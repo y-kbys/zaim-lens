@@ -26,10 +26,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies and build CSS
+      - name: Install dependencies and build
         run: |
           npm install
           npm run build:css
+          npm run build:licenses
 
       - name: Authenticate to Google Cloud
         id: auth

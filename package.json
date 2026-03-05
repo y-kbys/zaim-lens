@@ -1,10 +1,12 @@
 {
   "scripts": {
     "build:css": "npx @tailwindcss/cli -i ./static/input.css -o ./static/tailwind.css",
-    "watch:css": "npx @tailwindcss/cli -i ./static/input.css -o ./static/tailwind.css --watch"
+    "watch:css": "npx @tailwindcss/cli -i ./static/input.css -o ./static/tailwind.css --watch",
+    "build:licenses": "npx license-checker --json --out static/OSS_LICENSES.txt"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",
+    "license-checker": "^25.0.1",
     "tailwindcss": "^4.2.1"
   }
 }
