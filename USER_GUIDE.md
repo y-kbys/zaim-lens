@@ -11,7 +11,7 @@ Zaim Lens をご利用いただきありがとうございます！
 
 まず、Zaim が開発者向けに提供している設定サイトにアクセスします。
 
-1. [Zaim Developers](https://developers.zaim.net/) にアクセスします。
+1. [Zaim Developers](https://dev.zaim.net/) にアクセスします。
 2. お使いの Zaim アカウントでログインしてください。
 
 ## 📝 ステップ 2: アプリケーションの登録
