@@ -25,13 +25,52 @@
         <!-- Header -->
         <header
             class="bg-blue-600 dark:bg-blue-800 text-white p-4 shadow-md sticky top-0 z-10 transition-colors duration-200">
-            <h1 class="text-xl font-bold flex items-center justify-between">
-                <span><i class="fa-solid fa-receipt mr-2"></i> Zaim Lens</span>
+            <div class="flex items-center justify-between">
+                <div class="flex flex-col">
+                    <h1 class="text-xl font-bold flex items-center">
+                        <i class="fa-solid fa-receipt mr-2"></i> Zaim Lens
+                    </h1>
+                    <span class="text-[10px] font-medium text-blue-200 mt-0.5 tracking-wider">UNOFFICIAL APP</span>
+                </div>
                 <div class="flex items-center space-x-3">
-                    <button id="btn-zaim-settings"
-                        class="hidden text-xl p-2 rounded-full hover:bg-white/20 transition-colors" title="Zaim設定">
-                        <i class="fa-solid fa-gear"></i>
-                    </button>
+                    <div class="relative">
+                        <button id="btn-zaim-settings"
+                            class="hidden text-xl p-2 rounded-full hover:bg-white/20 transition-colors focus:outline-none"
+                            title="メニュー">
+                            <i class="fa-solid fa-gear"></i>
+                        </button>
+                        <!-- Settings Dropdown -->
+                        <div id="settings-dropdown"
+                            class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-200">
+                                <li>
+                                    <button id="menu-item-zaim-creds"
+                                        class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                        <i
+                                            class="fa-solid fa-key w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                        Zaim連携設定
+                                    </button>
+                                </li>
+                                <li class="border-t border-gray-100 dark:border-gray-700 my-1"></li>
+                                <li>
+                                    <a href="/static/terms.html" target="_blank"
+                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                        <i
+                                            class="fa-solid fa-file-contract w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                        利用規約
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="/static/privacy.html" target="_blank"
+                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                        <i
+                                            class="fa-solid fa-shield-halved w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                        プライバシーポリシー
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                     <button id="theme-toggle" class="text-xl p-2 rounded-full hover:bg-white/20 transition-colors">
                         <i class="fa-solid fa-moon hidden! dark:block!"></i>
                         <i class="fa-solid fa-sun block! dark:hidden!"></i>
@@ -44,7 +83,7 @@
                             onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'white\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
                     </div>
                 </div>
-            </h1>
+            </div>
         </header>
 
         <!-- Tabs -->
@@ -461,10 +500,27 @@
             <p class="text-gray-500 dark:text-gray-400 font-medium">レシート解析をもっとスムーズに</p>
             <div class="pt-8">
                 <button id="btn-google-login"
-                    class="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow-md text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg transition-all flex items-center justify-center space-x-3 w-full max-w-sm mx-auto">
+                    class="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow-md text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg transition-all flex items-center justify-center space-x-3 w-full max-w-sm mx-auto mb-4">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
                     <span>Googleでログイン</span>
                 </button>
+                <div
+                    class="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed max-w-sm mx-auto text-left bg-gray-100 dark:bg-gray-800/50 p-3 rounded-xl">
+                    <strong>免責事項:</strong> 本ウェブサービスおよびプログラムは個人が開発した非公式のものであり、株式会社くふうカンパニーおよび「くふう Zaim」とは一切関係ありません。
+                    ログインすることにより、<a href="/static/terms.html" target="_blank"
+                        class="underline text-blue-500">利用規約</a>および<a href="/static/privacy.html" target="_blank"
+                        class="underline text-blue-500">プライバシーポリシー</a>に同意したものとみなされます。
+                </div>
+            </div>
+
+            <!-- Static Login Footer for Crawlers & Legal compliance -->
+            <div
+                class="absolute bottom-6 left-0 w-full text-center space-x-4 text-xs font-medium text-gray-400 dark:text-gray-600">
+                <a href="/static/terms.html" target="_blank"
+                    class="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Terms of Use</a>
+                <span class="opacity-50">|</span>
+                <a href="/static/privacy.html" target="_blank"
+                    class="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Privacy Policy</a>
             </div>
         </div>
     </div>

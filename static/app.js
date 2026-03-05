@@ -128,6 +128,8 @@ const EL = {
     userProfile: document.getElementById('user-profile'),
     userAvatar: document.getElementById('user-avatar'),
     btnZaimSettings: document.getElementById('btn-zaim-settings'),
+    settingsDropdown: document.getElementById('settings-dropdown'),
+    menuItemZaimCreds: document.getElementById('menu-item-zaim-creds'),
 
     // Zaim Creds Modal
     zaimCredsModal: document.getElementById('zaim-creds-modal'),
@@ -1872,7 +1874,40 @@ const closeZaimSettings = () => {
     }, 300);
 };
 
-EL.btnZaimSettings.addEventListener('click', openZaimSettings);
+// Open Settings Dropdown
+EL.btnZaimSettings.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = EL.settingsDropdown.classList.contains('hidden');
+    if (isHidden) {
+        EL.settingsDropdown.classList.remove('hidden');
+        setTimeout(() => {
+            EL.settingsDropdown.classList.remove('opacity-0', 'scale-95');
+            EL.settingsDropdown.classList.add('opacity-100', 'scale-100');
+        }, 10);
+    } else {
+        closeSettingsDropdown();
+    }
+});
+
+function closeSettingsDropdown() {
+    EL.settingsDropdown.classList.remove('opacity-100', 'scale-100');
+    EL.settingsDropdown.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => {
+        EL.settingsDropdown.classList.add('hidden');
+    }, 200);
+}
+
+document.addEventListener('click', (e) => {
+    if (!EL.settingsDropdown.contains(e.target) && e.target !== EL.btnZaimSettings) {
+        closeSettingsDropdown();
+    }
+});
+
+EL.menuItemZaimCreds.addEventListener('click', () => {
+    closeSettingsDropdown();
+    openZaimSettings();
+});
+
 EL.btnCloseCreds.addEventListener('click', closeZaimSettings);
 EL.btnCancelCreds.addEventListener('click', () => {
     const isFormVisible = !EL.zaimFormContainer.classList.contains('hidden');
