@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 import jwt
 import requests
 from requests_oauthlib import OAuth1Session
-from db import get_user_config, save_user_config, firebase_app
+from db import get_user_config, save_user_config, delete_user_config, firebase_app
 
 load_dotenv()
 
@@ -797,3 +797,20 @@ async def delete_zaim_credentials(account_id: str, user_id: str = Depends(verify
         return {"status": "success", "message": f"Account {account_id} deleted."}
     else:
         raise HTTPException(status_code=404, detail="Account not found.")
+
+@app.delete("/api/user")
+async def delete_user_account(user_id: str = Depends(verify_token)):
+    """
+    Delete all user data from Firestore permanently.
+    The frontend is responsible for deleting the user from Firebase Auth.
+    """
+    success = delete_user_config(user_id)
+    if success:
+        # Clear all cache entries for this user
+        keys_to_delete = [k for k in MASTER_DATA_CACHE.keys() if k.startswith(f"{user_id}_")]
+        for k in keys_to_delete:
+            del MASTER_DATA_CACHE[k]
+            
+        return {"status": "success", "message": "User data completely removed."}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete user data.")

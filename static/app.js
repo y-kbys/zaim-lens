@@ -127,6 +127,11 @@ const EL = {
     btnGoogleLogin: document.getElementById('btn-google-login'),
     userProfile: document.getElementById('user-profile'),
     userAvatar: document.getElementById('user-avatar'),
+    btnUserAvatar: document.getElementById('btn-user-avatar'),
+    avatarDropdown: document.getElementById('avatar-dropdown'),
+    menuItemLogout: document.getElementById('menu-item-logout'),
+    menuItemDeleteAccount: document.getElementById('menu-item-delete-account'),
+
     btnZaimSettings: document.getElementById('btn-zaim-settings'),
     settingsDropdown: document.getElementById('settings-dropdown'),
     menuItemZaimCreds: document.getElementById('menu-item-zaim-creds'),
@@ -1714,12 +1719,87 @@ const initFirebaseAuth = async () => {
             }
         });
 
-        EL.userAvatar.addEventListener('click', async () => {
+        // Avatar Dropdown Toggle
+        EL.btnUserAvatar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = EL.avatarDropdown;
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                setTimeout(() => {
+                    dropdown.classList.remove('opacity-0', 'scale-95');
+                    dropdown.classList.add('opacity-100', 'scale-100');
+                }, 10);
+            } else {
+                dropdown.classList.remove('opacity-100', 'scale-100');
+                dropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => dropdown.classList.add('hidden'), 200);
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!EL.btnUserAvatar.contains(e.target) && !EL.avatarDropdown.contains(e.target)) {
+                if (!EL.avatarDropdown.classList.contains('hidden')) {
+                    EL.avatarDropdown.classList.remove('opacity-100', 'scale-100');
+                    EL.avatarDropdown.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => EL.avatarDropdown.classList.add('hidden'), 200);
+                }
+            }
+        });
+
+        // Logout
+        EL.menuItemLogout.addEventListener('click', async () => {
+            EL.avatarDropdown.classList.add('hidden');
             if (await showConfirm("ログアウト", "ログアウトしますか？")) {
                 try {
                     await signOut(auth);
                 } catch (error) {
                     console.error("Logout failed", error);
+                }
+            }
+        });
+
+        // Delete Account
+        EL.menuItemDeleteAccount.addEventListener('click', async () => {
+            EL.avatarDropdown.classList.add('hidden');
+            const confirmMsg = "本当にアカウントを削除しますか？\n設定したすべての連携情報や履歴データが完全に消去され、元に戻すことはできません。";
+            if (await showConfirm("アカウント削除の警告", confirmMsg)) {
+                try {
+                    showToast("アカウントを削除しています...", "info");
+
+                    // 1. Delete data from backend (Firestore)
+                    const res = await fetch('/api/user', {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${appState.idToken}`
+                        }
+                    });
+
+                    if (!res.ok) {
+                        throw new Error(`Failed to delete backend data: ${res.statusText}`);
+                    }
+
+                    // 2. Delete user from Firebase Auth
+                    const user = auth.currentUser;
+                    if (user) {
+                        import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js').then(async (module) => {
+                            const { deleteUser } = module;
+                            await deleteUser(user);
+                            showToast("アカウントを正常に削除しました", "success");
+                        }).catch(err => {
+                            console.error("Firebase module load failed", err);
+                            throw err;
+                        });
+                    }
+                } catch (error) {
+                    console.error("Account deletion failed", error);
+                    // Special error handling for specific Firebase requirement
+                    if (error.code === 'auth/requires-recent-login') {
+                        showToast("セキュリティのため、再度ログインしてからもう一度削除を実行してください。", "error");
+                        await signOut(auth);
+                    } else {
+                        showToast("アカウント削除に失敗しました: " + error.message, "error");
+                    }
                 }
             }
         });

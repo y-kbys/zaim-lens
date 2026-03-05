@@ -85,11 +85,36 @@
                         <i class="fa-solid fa-sun block! dark:hidden!"></i>
                     </button>
                     <!-- User Profile -->
-                    <div id="user-profile" class="hidden flex items-center space-x-2">
-                        <img id="user-avatar" src=""
-                            class="w-8 h-8 rounded-full border border-white cursor-pointer hover:scale-110 transition-transform"
-                            alt="User" title="ログアウト"
-                            onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'white\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+                    <div id="user-profile" class="hidden relative flex items-center space-x-2">
+                        <button id="btn-user-avatar" class="focus:outline-none rounded-full" title="アカウントメニュー">
+                            <img id="user-avatar" src=""
+                                class="w-8 h-8 rounded-full border border-white cursor-pointer hover:scale-110 transition-transform"
+                                alt="User"
+                                onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'white\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+                        </button>
+                        <!-- Avatar Dropdown -->
+                        <div id="avatar-dropdown"
+                            class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-200">
+                                <li>
+                                    <button id="menu-item-logout"
+                                        class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                        <i
+                                            class="fa-solid fa-arrow-right-from-bracket w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                        ログアウト
+                                    </button>
+                                </li>
+                                <li class="border-t border-gray-100 dark:border-gray-700 my-1"></li>
+                                <li>
+                                    <button id="menu-item-delete-account"
+                                        class="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center">
+                                        <i
+                                            class="fa-solid fa-user-xmark w-5 text-center mr-2 text-red-500 dark:text-red-400"></i>
+                                        アカウント削除
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>

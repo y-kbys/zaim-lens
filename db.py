@@ -136,3 +136,20 @@ def save_user_config(user_id: str, config: Dict[str, Any]):
         
     doc_ref = db.collection("users").document(user_id)
     doc_ref.set(data_to_save)
+
+def delete_user_config(user_id: str) -> bool:
+    """
+    Permanently delete the user's data from Firestore.
+    """
+    if db is None:
+        print("ERROR: Cannot delete config. Firestore client (db) is not initialized.")
+        return False
+        
+    try:
+        doc_ref = db.collection("users").document(user_id)
+        doc_ref.delete()
+        print(f"Data for user {user_id} deleted successfully.")
+        return True
+    except Exception as e:
+        print(f"Failed to delete user {user_id}: {e}")
+        return False
