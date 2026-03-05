@@ -1,0 +1,200 @@
+/* Custom utilities specifically for this project not heavily handled by tailwind classes directly */
+
+body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+    /* Prevent pull-to-refresh on mobile in app mode */
+}
+
+/* Hide scrollbar for cleaner look in the item list */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Transition for view swaps */
+section {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    appearance: textfield;
+}
+
+/* Snackbar styles */
+#snackbar.show {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.snackbar-fade-out {
+    opacity: 0 !important;
+    transform: translateY(10px) !important;
+}
+
+/* Thumbnail Skeleton Screen & Fade-in */
+:root {
+    --skeleton-bg: #f3f4f6;
+    --skeleton-highlight: #e5e7eb;
+}
+
+.dark {
+    --skeleton-bg: #1f2937;
+    --skeleton-highlight: #374151;
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.thumbnail-loading {
+    background: linear-gradient(90deg,
+            var(--skeleton-bg) 25%,
+            var(--skeleton-highlight) 50%,
+            var(--skeleton-bg) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite linear;
+}
+
+#receipt-thumbnail {
+    transition: opacity 0.5s ease-in-out;
+}
+
+.opacity-0 {
+    opacity: 0;
+}
+
+/* Lightbox Premium UI */
+#lightbox-close {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+#lightbox-close:hover {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 640px) {
+    #lightbox-close {
+        top: 1rem;
+        right: 1rem;
+    }
+}
+
+/* Toast Notification Premium UI */
+.toast {
+    pointer-events: auto;
+    background: rgba(31, 41, 55, 0.95);
+    backdrop-filter: blur(12px);
+    color: white;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    min-width: 280px;
+    max-width: 100%;
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-left: 4px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.toast.show {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.toast.hide {
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+}
+
+.toast-success {
+    border-left-color: #10b981;
+}
+
+.toast-error {
+    border-left-color: #ef4444;
+}
+
+.toast-warning {
+    border-left-color: #f59e0b;
+}
+
+.toast-info {
+    border-left-color: #3b82f6;
+}
+
+.toast i {
+    margin-right: 0.75rem;
+    font-size: 1.125rem;
+}
+
+.toast-success i {
+    color: #10b981;
+}
+
+.toast-error i {
+    color: #ef4444;
+}
+
+.toast-warning i {
+    color: #f59e0b;
+}
+
+.toast-info i {
+    color: #3b82f6;
+}
+
+/* Custom Confirm Modal Animations */
+#confirm-modal.show {
+    opacity: 1;
+}
+
+#confirm-modal.show #confirm-modal-content {
+    transform: scale(1);
+    opacity: 1;
+}

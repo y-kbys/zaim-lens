@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Firebase
+.firebase/
+firebase-debug.log*
+
+# Project Organization
+scripts/
+user_data/
+*.txt
+!requirements.txt
+*.code-workspace
+
+# Node / Frontend
+node_modules/
+/static/tailwind.css

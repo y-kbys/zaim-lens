@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaim Lens</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS (Built via CLI) -->
+    <link rel="stylesheet" href="/static/tailwind.css">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body
+    class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
+    <div
+        class="max-w-md mx-auto min-h-screen bg-white dark:bg-gray-800 shadow-lg overflow-hidden flex flex-col relative transition-colors duration-200">
+        <!-- Header -->
+        <header
+            class="bg-blue-600 dark:bg-blue-800 text-white p-4 shadow-md sticky top-0 z-10 transition-colors duration-200">
+            <h1 class="text-xl font-bold flex items-center justify-between">
+                <span><i class="fa-solid fa-receipt mr-2"></i> Zaim Lens</span>
+                <div class="flex items-center space-x-3">
+                    <button id="btn-zaim-settings"
+                        class="hidden text-xl p-2 rounded-full hover:bg-white/20 transition-colors" title="Zaim設定">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                    <button id="theme-toggle" class="text-xl p-2 rounded-full hover:bg-white/20 transition-colors">
+                        <i class="fa-solid fa-moon hidden! dark:block!"></i>
+                        <i class="fa-solid fa-sun block! dark:hidden!"></i>
+                    </button>
+                    <!-- User Profile -->
+                    <div id="user-profile" class="hidden flex items-center space-x-2">
+                        <img id="user-avatar" src=""
+                            class="w-8 h-8 rounded-full border border-white cursor-pointer hover:scale-110 transition-transform"
+                            alt="User" title="ログアウト"
+                            onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'white\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+                    </div>
+                </div>
+            </h1>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors">
+            <button id="tab-parse"
+                class="flex-1 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 transition-colors">レシート解析</button>
+            <button id="tab-copy"
+                class="flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-colors">履歴コピー</button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow overflow-y-auto relative">
+            <!-- ========== TAB 1: Receipt Parser ========== -->
+            <div id="panel-parse" class="p-4 pb-24 h-full relative">
+                <!-- Batch Progress Indicator -->
+                <div id="batch-progress-container"
+                    class="hidden absolute top-0 left-0 w-full bg-blue-600 text-white text-[10px] font-bold py-1 px-4 z-30 flex justify-between items-center shadow-md">
+                    <span id="batch-progress-text">1 / 1 枚目を処理中...</span>
+                    <div class="flex space-x-2">
+                        <span id="batch-status-parsing" class="animate-pulse"><i
+                                class="fa-solid fa-spinner fa-spin mr-1"></i>解析中</span>
+                        <span id="batch-status-complete" class="hidden"><i
+                                class="fa-solid fa-circle-check mr-1"></i>完了</span>
+                    </div>
+                </div>
+
+                <!-- ====== State 1: Upload ====== -->
+                <section id="state-upload" class="flex flex-col items-center justify-center h-full space-y-6 pt-10">
+                    <div class="text-center">
+                        <p class="text-gray-600 dark:text-gray-300 mb-2">購入履歴の画像を選択</p>
+                    </div>
+
+                    <label for="image-upload"
+                        class="relative w-full h-64 border-2 border-dashed border-blue-400 dark:border-blue-500 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors">
+                        <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 dark:text-blue-400 mb-4"></i>
+                        <span class="text-blue-600 dark:text-blue-300 font-medium">画像をタップして選択（複数可）</span>
+                        <input type="file" id="image-upload" accept="image/*" class="hidden" multiple>
+
+                        <div id="image-preview-container"
+                            class="hidden absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-white dark:bg-gray-800">
+                            <img id="image-preview" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center">
+                                <span class="text-white font-bold"><i class="fa-solid fa-pen"></i> 変更</span>
+                            </div>
+                        </div>
+                    </label>
+
+                    <button id="btn-parse"
+                        class="w-full py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition transform active:scale-95 text-lg mt-4 hidden">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> 解析を実行
+                    </button>
+
+                    <div class="mt-4 flex justify-center">
+                        <button id="btn-manual-entry"
+                            class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex items-center">
+                            <i class="fa-solid fa-keyboard mr-1.5"></i> 手入力で登録（画像なし）
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ====== State 2: Edit & Review ====== -->
+                <section id="state-edit" class="hidden space-y-3">
+                    <div
+                        class="bg-blue-50 dark:bg-blue-900/40 p-2 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-center text-blue-800 dark:text-blue-300 text-xs font-medium">
+                            <i class="fa-solid fa-circle-info mr-1"></i> 内容を確認・修正してください
+                        </div>
+                    </div>
+
+                    <div class="flex items-start space-x-3">
+                        <div id="receipt-thumbnail-container"
+                            class="w-20 h-20 flex-shrink-0 cursor-pointer group relative overflow-hidden rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-sm thumbnail-loading">
+                            <img id="receipt-thumbnail"
+                                class="w-full h-full object-cover transition duration-300 group-hover:scale-110">
+                            <div
+                                class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition duration-300">
+                                <i class="fa-solid fa-magnifying-glass-plus text-white shadow-sm"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow grid grid-cols-1 gap-2">
+                            <div class="relative">
+                                <i
+                                    class="fa-solid fa-calendar-days absolute left-3 top-3 text-blue-500 dark:text-blue-400"></i>
+                                <input type="date" id="edit-date"
+                                    class="w-full p-2 pl-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm">
+                            </div>
+                            <div class="relative">
+                                <i class="fa-solid fa-shop absolute left-3 top-3 text-blue-500 dark:text-blue-400"></i>
+                                <input type="text" id="edit-store"
+                                    class="w-full p-2 pl-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm"
+                                    placeholder="店舗名">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Account & Payment Source Selection -->
+                    <div
+                        class="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg space-y-4 shadow-sm border border-blue-100 dark:border-blue-800">
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
+                                <i class="fa-solid fa-user-circle mr-1"></i>登録先アカウント
+                            </label>
+                            <select id="edit-target-account"
+                                class="w-full p-2 border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-medium">
+                                <option value="1">読込中...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
+                                <i class="fa-solid fa-credit-card mr-1"></i>出金元
+                            </label>
+                            <select id="edit-from-account"
+                                class="w-full p-2 border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-medium">
+                                <option value="">未指定（出金元なし）</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <div class="flex justify-between items-center mb-1">
+                            <div class="flex items-baseline space-x-2">
+                                <h3
+                                    class="text-sm font-bold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-0.5 inline-block">
+                                    品目リスト
+                                </h3>
+                                <span id="edit-receipt-id"
+                                    class="text-[10px] text-gray-400 dark:text-gray-500 font-mono"></span>
+                            </div>
+                            <button id="btn-add-item"
+                                class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-3 py-1 rounded-full hover:bg-green-200 dark:hover:bg-green-800/60 transition-colors">
+                                <i class="fa-solid fa-plus"></i> 追加
+                            </button>
+                        </div>
+
+                        <div id="items-container" class="space-y-2">
+                            <!-- Items injected here by JS -->
+                        </div>
+
+                        <div
+                            class="flex justify-between items-center mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg font-bold transition-colors">
+                            <span class="dark:text-gray-200">合計 (参考)</span>
+                            <span id="total-amount" class="dark:text-white">¥0</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ====== State 3: Success ====== -->
+                <section id="state-success" class="hidden flex-col items-center justify-center h-full pt-20">
+                    <div
+                        class="w-24 h-24 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mb-6 text-green-500 dark:text-green-400">
+                        <i class="fa-solid fa-check text-5xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">登録完了！</h2>
+                    <p class="text-gray-600 dark:text-gray-300 mb-2 text-center" id="success-message">Zaimへ正しく記録されました。
+                    </p>
+                    <div id="success-receipt-id-container" class="mb-8 text-center hidden">
+                        <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">Receipt ID: <span
+                                id="success-receipt-id"></span></span>
+                    </div>
+
+                    <button id="btn-reset"
+                        class="w-full py-4 bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-bold rounded-full shadow-md hover:bg-blue-50 dark:hover:bg-gray-700 transition transform active:scale-95 text-lg">
+                        トップに戻る
+                    </button>
+                </section>
+            </div>
+
+            <!-- ========== TAB 2: History Copy ========== -->
+            <div id="panel-copy" class="hidden p-4 pb-24 h-full flex flex-col">
+                <!-- Step 1: Source & Fetch -->
+                <section id="copy-step-config" class="space-y-4 mb-6">
+                    <div>
+                        <label
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">コピー元アカウント</label>
+                        <select id="source-account-select"
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                            <option value="">読込中...</option>
+                        </select>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">取得期間</label>
+                            <select id="history-period-select"
+                                class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                                <optgroup label="クイック選択">
+                                    <option value="this_month">今月</option>
+                                    <option value="last_month">先月</option>
+                                    <option value="past_month" selected>過去1ヶ月</option>
+                                    <option value="90">過去3ヶ月</option>
+                                </optgroup>
+                                <optgroup label="詳細指定">
+                                    <option value="month">月指定...</option>
+                                    <option value="custom">カスタム範囲...</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- 月指定用インプット -->
+                        <div id="period-month-input-container" class="hidden">
+                            <input type="month" id="period-month-input"
+                                class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                        </div>
+
+                        <!-- カスタム範囲用インプット -->
+                        <div id="period-custom-input-container" class="hidden grid grid-cols-2 gap-2 mt-2">
+                            <div>
+                                <label
+                                    class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1 ml-1">開始日</label>
+                                <input type="date" id="period-start-input"
+                                    class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1 ml-1">終了日</label>
+                                <input type="date" id="period-end-input"
+                                    class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                            </div>
+                        </div>
+
+                        <button id="btn-fetch-history"
+                            class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition transform active:scale-95">
+                            <i class="fa-solid fa-download mr-2"></i>履歴を取得
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Step 3: Destination & Confirm (Moved UP) -->
+                <section id="copy-step-dest" class="hidden mb-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="space-y-4 mb-4">
+                        <div>
+                            <label
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">コピー先アカウント</label>
+                            <select id="dest-account-select"
+                                class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                                <option value="">読込中...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">出金元
+                                (コピー先での記録用)</label>
+                            <select id="dest-internal-account-select"
+                                class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                                <option value="">読込中...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="btn-prepare-copy"
+                        class="w-full py-4 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition transform active:scale-95 text-lg">
+                        確認画面へ進む (<span id="selected-copy-count">0</span>件)
+                    </button>
+                </section>
+
+                <!-- Step 2: History List & Selection (Pushed DOWN) -->
+                <section id="copy-step-list"
+                    class="hidden flex-col flex-grow min-h-0 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-md font-bold text-gray-800 dark:text-gray-100">履歴の選択</h3>
+                        <div class="text-sm space-x-4">
+                            <button id="btn-select-all"
+                                class="text-blue-600 dark:text-blue-400 font-medium">全選択</button>
+                        </div>
+                    </div>
+
+                    <div
+                        class="flex-grow overflow-y-auto mb-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 shadow-inner p-2 hide-scrollbar">
+                        <ul id="history-list-container" class="space-y-2">
+                            <!-- Injected rows -->
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Step 4: Success Message -->
+                <section id="copy-step-success" class="hidden flex-col items-center justify-center h-full">
+                    <div
+                        class="w-24 h-24 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mb-6 text-green-500 dark:text-green-400">
+                        <i class="fa-solid fa-check-double text-5xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">コピー完了！</h2>
+                    <p class="text-gray-600 dark:text-gray-300 mb-8 text-center" id="copy-success-message">
+                        Zaimへ履歴をコピーしました。</p>
+                    <button id="btn-reset-copy"
+                        class="w-full py-4 bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-bold rounded-full shadow-md hover:bg-blue-50 dark:hover:bg-gray-700 transition transform active:scale-95 text-lg">
+                        トップに戻る
+                    </button>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- Sticky Bottom Bar for Action (Edit State for Parser) -->
+        <div id="bottom-action-bar"
+            class="hidden absolute bottom-0 left-0 w-full bg-white dark:bg-gray-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)] z-20 transition-colors">
+            <div class="flex space-x-3">
+                <button id="btn-skip"
+                    class="w-1/3 py-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition transform active:scale-95 text-md flex items-center justify-center">
+                    スキップ
+                </button>
+                <button id="btn-register"
+                    class="w-2/3 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition transform active:scale-95 text-lg flex items-center justify-center">
+                    <i class="fa-solid fa-paper-plane mr-2"></i> Zaimへ登録 (<span id="btn-register-count">0</span>件)
+                </button>
+            </div>
+        </div>
+
+        <!-- Global Full-screen Overlay Loading Spinner -->
+        <div id="loading-overlay"
+            class="hidden absolute inset-0 bg-white/90 dark:bg-gray-900/90 z-[2000] flex flex-col items-center justify-center">
+            <div
+                class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 dark:border-blue-400 mb-4">
+            </div>
+            <p id="loading-text" class="text-lg font-bold text-blue-800 dark:text-blue-300 animate-pulse">解析中...</p>
+        </div>
+        <!-- Copy Confirmation Modal -->
+        <div id="copy-confirm-modal"
+            class="hidden absolute inset-0 bg-black/60 z-[300] flex flex-col justify-start transition-opacity opacity-0">
+            <div class="bg-white dark:bg-gray-800 w-full rounded-b-2xl shadow-2xl flex flex-col max-h-[90%] transform -translate-y-full transition-transform duration-300"
+                id="copy-confirm-modal-content">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fa-solid fa-copy mr-2"></i>
+                        コピー内容の確認</h2>
+                    <button id="btn-close-modal"
+                        class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-2">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="p-4 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                    <div
+                        class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg mb-4 text-sm text-blue-800 dark:text-blue-300">
+                        以下の履歴を <span id="confirm-dest-name" class="font-bold">---</span>
+                        にコピーします。カテゴリ等の設定はコピー先に存在しない場合、デフォルト値になります。
+                    </div>
+                    <ul id="confirm-list-container" class="space-y-2 mb-4">
+                        <!-- Preview items injected here -->
+                    </ul>
+                </div>
+
+                <div
+                    class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                    <button id="btn-execute-copy"
+                        class="w-full py-4 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 transition transform active:scale-95 text-lg flex justify-center items-center">
+                        <i class="fa-solid fa-check mr-2"></i> 確定してコピー実行
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Confirmation Modal -->
+        <div id="confirm-modal"
+            class="hidden fixed inset-0 z-[450] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+                id="confirm-modal-content">
+                <div class="p-6">
+                    <h3 id="confirm-title" class="text-xl font-bold text-gray-900 dark:text-white mb-2">確認</h3>
+                    <p id="confirm-message" class="text-gray-600 dark:text-gray-300">メッセージ内容がここに入ります。</p>
+                </div>
+                <div class="flex p-4 bg-gray-50 dark:bg-gray-700/50 space-x-3">
+                    <button id="confirm-btn-cancel"
+                        class="flex-1 py-3 px-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        キャンセル
+                    </button>
+                    <button id="confirm-btn-ok"
+                        class="flex-1 py-3 px-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lightbox Modal for Image Preview -->
+        <div id="lightbox-modal"
+            class="hidden fixed inset-0 z-[1500] bg-black/95 flex items-center justify-center opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+            <button id="lightbox-close"
+                class="absolute top-6 right-6 text-white text-3xl p-2 hover:bg-white/10 rounded-full transition-colors z-[70]">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-full h-full flex items-center justify-center p-4 select-none">
+                <img id="lightbox-image" class="max-w-full max-h-full object-contain shadow-2xl transition duration-500"
+                    alt="Receipt Full Preview">
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"
+        class="fixed top-6 left-1/2 -translate-x-1/2 z-[500] w-[90%] max-w-sm flex flex-col items-center space-y-3 pointer-events-none">
+    </div>
+
+    <!-- Snackbar for Undo Notification -->
+    <div id="snackbar-container"
+        class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[400] w-[90%] max-w-sm pointer-events-none">
+        <div id="snackbar"
+            class="hidden opacity-0 translate-y-4 bg-gray-900/95 text-white p-4 rounded-xl shadow-2xl flex items-center justify-between pointer-events-auto transition-all duration-300 backdrop-blur-sm">
+            <span id="snackbar-message" class="text-sm font-medium">品目を削除しました</span>
+            <button id="btn-undo"
+                class="ml-4 text-blue-400 hover:text-blue-300 font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors uppercase tracking-wider">
+                元に戻す
+            </button>
+        </div>
+    </div>
+
+    <!-- Login Screen Overlay -->
+    <div id="login-overlay"
+        class="hidden fixed inset-0 z-[300] bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center transition-opacity duration-300">
+        <div class="text-center space-y-6 p-8">
+            <div
+                class="w-24 h-24 bg-blue-100 dark:bg-blue-900/40 rounded-3xl flex items-center justify-center mx-auto mb-6 text-blue-500 dark:text-blue-400 rotate-12 shadow-lg">
+                <i class="fa-solid fa-receipt text-5xl -rotate-12"></i>
+            </div>
+            <h1 class="text-3xl font-black text-gray-800 dark:text-white tracking-tight">Zaim Lens</h1>
+            <p class="text-gray-500 dark:text-gray-400 font-medium">レシート解析をもっとスムーズに</p>
+            <div class="pt-8">
+                <button id="btn-google-login"
+                    class="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow-md text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg transition-all flex items-center justify-center space-x-3 w-full max-w-sm mx-auto">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
+                    <span>Googleでログイン</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zaim Credentials Modal -->
+    <div id="zaim-creds-modal"
+        class="hidden opacity-0 fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300">
+            <div
+                class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-blue-50 dark:bg-gray-800">
+                <h2 class="text-lg font-bold text-blue-800 dark:text-blue-300"><i
+                        class="fa-solid fa-key mr-2"></i>Zaim連携設定</h2>
+                <button id="btn-close-creds"
+                    class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-2 flex-shrink-0 hidden">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[85vh] overflow-y-auto hide-scrollbar">
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium" id="zaim-creds-msg">
+                    Zaim連携アカウントを管理します。
+                </p>
+                <div
+                    class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-xl mb-4">
+                    <p class="text-xs text-blue-800 dark:text-blue-300">
+                        <i class="fa-solid fa-circle-info mr-1"></i>
+                        <strong>Zaimとの連携には専用の「キー」が必要です。</strong><br>
+                        <a href="./USER_GUIDE.md" target="_blank"
+                            class="underline font-bold hover:text-blue-600 dark:hover:text-blue-200 transition-colors">
+                            セットアップガイド (USER_GUIDE.md)
+                        </a> を見ながら設定を進めてください。
+                    </p>
+                </div>
+
+                <!-- Accounts List -->
+                <div id="zaim-accounts-list-container" class="space-y-2 mb-4">
+                    <label
+                        class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">登録済みアカウント</label>
+                    <div id="zaim-accounts-list" class="grid grid-cols-1 gap-2">
+                        <!-- Account items will be injected here -->
+                        <div
+                            class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 flex justify-between items-center group cursor-pointer hover:border-blue-500 transition-all">
+                            <span class="text-sm font-medium">現在のアカウント</span>
+                            <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                        </div>
+                    </div>
+                    <button id="btn-add-new-account"
+                        class="w-full py-2 text-xs font-bold text-blue-600 dark:text-blue-400 border border-dashed border-blue-300 dark:border-blue-700 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all mt-2">
+                        <i class="fa-solid fa-plus mr-1"></i>新規アカウントを追加
+                    </button>
+                </div>
+
+                <div id="zaim-form-container" class="space-y-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">表示名</label>
+                        <input type="text" id="zaim-account-name" placeholder="例: 個人用、共有用"
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm">
+                    </div>
+                    <hr class="border-gray-100 dark:border-gray-700 my-2">
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Consumer
+                            Key</label>
+                        <input type="text" id="zaim-consumer-key"
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-mono">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Consumer
+                            Secret</label>
+                        <input type="password" id="zaim-consumer-secret"
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-mono">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Access
+                            Token</label>
+                        <input type="text" id="zaim-token"
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-mono">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Access
+                            Token Secret</label>
+                        <input type="password" id="zaim-token-secret"
+                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-mono">
+                    </div>
+                </div>
+            </div>
+            <div id="zaim-buttons-container"
+                class="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-save-creds"
+                        class="py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition transform active:scale-[0.98] text-sm flex justify-center items-center">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> 保存
+                    </button>
+                    <button id="btn-delete-creds"
+                        class="py-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition transform active:scale-[0.98] text-sm flex justify-center items-center">
+                        <i class="fa-solid fa-trash mr-2"></i> 削除
+                    </button>
+                </div>
+                <button id="btn-cancel-creds"
+                    class="w-full py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                    キャンセル
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/app.js?v={{APP_VERSION}}"></script>
+</body>
+
+</html>

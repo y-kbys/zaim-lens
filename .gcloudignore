@@ -1,0 +1,11 @@
+.gcloudignore
+.git
+.gitignore
+.env
+.venv
+__pycache__
+*.pyc
+firebase.json
+.firebaserc
+.github
+*.code-workspace
