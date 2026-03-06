@@ -1712,10 +1712,21 @@ const initFirebaseAuth = async () => {
 
         EL.btnGoogleLogin.addEventListener('click', async () => {
             try {
+                EL.btnGoogleLogin.disabled = true;
+                EL.btnGoogleLogin.innerHTML = `
+                    <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-600 mr-3"></div>
+                    <span>ログイン処理中...</span>
+                `;
                 await signInWithPopup(auth, provider);
             } catch (error) {
                 console.error("Login failed", error);
                 showToast("ログインに失敗しました: " + error.message, 'error');
+                // Restore button state
+                EL.btnGoogleLogin.disabled = false;
+                EL.btnGoogleLogin.innerHTML = `
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
+                    <span>Googleでログイン</span>
+                `;
             }
         });
 
@@ -1811,34 +1822,35 @@ const initFirebaseAuth = async () => {
                 appState.user = user;
                 appState.idToken = await user.getIdToken();
 
+                // Show app shell IMMEDIATELY
                 if (!EL.loginOverlay.classList.contains('hidden')) {
                     EL.loginOverlay.classList.add('opacity-0');
                     setTimeout(() => EL.loginOverlay.classList.add('hidden'), 300);
                 }
-
                 EL.userProfile.classList.remove('hidden');
                 EL.btnZaimSettings.classList.remove('hidden');
                 if (user.photoURL) EL.userAvatar.src = user.photoURL;
 
-                // Load initial data 
-                try {
-                    await loadAccounts(); // Always try load accounts first to pop appState
-                    const hasTarget = await loadTargetAccounts();
-                    if (hasTarget !== false) {
-                        try {
-                            await loadZaimAccounts();
-                        } catch (loadErr) {
-                            console.error("Zaim access failed:", loadErr);
-                            showToast("Zaim連携に失敗しました。設定を確認してください。", "error");
+                // Load initial data (Asynchronously)
+                (async () => {
+                    try {
+                        await loadAccounts();
+                        const hasTarget = await loadTargetAccounts();
+                        if (hasTarget !== false) {
+                            try {
+                                await loadZaimAccounts();
+                            } catch (loadErr) {
+                                console.error("Zaim access failed:", loadErr);
+                                showToast("Zaim連携に失敗しました。設定を確認してください。", "error");
+                                openZaimSettings();
+                            }
+                        } else {
                             openZaimSettings();
                         }
-                    } else {
-                        // No accounts configured
-                        openZaimSettings();
+                    } catch (err) {
+                        console.error("Error loading accounts post-login:", err);
                     }
-                } catch (err) {
-                    console.error("Error loading accounts post-login:", err);
-                }
+                })();
             } else {
                 // Not Logged In
                 appState.user = null;
@@ -1849,6 +1861,13 @@ const initFirebaseAuth = async () => {
                 EL.userProfile.classList.add('hidden');
                 EL.btnZaimSettings.classList.add('hidden');
                 EL.userAvatar.src = "";
+
+                // Reset login button state if it was loading
+                EL.btnGoogleLogin.disabled = false;
+                EL.btnGoogleLogin.innerHTML = `
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
+                    <span>Googleでログイン</span>
+                `;
             }
             isFirstAuthCheck = false;
         });
