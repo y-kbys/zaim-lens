@@ -1158,7 +1158,7 @@ function updateDestAccountOptions() {
     let firstValidValue = "";
 
     Array.from(EL.destAccountSelect.options).forEach(opt => {
-        if (opt.value === "" || opt.disabled) return;
+        if (opt.value === "") return;
 
         if (opt.value === src) {
             opt.disabled = true;
@@ -1196,6 +1196,13 @@ EL.destAccountSelect.addEventListener('change', async () => {
     await loadDestInternalAccounts();
 });
 
+EL.destInternalAccountSelect.addEventListener('change', () => {
+    const destId = EL.destAccountSelect.value;
+    if (destId) {
+        localStorage.setItem(`lastUsedCopyAccountId_${destId}`, EL.destInternalAccountSelect.value);
+    }
+});
+
 async function loadDestInternalAccounts() {
     const destId = EL.destAccountSelect.value;
     if (!destId) return;
@@ -1223,8 +1230,9 @@ async function loadDestInternalAccounts() {
         EL.destInternalAccountSelect.innerHTML = optionsHtml;
 
         // Restore last used account for this destination
-        const lastUsedId = localStorage.getItem('lastUsedCopyAccountId');
-        if (lastUsedId && Array.from(EL.destInternalAccountSelect.options).some(o => o.value === lastUsedId)) {
+        const storageKey = `lastUsedCopyAccountId_${destId}`;
+        const lastUsedId = localStorage.getItem(storageKey);
+        if (lastUsedId !== null && Array.from(EL.destInternalAccountSelect.options).some(o => o.value === lastUsedId)) {
             EL.destInternalAccountSelect.value = lastUsedId;
         }
     } catch (err) {
