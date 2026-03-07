@@ -1131,6 +1131,15 @@ async function refreshAllAccountDropdowns() {
         EL.destAccountSelect.innerHTML = html;
         EL.editTargetAccount.innerHTML = targetHtml;
 
+        // --- Restore Source Account Preference ---
+        const lastSourceId = localStorage.getItem('lastUsedSourceAccountId');
+        if (lastSourceId && Array.from(EL.sourceAccountSelect.options).some(o => o.value === lastSourceId)) {
+            EL.sourceAccountSelect.value = lastSourceId;
+        }
+
+        // --- Handle Initial Destination Selection ---
+        updateDestAccountOptions();
+
         return appState.accounts;
     } catch (err) {
         console.error("Failed to refresh account dropdowns:", err);
@@ -1143,20 +1152,39 @@ async function loadAccounts() {
     return await refreshAllAccountDropdowns();
 }
 
-// Ensure Destination account cannot be the same as Source account
-EL.sourceAccountSelect.addEventListener('change', () => {
+// Helper to disable current source in destination list and pick a default
+function updateDestAccountOptions() {
     const src = EL.sourceAccountSelect.value;
+    let firstValidValue = "";
+
     Array.from(EL.destAccountSelect.options).forEach(opt => {
+        if (opt.value === "" || opt.disabled) return;
+
         if (opt.value === src) {
             opt.disabled = true;
-            if (EL.destAccountSelect.value === src) {
-                EL.destAccountSelect.value = "";
-                EL.destInternalAccountSelect.innerHTML = '<option value="">出金元を選択...</option>';
-            }
         } else {
             opt.disabled = false;
+            if (!firstValidValue) firstValidValue = opt.value;
         }
     });
+
+    // If destination is now invalid (same as source), or if it's currently empty, pick the first valid one
+    if (EL.destAccountSelect.value === src || EL.destAccountSelect.value === "") {
+        if (firstValidValue) {
+            EL.destAccountSelect.value = firstValidValue;
+            // Trigger loading internal accounts for this new selection
+            loadDestInternalAccounts();
+        }
+    }
+}
+
+// Ensure Destination account cannot be the same as Source account
+EL.sourceAccountSelect.addEventListener('change', () => {
+    // Save preference
+    if (EL.sourceAccountSelect.value) {
+        localStorage.setItem('lastUsedSourceAccountId', EL.sourceAccountSelect.value);
+    }
+    updateDestAccountOptions();
 });
 
 EL.destAccountSelect.addEventListener('change', async () => {
