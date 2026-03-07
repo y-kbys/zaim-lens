@@ -1509,13 +1509,13 @@ EL.btnPrepareCopy.addEventListener('click', () => {
     EL.copyConfirmModal.classList.remove('hidden');
     // small delay to allow display:block to apply before animating opacity
     setTimeout(() => {
-        EL.copyConfirmModal.classList.add('opacity-100');
+        EL.copyConfirmModal.classList.replace('opacity-0', 'opacity-100');
         EL.copyConfirmModalContent.classList.remove('-translate-y-full');
     }, 10);
 });
 
 const closeCopyModal = () => {
-    EL.copyConfirmModal.classList.remove('opacity-100');
+    EL.copyConfirmModal.classList.replace('opacity-100', 'opacity-0');
     EL.copyConfirmModalContent.classList.add('-translate-y-full');
     setTimeout(() => {
         EL.copyConfirmModal.classList.add('hidden');
