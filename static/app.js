@@ -1185,6 +1185,15 @@ EL.sourceAccountSelect.addEventListener('change', () => {
         localStorage.setItem('lastUsedSourceAccountId', EL.sourceAccountSelect.value);
     }
     updateDestAccountOptions();
+
+    // Clear history list and hide selection steps to prevent confusion
+    appState.fetchedHistory = [];
+    appState.selectedHistoryIds.clear();
+    EL.historyListContainer.innerHTML = '';
+    EL.copyStepList.classList.add('hidden');
+    EL.copyStepList.classList.remove('flex');
+    EL.copyStepDest.classList.add('hidden');
+    if (typeof updateCopyCountUI === 'function') updateCopyCountUI();
 });
 
 EL.destAccountSelect.addEventListener('change', async () => {
