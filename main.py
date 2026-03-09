@@ -335,6 +335,9 @@ async def read_index():
     except FileNotFoundError:
         return "index.html not found in static/"
 
+# Temporary in-memory cache for OAuth secrets to handle cross-domain cookie blocking in SPAs
+OAUTH_SECRETS = {}
+
 @app.get("/api/zaim/login")
 async def zaim_login(request: Request, name: str = "デフォルト", idToken: str = None, user_id_dep: str = Depends(verify_token_optional)):
     print(f"DEBUG: zaim_login initiated. name={name}, has_idToken={bool(idToken)}, user_id_dep={user_id_dep}")
@@ -365,6 +368,12 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         # Cloud Run / Proxy workaround: Force https if not localhost
         if "localhost" not in callback_url and callback_url.startswith("http://"):
             callback_url = callback_url.replace("http://", "https://", 1)
+            
+    # Add user_id to callback URL to ensure we can identify the user when Zaim redirects back
+    if "?" in callback_url:
+        callback_url += f"&user_id={user_id}"
+    else:
+        callback_url += f"?user_id={user_id}"
     
     print(f"DEBUG: zaim_login using callback_url={callback_url}")
 
@@ -373,38 +382,50 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         request_token_url = "https://api.zaim.net/v2/auth/request"
         fetch_response = zaim.fetch_request_token(request_token_url)
         
+        oauth_token = fetch_response.get('oauth_token')
+        oauth_token_secret = fetch_response.get('oauth_token_secret')
+        
         # Save request token secret in session to use it in callback
         request.session['user_id'] = user_id
-        request.session['zaim_oauth_token_secret'] = fetch_response.get('oauth_token_secret')
+        request.session['zaim_oauth_token_secret'] = oauth_token_secret
         request.session['zaim_pending_name'] = name
+        
+        # Also save in global dictionary to survive strict SameSite cookie blocking
+        if oauth_token:
+            OAUTH_SECRETS[oauth_token] = {
+                'secret': oauth_token_secret,
+                'name': name
+            }
         
         # Build authorize URL
         base_authorization_url = "https://auth.zaim.net/users/auth"
         # Passing request token explicitly as shown in the snippets
-        authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=fetch_response.get('oauth_token'))
-        print(f"DEBUG: zaim_login redirecting to {authorization_url}")
-        return RedirectResponse(authorization_url)
+        authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=oauth_token)
+        print(f"DEBUG: zaim_login returning auth_url={authorization_url}")
+        return {"auth_url": authorization_url}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to initiate Zaim OAuth: {str(e)}")
 
 @app.get("/api/zaim/callback")
-async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str):
-    # Retrieve user_id from session or require authentication if possible
-    # Since we redirected away, we might lose the idToken in the client.
-    # However, for this simplified flow, we will rely on the session or redirect back to a landing page 
-    # that handles the token storage after the client-side app re-authenticates.
-    # BUT, Zaim OAuth 1.0a callback doesn't include user context. 
-    # To fix this, we can store user_id in session before redirecting.
+async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str, user_id: str = None):
+    # Retrieve user_id from query param first, then fallback to session
+    final_user_id = user_id or request.session.get('user_id')
     
-    user_id = request.session.get('user_id')
-    if not user_id:
+    if not final_user_id:
         # If we lost user_id, we can't save the token. 
         # We might need to ask the user to log in again or use a temporary cookie.
         return HTMLResponse("<html><body><script>alert('Session lost. Please try again.'); window.location.href='/';</script></body></html>")
 
-    request_token_secret = request.session.get('zaim_oauth_token_secret')
-    pending_name = request.session.get('zaim_pending_name', 'Zaim Account')
+    # Try to load secrets from global dict first (bypasses cookie issues)
+    secret_data = OAUTH_SECRETS.pop(oauth_token, None)
+    if secret_data:
+        request_token_secret = secret_data.get('secret')
+        pending_name = secret_data.get('name', 'Zaim Account')
+    else:
+        # Fallback to session
+        request_token_secret = request.session.get('zaim_oauth_token_secret')
+        pending_name = request.session.get('zaim_pending_name', 'Zaim Account')
 
     if not request_token_secret:
         raise HTTPException(status_code=400, detail="OAuth request token secret missing in session.")

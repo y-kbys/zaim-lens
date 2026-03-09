@@ -2169,10 +2169,15 @@ EL.btnZaimConnect.addEventListener('click', async () => {
     EL.btnZaimConnect.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 連携中...';
 
     try {
-        // Redirect directly to the login endpoint which will then redirect to Zaim.
-        // We pass idToken in the query string because top-level redirection cannot have custom headers.
-        const url = `/api/zaim/login?name=${encodeURIComponent(name)}&idToken=${encodeURIComponent(appState.idToken)}`;
-        window.location.href = url;
+        const res = await apiFetch(`/api/zaim/login?name=${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error(await res.text());
+
+        const data = await res.json();
+        if (data.auth_url) {
+            window.location.href = data.auth_url;
+        } else {
+            throw new Error("Invalid response from server. No auth_url found.");
+        }
     } catch (e) {
         console.error(e);
         showToast("連携の開始に失敗しました: " + e.message, 'error');
