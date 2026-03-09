@@ -39,7 +39,8 @@ gcloud auth application-default login
 ```bash
 cp .env.example .env
 ```
-※ `GEMINI_API_KEY`, `ENCRYPTION_KEY`, および Firebase の設定値が必要です。詳細は [CLOUD_SETUP.md](./CLOUD_SETUP.md) を参照してください。
+※ `GEMINI_API_KEY`, `ENCRYPTION_KEY`, `ZAIM_CONSUMER_KEY`, `ZAIM_CONSUMER_SECRET`, `ZAIM_CALLBACK_URL` および Firebase の設定値が必要です。
+手順の詳細は **[ZAIM_OAUTH_SETUP.md](./ZAIM_OAUTH_SETUP.md)**, [DEPLOY.md](./DEPLOY.md), [CLOUD_SETUP.md](./CLOUD_SETUP.md) を参照してください。
 
 ## 開発・実行コマンド
 

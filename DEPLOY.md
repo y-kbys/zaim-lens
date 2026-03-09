@@ -55,9 +55,9 @@ gcloud run deploy zaim-lens \
 Zaim の API 連携には、デプロイ時に以下の環境変数を設定して Zaim 開発者センターと同期させる必要があります：
 - `ZAIM_CONSUMER_KEY`: Consumer Key
 - `ZAIM_CONSUMER_SECRET`: Consumer Secret
-- `ZAIM_CALLBACK_URL`: コールバックURL（例: `https://your-app.a.run.app/api/zaim/callback`）
+- `ZAIM_CALLBACK_URL`: コールバックURL
 
-ユーザーごとのアクセストークンは、アプリ内の「Zaim API設定」からボタン一つで取得・保存されます。
+詳細な取得・設定手順は **[ZAIM_OAUTH_SETUP.md](./ZAIM_OAUTH_SETUP.md)** を参照してください。
 
 ## 4. プロジェクト構造
 - `main.py`: FastAPI バックエンド
