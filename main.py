@@ -441,15 +441,24 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
         # Save to DB
         config = get_user_config(user_id)
         accounts = config.get("accounts", {})
-        
-        # Generate or reuse account ID
-        acct_id = str(len(accounts) + 1)
-        # Check for existing
+        # Generate or reuse account ID securely
+        # First check for existing name to allow overwriting if user uses the exact same name
+        acct_id = None
+        max_id = 0
         for aid, ainfo in accounts.items():
+            try:
+                numeric_id = int(aid)
+                if numeric_id > max_id:
+                    max_id = numeric_id
+            except ValueError:
+                pass
+                
             if ainfo.get('name') == pending_name:
                 acct_id = aid
-                break
-        
+                
+        if not acct_id:
+            acct_id = str(max_id + 1)
+
         accounts[acct_id] = {
             "id": acct_id,
             "name": pending_name,
