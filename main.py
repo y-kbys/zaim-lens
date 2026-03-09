@@ -217,6 +217,94 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 # Load legacy API key if any
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+# --- Firebase Auth Dependencies ---
+FIREBASE_KEYS_CACHE = {"keys": {}, "expiry": 0}
+
+def get_firebase_public_keys():
+    global FIREBASE_KEYS_CACHE
+    if time.time() < FIREBASE_KEYS_CACHE["expiry"]:
+        return FIREBASE_KEYS_CACHE["keys"]
+    try:
+        res = requests.get("https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com")
+        if res.status_code == 200:
+            FIREBASE_KEYS_CACHE["keys"] = res.json()
+            cc = res.headers.get("Cache-Control", "")
+            max_age = 3600
+            if "max-age=" in cc:
+                try:
+                    max_age = int(cc.split("max-age=")[1].split(",")[0])
+                except: pass
+            FIREBASE_KEYS_CACHE["expiry"] = time.time() + max_age
+            return FIREBASE_KEYS_CACHE["keys"]
+    except Exception as e:
+        print(f"Error fetching Firebase public keys: {e}")
+    return {}
+
+def verify_token_manually(id_token: str) -> str:
+    project_id = os.environ.get("FIREBASE_PROJECT_ID")
+    if not project_id:
+        raise Exception("FIREBASE_PROJECT_ID environment variable is missing.")
+    
+    header = jwt.get_unverified_header(id_token)
+    kid = header.get("kid")
+    public_keys = get_firebase_public_keys()
+    cert_str = public_keys.get(kid)
+    
+    if not cert_str:
+        raise Exception(f"Public key for kid '{kid}' not found.")
+        
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    cert_obj = x509.load_pem_x509_certificate(cert_str.encode(), default_backend())
+    public_key = cert_obj.public_key()
+    
+    decoded = jwt.decode(
+        id_token,
+        public_key,
+        algorithms=["RS256"],
+        audience=project_id,
+        issuer=f"https://securetoken.google.com/{project_id}"
+    )
+    uid = decoded.get("uid") or decoded.get("sub")
+    if not uid:
+        raise Exception("Token does not contain a uid or sub claim.")
+    return uid
+
+security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
+
+def verify_token_logic(id_token: str) -> str:
+    """Core logic to verify Firebase JWT token."""
+    try:
+        decoded_token = auth.verify_id_token(id_token, app=firebase_app)
+        return decoded_token['uid']
+    except Exception as e:
+        error_msg = str(e)
+        if "Your default credentials were not found" in error_msg:
+            return verify_token_manually(id_token)
+        raise e
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Verifies Firebase JWT token and returns the user's UID."""
+    try:
+        return verify_token_logic(credentials.credentials)
+    except Exception as e:
+        print(f"Token verification failed: {e}")
+        raise HTTPException(
+            status_code=401,
+            detail=f"Authentication failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+def verify_token_optional(credentials: HTTPAuthorizationCredentials = Depends(security_optional)) -> Optional[str]:
+    """Verifies token if present, returns None if missing or invalid."""
+    if not credentials:
+        return None
+    try:
+        return verify_token_logic(credentials.credentials)
+    except:
+        return None
+
 @app.get("/", response_class=HTMLResponse)
 async def read_index():
     try:
@@ -224,9 +312,6 @@ async def read_index():
             return f.read()
     except FileNotFoundError:
         return "index.html not found in static/"
-
-# --- Zaim OAuth 1.0a Endpoints ---
-from fastapi import Request
 
 @app.get("/api/zaim/login")
 async def zaim_login(request: Request, name: str = "デフォルト", idToken: str = None, user_id_dep: str = Depends(verify_token_optional)):
@@ -361,100 +446,6 @@ async def zaim_disconnect(account_id: str, user_id: str = Depends(verify_token))
     else:
         raise HTTPException(status_code=404, detail="Account not found.")
 
-# Firebase Auth Dependency
-# --- Manual JWT Verification Fallback ---
-# Standard firebase-admin verification requires service account credentials even for public key checks.
-# This manual fallback allows local testing without a service account JSON file.
-FIREBASE_KEYS_CACHE = {"keys": {}, "expiry": 0}
-
-def get_firebase_public_keys():
-    global FIREBASE_KEYS_CACHE
-    if time.time() < FIREBASE_KEYS_CACHE["expiry"]:
-        return FIREBASE_KEYS_CACHE["keys"]
-    try:
-        res = requests.get("https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com")
-        if res.status_code == 200:
-            FIREBASE_KEYS_CACHE["keys"] = res.json()
-            cc = res.headers.get("Cache-Control", "")
-            max_age = 3600
-            if "max-age=" in cc:
-                try:
-                    max_age = int(cc.split("max-age=")[1].split(",")[0])
-                except: pass
-            FIREBASE_KEYS_CACHE["expiry"] = time.time() + max_age
-            return FIREBASE_KEYS_CACHE["keys"]
-    except Exception as e:
-        print(f"Error fetching Firebase public keys: {e}")
-    return {}
-
-def verify_token_manually(id_token: str) -> str:
-    project_id = os.environ.get("FIREBASE_PROJECT_ID")
-    if not project_id:
-        raise Exception("FIREBASE_PROJECT_ID environment variable is missing.")
-    
-    header = jwt.get_unverified_header(id_token)
-    kid = header.get("kid")
-    public_keys = get_firebase_public_keys()
-    cert_str = public_keys.get(kid)
-    
-    if not cert_str:
-        raise Exception(f"Public key for kid '{kid}' not found.")
-        
-    from cryptography import x509
-    from cryptography.hazmat.backends import default_backend
-    cert_obj = x509.load_pem_x509_certificate(cert_str.encode(), default_backend())
-    public_key = cert_obj.public_key()
-    
-    decoded = jwt.decode(
-        id_token,
-        public_key,
-        algorithms=["RS256"],
-        audience=project_id,
-        issuer=f"https://securetoken.google.com/{project_id}"
-    )
-    # Firebase ID tokens use 'sub' for the user UID. 'uid' is sometimes present depending on the library.
-    uid = decoded.get("uid") or decoded.get("sub")
-    if not uid:
-        print(f"Manual decode success but missing identifier. Claims: {list(decoded.keys())}")
-        raise Exception("Token does not contain a uid or sub claim.")
-    return uid
-
-security = HTTPBearer()
-security_optional = HTTPBearer(auto_error=False)
-
-def verify_token_logic(id_token: str) -> str:
-    """Core logic to verify Firebase JWT token."""
-    try:
-        # 1. Try standard Firebase Admin SDK verification
-        decoded_token = auth.verify_id_token(id_token, app=firebase_app)
-        return decoded_token['uid']
-    except Exception as e:
-        error_msg = str(e)
-        if "Your default credentials were not found" in error_msg:
-            # 2. Fallback: Manual verification using public keys
-            return verify_token_manually(id_token)
-        raise e
-
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """Verifies Firebase JWT token and returns the user's UID. Raises 401 on failure."""
-    try:
-        return verify_token_logic(credentials.credentials)
-    except Exception as e:
-        print(f"Token verification failed: {e}")
-        raise HTTPException(
-            status_code=401,
-            detail=f"Authentication failed: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-def verify_token_optional(credentials: HTTPAuthorizationCredentials = Depends(security_optional)) -> Optional[str]:
-    """Verifies token if present, returns None if missing or invalid."""
-    if not credentials:
-        return None
-    try:
-        return verify_token_logic(credentials.credentials)
-    except:
-        return None
 
 @app.get("/api/config")
 async def get_firebase_config():
