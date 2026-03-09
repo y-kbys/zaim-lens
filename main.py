@@ -315,28 +315,36 @@ async def read_index():
 
 @app.get("/api/zaim/login")
 async def zaim_login(request: Request, name: str = "デフォルト", idToken: str = None, user_id_dep: str = Depends(verify_token_optional)):
+    print(f"DEBUG: zaim_login initiated. name={name}, has_idToken={bool(idToken)}, user_id_dep={user_id_dep}")
+    
     # Use idToken from query if user_id_dep didn't resolve (e.g. standard redirect)
     user_id = user_id_dep
     if not user_id and idToken:
         try:
             user_id = verify_token_manually(idToken)
-        except:
+            print(f"DEBUG: zaim_login manual verify success. user_id={user_id}")
+        except Exception as ve:
+            print(f"DEBUG: zaim_login manual verify failed: {ve}")
             pass
             
     if not user_id:
+        print("DEBUG: zaim_login failed: No user_id")
         raise HTTPException(status_code=401, detail="Authentication required")
 
     if not ZAIM_CONSUMER_KEY or not ZAIM_CONSUMER_SECRET:
+        print("DEBUG: zaim_login failed: Missing ZAIM_CONSUMER_KEY or SECRET")
         raise HTTPException(status_code=500, detail="Zaim Consumer Key/Secret is missing in environment variables.")
 
     # Explicitly use ZAIM_CALLBACK_URL if provided, else rely on request.url_for
     callback_url = ZAIM_CALLBACK_URL
     if not callback_url:
         callback_uri = request.url_for('zaim_callback')
-        # In some proxy environments, request.url_for might return http instead of https
-        # We can force https if needed or let common reverse proxy headers handle it.
-        # Here we just use the string representation.
         callback_url = str(callback_uri)
+        # Cloud Run / Proxy workaround: Force https if not localhost
+        if "localhost" not in callback_url and callback_url.startswith("http://"):
+            callback_url = callback_url.replace("http://", "https://", 1)
+    
+    print(f"DEBUG: zaim_login using callback_url={callback_url}")
 
     try:
         zaim = OAuth1Session(ZAIM_CONSUMER_KEY, client_secret=ZAIM_CONSUMER_SECRET, callback_uri=callback_url)
