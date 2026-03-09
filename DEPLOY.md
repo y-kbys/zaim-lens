@@ -33,8 +33,10 @@ npm run build:css
 ```yaml
 FIREBASE_API_KEY: "..."
 FIREBASE_PROJECT_ID: "..."
-# ... 他の必須変数 ...
 ENCRYPTION_KEY: "your_secure_string"
+ZAIM_CONSUMER_KEY: "..."
+ZAIM_CONSUMER_SECRET: "..."
+ZAIM_CALLBACK_URL: "https://your-app.a.run.app/api/zaim/callback"
 ```
 
 ### 3. デプロイコマンド
@@ -48,11 +50,14 @@ gcloud run deploy zaim-lens \
   --env-vars-file env.yaml
 ```
 
-## 3. アカウント設定について (Zaim Credentials)
+## 3. Zaim OAuth 連携の設定
 
-Zaim の API 認証情報（Consumer Key, Access Token など）は**環境変数から設定する必要はありません**。
+Zaim の API 連携には、デプロイ時に以下の環境変数を設定して Zaim 開発者センターと同期させる必要があります：
+- `ZAIM_CONSUMER_KEY`: Consumer Key
+- `ZAIM_CONSUMER_SECRET`: Consumer Secret
+- `ZAIM_CALLBACK_URL`: コールバックURL（例: `https://your-app.a.run.app/api/zaim/callback`）
 
-アプリの初回起動・ログイン後、UI 上の「Zaim連携設定」から直接入力してください。入力された情報は Firebase Firestore に安全に保存され、複数アカウントの切り替えも可能です。
+ユーザーごとのアクセストークンは、アプリ内の「Zaim API設定」からボタン一つで取得・保存されます。
 
 ## 4. プロジェクト構造
 - `main.py`: FastAPI バックエンド

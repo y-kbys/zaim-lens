@@ -10,8 +10,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 import datetime
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
+from starlette.middleware.sessions import SessionMiddleware
 import json
 import traceback
 from google import genai
@@ -23,6 +24,12 @@ from requests_oauthlib import OAuth1Session
 from db import get_user_config, save_user_config, delete_user_config, firebase_app
 
 load_dotenv()
+
+# --- Zaim OAuth Constants ---
+ZAIM_CONSUMER_KEY = os.environ.get("ZAIM_CONSUMER_KEY")
+ZAIM_CONSUMER_SECRET = os.environ.get("ZAIM_CONSUMER_SECRET")
+ZAIM_CALLBACK_URL = os.environ.get("ZAIM_CALLBACK_URL")
+SESSION_SECRET = os.environ.get("SESSION_SECRET", os.environ.get("ENCRYPTION_KEY", "temporary-secret-for-session"))
 
 # --- Pydantic Schemas ---
 class ReceiptItem(BaseModel):
@@ -89,8 +96,6 @@ def migrate_env_to_firestore():
                     accounts[acct_id] = {
                         "id": acct_id,
                         "name": name,
-                        "consumer_key": consumer_key,
-                        "consumer_secret": consumer_secret,
                         "token": token,
                         "token_secret": token_secret
                     }
@@ -106,8 +111,6 @@ def migrate_env_to_firestore():
             accounts["1"] = {
                 "id": "1",
                 "name": "Default Account",
-                "consumer_key": legacy_key,
-                "consumer_secret": legacy_secret,
                 "token": legacy_token,
                 "token_secret": legacy_token_secret
             }
@@ -128,7 +131,6 @@ except Exception as e:
 def get_zaim_session(account_id: str, user_id: str):
     config = get_user_config(user_id)
     accounts = config.get("accounts", {})
-    # Ensure account_id is treated as a string since JSON object keys are strings
     str_account_id = str(account_id)
     acct = accounts.get(str_account_id)
     
@@ -136,9 +138,12 @@ def get_zaim_session(account_id: str, user_id: str):
         print(f"DEBUG: get_zaim_session failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts.keys())}")
         raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
         
+    if not ZAIM_CONSUMER_KEY or not ZAIM_CONSUMER_SECRET:
+        raise HTTPException(status_code=500, detail="System Zaim Consumer credentials are not configured.")
+
     return OAuth1Session(
-        acct["consumer_key"],
-        client_secret=acct["consumer_secret"],
+        ZAIM_CONSUMER_KEY,
+        client_secret=ZAIM_CONSUMER_SECRET,
         resource_owner_key=acct["token"],
         resource_owner_secret=acct["token_secret"]
     )
@@ -206,6 +211,9 @@ app = FastAPI(title="Zaim Lens")
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Add SessionMiddleware for OAuth 1.0a request token secret storage
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
+
 # Load legacy API key if any
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
@@ -216,6 +224,142 @@ async def read_index():
             return f.read()
     except FileNotFoundError:
         return "index.html not found in static/"
+
+# --- Zaim OAuth 1.0a Endpoints ---
+from fastapi import Request
+
+@app.get("/api/zaim/login")
+async def zaim_login(request: Request, name: str = "デフォルト", idToken: str = None, user_id_dep: str = Depends(verify_token_optional)):
+    # Use idToken from query if user_id_dep didn't resolve (e.g. standard redirect)
+    user_id = user_id_dep
+    if not user_id and idToken:
+        try:
+            user_id = verify_token_manually(idToken)
+        except:
+            pass
+            
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    if not ZAIM_CONSUMER_KEY or not ZAIM_CONSUMER_SECRET:
+        raise HTTPException(status_code=500, detail="Zaim Consumer Key/Secret is missing in environment variables.")
+
+    # Explicitly use ZAIM_CALLBACK_URL if provided, else rely on request.url_for
+    callback_url = ZAIM_CALLBACK_URL
+    if not callback_url:
+        callback_uri = request.url_for('zaim_callback')
+        # In some proxy environments, request.url_for might return http instead of https
+        # We can force https if needed or let common reverse proxy headers handle it.
+        # Here we just use the string representation.
+        callback_url = str(callback_uri)
+
+    try:
+        zaim = OAuth1Session(ZAIM_CONSUMER_KEY, client_secret=ZAIM_CONSUMER_SECRET, callback_uri=callback_url)
+        request_token_url = "https://api.zaim.net/v2/auth/request"
+        fetch_response = zaim.fetch_request_token(request_token_url)
+        
+        # Save request token secret in session to use it in callback
+        request.session['user_id'] = user_id
+        request.session['zaim_oauth_token_secret'] = fetch_response.get('oauth_token_secret')
+        request.session['zaim_pending_name'] = name
+        
+        # Build authorize URL
+        base_authorization_url = "https://auth.zaim.net/users/auth"
+        authorization_url = zaim.create_authorization_url(base_authorization_url)
+        return RedirectResponse(authorization_url)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to initiate Zaim OAuth: {str(e)}")
+
+@app.get("/api/zaim/callback")
+async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str):
+    # Retrieve user_id from session or require authentication if possible
+    # Since we redirected away, we might lose the idToken in the client.
+    # However, for this simplified flow, we will rely on the session or redirect back to a landing page 
+    # that handles the token storage after the client-side app re-authenticates.
+    # BUT, Zaim OAuth 1.0a callback doesn't include user context. 
+    # To fix this, we can store user_id in session before redirecting.
+    
+    user_id = request.session.get('user_id')
+    if not user_id:
+        # If we lost user_id, we can't save the token. 
+        # We might need to ask the user to log in again or use a temporary cookie.
+        return HTMLResponse("<html><body><script>alert('Session lost. Please try again.'); window.location.href='/';</script></body></html>")
+
+    request_token_secret = request.session.get('zaim_oauth_token_secret')
+    pending_name = request.session.get('zaim_pending_name', 'Zaim Account')
+
+    if not request_token_secret:
+        raise HTTPException(status_code=400, detail="OAuth request token secret missing in session.")
+
+    try:
+        zaim = OAuth1Session(
+            ZAIM_CONSUMER_KEY, 
+            client_secret=ZAIM_CONSUMER_SECRET,
+            resource_owner_key=oauth_token,
+            resource_owner_secret=request_token_secret
+        )
+        access_token_url = "https://api.zaim.net/v2/auth/access"
+        token_res = zaim.fetch_access_token(access_token_url, verifier=oauth_verifier)
+        
+        final_token = token_res.get('oauth_token')
+        final_token_secret = token_res.get('oauth_token_secret')
+        
+        # Save to DB
+        config = get_user_config(user_id)
+        accounts = config.get("accounts", {})
+        
+        # Generate or reuse account ID
+        acct_id = str(len(accounts) + 1)
+        # Check for existing
+        for aid, ainfo in accounts.items():
+            if ainfo.get('name') == pending_name:
+                acct_id = aid
+                break
+        
+        accounts[acct_id] = {
+            "id": acct_id,
+            "name": pending_name,
+            "token": final_token,
+            "token_secret": final_token_secret
+        }
+        config["accounts"] = accounts
+        save_user_config(user_id, config)
+        
+        # Clear sensitive session data
+        request.session.pop('zaim_oauth_token_secret', None)
+        request.session.pop('zaim_pending_name', None)
+        
+        return HTMLResponse("<html><body><script>window.location.href='/';</script></body></html>")
+    except Exception as e:
+        traceback.print_exc()
+        return HTMLResponse(f"<html><body>OAuth failed: {str(e)} <a href='/'>Back</a></body></html>")
+
+@app.get("/api/zaim/status")
+async def get_zaim_status(user_id: str = Depends(verify_token)):
+    config = get_user_config(user_id)
+    accounts = config.get("accounts", {})
+    # Return basic info without sensitive tokens (though DB layer handles encryption, we shouldn't leak even decrypted ones)
+    status_list = []
+    for aid, ainfo in accounts.items():
+        status_list.append({
+            "id": aid,
+            "name": ainfo.get("name", "Unknown"),
+            "connected": True
+        })
+    return {"accounts": status_list}
+
+@app.delete("/api/zaim/disconnect/{account_id}")
+async def zaim_disconnect(account_id: str, user_id: str = Depends(verify_token)):
+    config = get_user_config(user_id)
+    accounts = config.get("accounts", {})
+    if account_id in accounts:
+        del accounts[account_id]
+        config["accounts"] = accounts
+        save_user_config(user_id, config)
+        return {"status": "success"}
+    else:
+        raise HTTPException(status_code=404, detail="Account not found.")
 
 # Firebase Auth Dependency
 # --- Manual JWT Verification Fallback ---
@@ -276,35 +420,41 @@ def verify_token_manually(id_token: str) -> str:
     return uid
 
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
-    """Verifies Firebase JWT token and returns the user's UID."""
-    id_token = credentials.credentials
+def verify_token_logic(id_token: str) -> str:
+    """Core logic to verify Firebase JWT token."""
     try:
-        # 1. Try standard Firebase Admin SDK verification (Requires ADC/Service Account)
+        # 1. Try standard Firebase Admin SDK verification
         decoded_token = auth.verify_id_token(id_token, app=firebase_app)
         return decoded_token['uid']
     except Exception as e:
         error_msg = str(e)
         if "Your default credentials were not found" in error_msg:
-            # 2. Fallback: Manual verification using public keys (Works locally without credentials)
-            try:
-                print("Firebase Admin verification failed (no credentials). Attempting manual verification fallback...")
-                return verify_token_manually(id_token)
-            except Exception as me:
-                print(f"Manual verification also failed: {me}")
-                raise HTTPException(
-                    status_code=401,
-                    detail=f"Authentication failed: {error_msg} AND {str(me)}",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-        
-        print(f"Token verification failed: {error_msg}")
+            # 2. Fallback: Manual verification using public keys
+            return verify_token_manually(id_token)
+        raise e
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Verifies Firebase JWT token and returns the user's UID. Raises 401 on failure."""
+    try:
+        return verify_token_logic(credentials.credentials)
+    except Exception as e:
+        print(f"Token verification failed: {e}")
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid or expired authentication token: {error_msg}",
+            detail=f"Authentication failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+def verify_token_optional(credentials: HTTPAuthorizationCredentials = Depends(security_optional)) -> Optional[str]:
+    """Verifies token if present, returns None if missing or invalid."""
+    if not credentials:
+        return None
+    try:
+        return verify_token_logic(credentials.credentials)
+    except:
+        return None
 
 @app.get("/api/config")
 async def get_firebase_config():

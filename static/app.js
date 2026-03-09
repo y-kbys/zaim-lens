@@ -139,12 +139,8 @@ const EL = {
     // Zaim Creds Modal
     zaimCredsModal: document.getElementById('zaim-creds-modal'),
     btnCloseCreds: document.getElementById('btn-close-creds'),
-    btnSaveCreds: document.getElementById('btn-save-creds'),
-    zaimConsumerKey: document.getElementById('zaim-consumer-key'),
-    zaimConsumerSecret: document.getElementById('zaim-consumer-secret'),
-    zaimToken: document.getElementById('zaim-token'),
-    zaimTokenSecret: document.getElementById('zaim-token-secret'),
     zaimAccountName: document.getElementById('zaim-account-name'),
+    btnZaimConnect: document.getElementById('btn-zaim-connect'),
 
     // Gemini Creds Modal
     menuItemGeminiCreds: document.getElementById('menu-item-gemini-creds'),
@@ -155,13 +151,6 @@ const EL = {
     btnCancelGeminiCreds: document.getElementById('btn-cancel-gemini-creds'),
     geminiApiKey: document.getElementById('gemini-api-key'),
     geminiKeyStatus: document.getElementById('gemini-key-status'),
-    btnCloseCreds: document.getElementById('btn-close-creds'),
-    btnSaveCreds: document.getElementById('btn-save-creds'),
-    zaimConsumerKey: document.getElementById('zaim-consumer-key'),
-    zaimConsumerSecret: document.getElementById('zaim-consumer-secret'),
-    zaimToken: document.getElementById('zaim-token'),
-    zaimTokenSecret: document.getElementById('zaim-token-secret'),
-    zaimAccountName: document.getElementById('zaim-account-name'),
 
     // Multi-Account elements
     zaimAccountsList: document.getElementById('zaim-accounts-list'),
@@ -1137,10 +1126,10 @@ function resetApp() {
 // サーバーから最新のアカウント一覧を取得し、メモリ（appState.accounts）とUIの全プルダウンを更新する
 async function refreshAllAccountDropdowns() {
     try {
-        const response = await apiFetch('/api/accounts');
+        const response = await apiFetch('/api/zaim/status');
         if (!response.ok) return;
         const data = await response.json();
-        appState.accounts = data || [];
+        appState.accounts = data.accounts || [];
 
         const options = appState.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         const placeholder = '<option value="" disabled selected>アカウントを選択...</option>';
@@ -1958,7 +1947,12 @@ const renderZaimAccountsList = () => {
         const item = document.createElement('div');
         item.className = 'p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 flex justify-between items-center group cursor-pointer hover:border-blue-500 transition-all';
         item.innerHTML = `
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">${acc.name}</span>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3 text-blue-600 dark:text-blue-400">
+                    <i class="fa-solid fa-user-check text-xs"></i>
+                </div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">${acc.name}</span>
+            </div>
             <i class="fa-solid fa-chevron-right text-xs text-gray-400 group-hover:translate-x-1 transition-transform"></i>
         `;
         item.onclick = () => editExternalAccount(acc.id);
@@ -1971,28 +1965,10 @@ const editExternalAccount = async (id) => {
     const acc = appState.accounts.find(a => a.id == id);
     EL.zaimAccountName.value = acc ? acc.name : "";
 
-    // Clear other fields while loading
-    EL.zaimConsumerKey.value = "";
-    EL.zaimConsumerSecret.value = "";
-    EL.zaimToken.value = "";
-    EL.zaimTokenSecret.value = "";
-
-    try {
-        const response = await apiFetch(`/api/zaim/credentials/${id}`);
-        if (!response.ok) throw new Error(await response.text());
-        const data = await response.json();
-
-        EL.zaimAccountName.value = data.name || "";
-        EL.zaimConsumerKey.value = data.consumer_key || "";
-        EL.zaimConsumerSecret.value = data.consumer_secret || "";
-        EL.zaimToken.value = data.token || "";
-        EL.zaimTokenSecret.value = data.token_secret || "";
-    } catch (e) {
-        console.error("Failed to load account details", e);
-        showToast("アカウント詳細の取得に失敗しました。", 'error');
-    }
-
     EL.zaimFormContainer.classList.remove('hidden');
+    // Hide connect button when editing existing (we only allow disconnect/rename via OAuth if we want, but currently just disconnect)
+    EL.btnZaimConnect.parentElement.classList.add('hidden');
+
     EL.zaimButtonsContainer.classList.remove('hidden');
     EL.btnDeleteCreds.classList.remove('hidden');
     EL.zaimAccountsList.parentElement.classList.add('hidden');
@@ -2014,10 +1990,6 @@ const openZaimSettings = async () => {
 
     // Reset form
     EL.zaimAccountName.value = "";
-    EL.zaimConsumerKey.value = "";
-    EL.zaimConsumerSecret.value = "";
-    EL.zaimToken.value = "";
-    EL.zaimTokenSecret.value = "";
 
     EL.zaimFormContainer.classList.add('hidden');
     EL.zaimButtonsContainer.classList.add('hidden');
@@ -2181,28 +2153,62 @@ EL.btnCancelCreds.addEventListener('click', () => {
 EL.btnAddNewAccount.addEventListener('click', () => {
     appState.editingAccountId = null;
     EL.zaimAccountName.value = "";
-    EL.zaimConsumerKey.value = "";
-    EL.zaimConsumerSecret.value = "";
-    EL.zaimToken.value = "";
-    EL.zaimTokenSecret.value = "";
 
     EL.zaimFormContainer.classList.remove('hidden');
+    EL.btnZaimConnect.parentElement.classList.remove('hidden');
+    // We don't show the "save" button anymore, OAuth handles it
     EL.zaimButtonsContainer.classList.remove('hidden');
     EL.btnDeleteCreds.classList.add('hidden');
     EL.zaimAccountsList.parentElement.classList.add('hidden');
 });
 
-EL.btnDeleteCreds.addEventListener('click', async () => {
-    if (!appState.editingAccountId) return;
-    if (!await showConfirm("削除の確認", "このアカウントの連携設定を削除しますか？")) return;
+EL.btnZaimConnect.addEventListener('click', async () => {
+    const name = EL.zaimAccountName.value.trim() || "Zaim Account";
+    const btnOriginalText = EL.btnZaimConnect.innerHTML;
+    EL.btnZaimConnect.disabled = true;
+    EL.btnZaimConnect.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 連携中...';
 
     try {
-        const resp = await apiFetch(`/api/zaim/credentials/${appState.editingAccountId}`, {
+        // We call the API to get the redirect URL. 
+        // Note: For OAuth 1.0a, we need to pass headers so we use apiFetch.
+        const res = await apiFetch(`/api/zaim/login?name=${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error(await res.text());
+
+        // Since the backend returns a RedirectResponse, if we use fetch (apiFetch), 
+        // it follows the redirect internally if possible, but for cross-domain OAuth redirects, 
+        // it might fail with CORS. 
+        // To avoid this, the backend should return the URL as JSON if it's an AJAX request.
+        // I'll update the backend to support this if needed, or I can just use a simple <a> link or similar.
+        // However, I can't set headers on a simple link.
+
+        // Let's assume for now apiFetch handles JSON response with url if I modify it.
+        // REVISED Backend plan: Return JSON with redirect_url if requested.
+
+        // BUT, a simpler approach: use a standard form submit or window.location.href with token in query.
+        // I'll update main.py to allow user_id as query param for /api/zaim/login if it's more convenient.
+
+        // Actually, let's keep it as is and use a trick: 
+        // redirect to the login endpoint which will then redirect to Zaim.
+        window.location.href = `/api/zaim/login?name=${encodeURIComponent(name)}&idToken=${encodeURIComponent(appState.idToken)}`;
+    } catch (e) {
+        console.error(e);
+        showToast("連携の開始に失敗しました: " + e.message, 'error');
+        EL.btnZaimConnect.disabled = false;
+        EL.btnZaimConnect.innerHTML = btnOriginalText;
+    }
+});
+
+EL.btnDeleteCreds.addEventListener('click', async () => {
+    if (!appState.editingAccountId) return;
+    if (!await showConfirm("連携解除の確認", "このZaimアカウントとの連携を解除しますか？")) return;
+
+    try {
+        const resp = await apiFetch(`/api/zaim/disconnect/${appState.editingAccountId}`, {
             method: 'DELETE'
         });
         if (!resp.ok) throw new Error(await resp.text());
 
-        showToast("連携を削除しました。");
+        showToast("連携を解除しました。");
         await refreshAllAccountDropdowns();
         renderZaimAccountsList();
 
@@ -2210,53 +2216,7 @@ EL.btnDeleteCreds.addEventListener('click', async () => {
         EL.zaimAccountsList.parentElement.classList.remove('hidden');
         updateZaimCloseButtonVisibility();
     } catch (e) {
-        showToast("削除に失敗しました: " + e.message, 'error');
-    }
-});
-
-EL.btnSaveCreds.addEventListener('click', async () => {
-    const payload = {
-        account_id: appState.editingAccountId,
-        name: EL.zaimAccountName.value.trim() || "デフォルトアカウント",
-        consumer_key: EL.zaimConsumerKey.value.trim(),
-        consumer_secret: EL.zaimConsumerSecret.value.trim(),
-        token: EL.zaimToken.value.trim(),
-        token_secret: EL.zaimTokenSecret.value.trim(),
-    };
-
-    if (!payload.consumer_key || !payload.consumer_secret || !payload.token || !payload.token_secret) {
-        showToast("すべての項目を入力してください。", 'warning');
-        return;
-    }
-
-    const btnOriginalText = EL.btnSaveCreds.innerHTML;
-    EL.btnSaveCreds.disabled = true;
-    EL.btnSaveCreds.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 保存中...';
-
-    try {
-        const res = await apiFetch('/api/zaim/credentials', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error(await res.text());
-
-        showToast("連携設定を保存しました。");
-
-        await refreshAllAccountDropdowns();
-        renderZaimAccountsList();
-
-        EL.zaimFormContainer.classList.add('hidden');
-        EL.zaimButtonsContainer.classList.add('hidden');
-        EL.zaimAccountsList.parentElement.classList.remove('hidden');
-        updateZaimCloseButtonVisibility();
-    } catch (e) {
-        console.error(e);
-        showToast("設定の保存に失敗しました: " + e.message, 'error');
-    } finally {
-        EL.btnSaveCreds.disabled = false;
-        EL.btnSaveCreds.innerHTML = btnOriginalText;
+        showToast("解除に失敗しました: " + e.message, 'error');
     }
 });
 
