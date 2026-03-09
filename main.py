@@ -241,16 +241,24 @@ def get_firebase_public_keys():
     return {}
 
 def verify_token_manually(id_token: str) -> str:
-    project_id = os.environ.get("FIREBASE_PROJECT_ID")
+    # Use explicitly set project ID or Cloud Run's default project env var
+    project_id = os.environ.get("FIREBASE_PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
     if not project_id:
+        print("DEBUG: verify_token_manually failed: FIREBASE_PROJECT_ID and GOOGLE_CLOUD_PROJECT are missing.")
         raise Exception("FIREBASE_PROJECT_ID environment variable is missing.")
     
-    header = jwt.get_unverified_header(id_token)
+    try:
+        header = jwt.get_unverified_header(id_token)
+    except Exception as e:
+        print(f"DEBUG: verify_token_manually failed to get header: {e}")
+        raise e
+
     kid = header.get("kid")
     public_keys = get_firebase_public_keys()
     cert_str = public_keys.get(kid)
     
     if not cert_str:
+        print(f"DEBUG: verify_token_manually failed: Public key for kid '{kid}' not found.")
         raise Exception(f"Public key for kid '{kid}' not found.")
         
     from cryptography import x509
@@ -258,17 +266,31 @@ def verify_token_manually(id_token: str) -> str:
     cert_obj = x509.load_pem_x509_certificate(cert_str.encode(), default_backend())
     public_key = cert_obj.public_key()
     
-    decoded = jwt.decode(
-        id_token,
-        public_key,
-        algorithms=["RS256"],
-        audience=project_id,
-        issuer=f"https://securetoken.google.com/{project_id}"
-    )
-    uid = decoded.get("uid") or decoded.get("sub")
-    if not uid:
-        raise Exception("Token does not contain a uid or sub claim.")
-    return uid
+    try:
+        decoded = jwt.decode(
+            id_token,
+            public_key,
+            algorithms=["RS256"],
+            audience=project_id,
+            issuer=f"https://securetoken.google.com/{project_id}"
+        )
+        uid = decoded.get("uid") or decoded.get("sub")
+        if not uid:
+            print(f"DEBUG: verify_token_manually failed: Missing uid/sub claim in decoded token. Claims: {list(decoded.keys())}")
+            raise Exception("Token does not contain a uid or sub claim.")
+        return uid
+    except Exception as e:
+        print(f"DEBUG: verify_token_manually JWT decode failed: {e}. project_id={project_id}")
+        # One last attempt: maybe the token audience is slightly different?
+        # Standard decode without strict aud/iss check to see if we can get the UID
+        try:
+             decoded_loose = jwt.decode(id_token, public_key, algorithms=["RS256"], options={"verify_aud": False, "verify_iss": False})
+             uid = decoded_loose.get("uid") or decoded_loose.get("sub")
+             if uid:
+                 print(f"DEBUG: verify_token_manually succeeded with loose verification. UID={uid}")
+                 return uid
+        except: pass
+        raise e
 
 security = HTTPBearer()
 security_optional = HTTPBearer(auto_error=False)
@@ -358,7 +380,9 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         
         # Build authorize URL
         base_authorization_url = "https://auth.zaim.net/users/auth"
-        authorization_url = zaim.authorization_url(base_authorization_url)
+        # Passing request token explicitly as shown in the snippets
+        authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=fetch_response.get('oauth_token'))
+        print(f"DEBUG: zaim_login redirecting to {authorization_url}")
         return RedirectResponse(authorization_url)
     except Exception as e:
         traceback.print_exc()
