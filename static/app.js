@@ -2169,27 +2169,10 @@ EL.btnZaimConnect.addEventListener('click', async () => {
     EL.btnZaimConnect.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 連携中...';
 
     try {
-        // We call the API to get the redirect URL. 
-        // Note: For OAuth 1.0a, we need to pass headers so we use apiFetch.
-        const res = await apiFetch(`/api/zaim/login?name=${encodeURIComponent(name)}`);
-        if (!res.ok) throw new Error(await res.text());
-
-        // Since the backend returns a RedirectResponse, if we use fetch (apiFetch), 
-        // it follows the redirect internally if possible, but for cross-domain OAuth redirects, 
-        // it might fail with CORS. 
-        // To avoid this, the backend should return the URL as JSON if it's an AJAX request.
-        // I'll update the backend to support this if needed, or I can just use a simple <a> link or similar.
-        // However, I can't set headers on a simple link.
-
-        // Let's assume for now apiFetch handles JSON response with url if I modify it.
-        // REVISED Backend plan: Return JSON with redirect_url if requested.
-
-        // BUT, a simpler approach: use a standard form submit or window.location.href with token in query.
-        // I'll update main.py to allow user_id as query param for /api/zaim/login if it's more convenient.
-
-        // Actually, let's keep it as is and use a trick: 
-        // redirect to the login endpoint which will then redirect to Zaim.
-        window.location.href = `/api/zaim/login?name=${encodeURIComponent(name)}&idToken=${encodeURIComponent(appState.idToken)}`;
+        // Redirect directly to the login endpoint which will then redirect to Zaim.
+        // We pass idToken in the query string because top-level redirection cannot have custom headers.
+        const url = `/api/zaim/login?name=${encodeURIComponent(name)}&idToken=${encodeURIComponent(appState.idToken)}`;
+        window.location.href = url;
     } catch (e) {
         console.error(e);
         showToast("連携の開始に失敗しました: " + e.message, 'error');
