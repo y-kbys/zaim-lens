@@ -364,13 +364,12 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             return ReceiptParserResult.model_validate_json(response.text)
 
         try:
-            # gemini-1.5-flash is robust and widely available. 
-            # 2.0 or 2.5 names might be unstable or require specific regions/tiers.
-            gemini_result = await run_gemini("gemini-1.5-flash")
+            # Default to the highly accurate model
+            gemini_result = await run_gemini("gemini-flash-latest")
         except Exception as e:
-            print(f"Fallback initiated due to error with gemini-1.5-flash: {e}")
+            print(f"Fallback initiated due to error with gemini-flash-latest: {e}")
             # Fallback to the lite model
-            gemini_result = await run_gemini("gemini-1.5-flash-8b")
+            gemini_result = await run_gemini("gemini-2.5-flash-lite")
         
         result_dict = gemini_result.model_dump()
         cache_key = f"{user_id}_1" # Defaulting to account 1's master data for UI prompt if needed, though usually it matches current account
