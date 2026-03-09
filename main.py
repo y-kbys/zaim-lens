@@ -369,12 +369,6 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         if "localhost" not in callback_url and callback_url.startswith("http://"):
             callback_url = callback_url.replace("http://", "https://", 1)
             
-    # Add user_id to callback URL to ensure we can identify the user when Zaim redirects back
-    if "?" in callback_url:
-        callback_url += f"&user_id={user_id}"
-    else:
-        callback_url += f"?user_id={user_id}"
-    
     print(f"DEBUG: zaim_login using callback_url={callback_url}")
 
     try:
@@ -387,6 +381,7 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         
         # Save request token secret in session to use it in callback
         request.session['user_id'] = user_id
+        request.session['zaim_pending_user_id'] = user_id
         request.session['zaim_oauth_token_secret'] = oauth_token_secret
         request.session['zaim_pending_name'] = name
         
@@ -394,7 +389,8 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         if oauth_token:
             OAUTH_SECRETS[oauth_token] = {
                 'secret': oauth_token_secret,
-                'name': name
+                'name': name,
+                'user_id': user_id
             }
         
         # Build authorize URL
@@ -408,24 +404,23 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         raise HTTPException(status_code=500, detail=f"Failed to initiate Zaim OAuth: {str(e)}")
 
 @app.get("/api/zaim/callback")
-async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str, user_id: str = None):
-    # Retrieve user_id from query param first, then fallback to session
-    final_user_id = user_id or request.session.get('user_id')
-    
-    if not final_user_id:
-        # If we lost user_id, we can't save the token. 
-        # We might need to ask the user to log in again or use a temporary cookie.
-        return HTMLResponse("<html><body><script>alert('Session lost. Please try again.'); window.location.href='/';</script></body></html>")
-
+async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str):
     # Try to load secrets from global dict first (bypasses cookie issues)
     secret_data = OAUTH_SECRETS.pop(oauth_token, None)
     if secret_data:
         request_token_secret = secret_data.get('secret')
         pending_name = secret_data.get('name', 'Zaim Account')
+        user_id = secret_data.get('user_id')
     else:
         # Fallback to session
         request_token_secret = request.session.get('zaim_oauth_token_secret')
         pending_name = request.session.get('zaim_pending_name', 'Zaim Account')
+        user_id = request.session.get('zaim_pending_user_id') or request.session.get('user_id')
+
+    if not user_id:
+        # If we lost user_id, we can't save the token. 
+        # We might need to ask the user to log in again or use a temporary cookie.
+        return HTMLResponse("<html><body><script>alert('Session lost. Please try again.'); window.location.href='/';</script></body></html>")
 
     if not request_token_secret:
         raise HTTPException(status_code=400, detail="OAuth request token secret missing in session.")
@@ -467,6 +462,7 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str,
         # Clear sensitive session data
         request.session.pop('zaim_oauth_token_secret', None)
         request.session.pop('zaim_pending_name', None)
+        request.session.pop('zaim_pending_user_id', None)
         
         return HTMLResponse("<html><body><script>window.location.href='/';</script></body></html>")
     except Exception as e:
