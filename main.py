@@ -350,7 +350,7 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         
         # Build authorize URL
         base_authorization_url = "https://auth.zaim.net/users/auth"
-        authorization_url = zaim.create_authorization_url(base_authorization_url)
+        authorization_url = zaim.authorization_url(base_authorization_url)
         return RedirectResponse(authorization_url)
     except Exception as e:
         traceback.print_exc()
