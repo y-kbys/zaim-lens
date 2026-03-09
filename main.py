@@ -395,8 +395,8 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         
         # Build authorize URL
         base_authorization_url = "https://auth.zaim.net/users/auth"
-        # Passing request token explicitly as shown in the snippets
-        authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=oauth_token)
+        # Passing request token explicitly as shown in the snippets, and explicit callback URL
+        authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=oauth_token, oauth_callback=callback_url)
         print(f"DEBUG: zaim_login returning auth_url={authorization_url}")
         return {"auth_url": authorization_url}
     except Exception as e:
