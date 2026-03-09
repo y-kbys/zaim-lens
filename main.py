@@ -15,8 +15,7 @@ from pydantic import BaseModel
 import json
 import traceback
 from google import genai
-from google.genai import types
-from google.genai.errors import APIError
+from google.genai import types, errors
 from dotenv import load_dotenv
 import jwt
 import requests
@@ -365,12 +364,13 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             return ReceiptParserResult.model_validate_json(response.text)
 
         try:
-            # Default to the highly accurate model
-            gemini_result = await run_gemini("gemini-2.5-flash")
+            # gemini-1.5-flash is robust and widely available. 
+            # 2.0 or 2.5 names might be unstable or require specific regions/tiers.
+            gemini_result = await run_gemini("gemini-1.5-flash")
         except Exception as e:
-            print(f"Fallback initiated due to error with gemini-2.5-flash: {e}")
+            print(f"Fallback initiated due to error with gemini-1.5-flash: {e}")
             # Fallback to the lite model
-            gemini_result = await run_gemini("gemini-2.5-flash-lite")
+            gemini_result = await run_gemini("gemini-1.5-flash-8b")
         
         result_dict = gemini_result.model_dump()
         cache_key = f"{user_id}_1" # Defaulting to account 1's master data for UI prompt if needed, though usually it matches current account
@@ -382,7 +382,7 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             result_dict["master_genres"] = []
         
         return result_dict
-    except APIError as e:
+    except errors.APIError as e:
         print(f"Gemini APIError: {e}")
         if e.code == 429:
             raise HTTPException(status_code=429, detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。")

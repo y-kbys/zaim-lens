@@ -21,7 +21,8 @@ scripts/
 user_data/
 *.txt
 !requirements.txt
-*.code-workspace
+*zaim-lens.code-workspace
+tmp_pip_test/
 
 # Node / Frontend
 node_modules/
