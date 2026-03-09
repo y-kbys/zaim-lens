@@ -159,6 +159,8 @@ const EL = {
     btnCancelCreds: document.getElementById('btn-cancel-creds'),
     zaimFormContainer: document.getElementById('zaim-form-container'),
     zaimButtonsContainer: document.getElementById('zaim-buttons-container'),
+    btnCopyGuideZaim: document.getElementById('btn-copy-guide-zaim'),
+    btnCopyGuideGemini: document.getElementById('btn-copy-guide-gemini'),
 };
 
 /**
@@ -2207,6 +2209,20 @@ EL.btnDeleteCreds.addEventListener('click', async () => {
         showToast("解除に失敗しました: " + e.message, 'error');
     }
 });
+
+// Guide URL Copy Handlers
+const copyGuideUrl = () => {
+    const url = "https://note.com/logic_prompt/n/n9b49739594ca";
+    navigator.clipboard.writeText(url).then(() => {
+        showToast("セットアップガイドのURLをコピーしました。", 'success');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        showToast("URLのコピーに失敗しました。", 'error');
+    });
+};
+
+if (EL.btnCopyGuideZaim) EL.btnCopyGuideZaim.addEventListener('click', copyGuideUrl);
+if (EL.btnCopyGuideGemini) EL.btnCopyGuideGemini.addEventListener('click', copyGuideUrl);
 
 // App Entry Point
 initFirebaseAuth();
