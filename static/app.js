@@ -146,6 +146,23 @@ const EL = {
     zaimTokenSecret: document.getElementById('zaim-token-secret'),
     zaimAccountName: document.getElementById('zaim-account-name'),
 
+    // Gemini Creds Modal
+    menuItemGeminiCreds: document.getElementById('menu-item-gemini-creds'),
+    geminiCredsModal: document.getElementById('gemini-creds-modal'),
+    btnCloseGeminiCreds: document.getElementById('btn-close-gemini-creds'),
+    btnSaveGeminiCreds: document.getElementById('btn-save-gemini-creds'),
+    btnDeleteGeminiCreds: document.getElementById('btn-delete-gemini-creds'),
+    btnCancelGeminiCreds: document.getElementById('btn-cancel-gemini-creds'),
+    geminiApiKey: document.getElementById('gemini-api-key'),
+    geminiKeyStatus: document.getElementById('gemini-key-status'),
+    btnCloseCreds: document.getElementById('btn-close-creds'),
+    btnSaveCreds: document.getElementById('btn-save-creds'),
+    zaimConsumerKey: document.getElementById('zaim-consumer-key'),
+    zaimConsumerSecret: document.getElementById('zaim-consumer-secret'),
+    zaimToken: document.getElementById('zaim-token'),
+    zaimTokenSecret: document.getElementById('zaim-token-secret'),
+    zaimAccountName: document.getElementById('zaim-account-name'),
+
     // Multi-Account elements
     zaimAccountsList: document.getElementById('zaim-accounts-list'),
     btnAddNewAccount: document.getElementById('btn-add-new-account'),
@@ -508,6 +525,11 @@ async function startBackgroundParsing() {
                     showToast(errorDetail || "Geminiのレートリミットに達しました。時間を置いてから再度お試しください。", 'warning');
                     resetApp();
                     return; // Stop processing the queue
+                } else if (response.status === 400 && errorDetail.includes("API Key is not configured")) {
+                    showToast("Gemini APIキーが設定されていません。設定画面を開きます。", 'warning');
+                    resetApp();
+                    openGeminiSettings();
+                    return;
                 }
                 throw new Error(errorDetail);
             }
@@ -2051,6 +2073,96 @@ EL.menuItemZaimCreds.addEventListener('click', () => {
     closeSettingsDropdown();
     openZaimSettings();
 });
+
+// --- Gemini Settings ---
+const openGeminiSettings = async () => {
+    // Reset form
+    EL.geminiApiKey.value = "";
+    EL.geminiKeyStatus.textContent = "状態: 取得中...";
+    EL.geminiKeyStatus.className = "text-sm font-bold mt-2 text-gray-500";
+
+    try {
+        const response = await apiFetch(`/api/gemini/credentials`);
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+
+        if (data.is_configured) {
+            EL.geminiKeyStatus.textContent = `状態: 設定済み (末尾: ${data.api_key_last_4})`;
+            EL.geminiKeyStatus.className = "text-sm font-bold mt-2 text-green-600 dark:text-green-400";
+        } else {
+            EL.geminiKeyStatus.textContent = "状態: 未設定";
+            EL.geminiKeyStatus.className = "text-sm font-bold mt-2 text-red-600 dark:text-red-400";
+        }
+    } catch (e) {
+        console.error("Failed to load Gemini config", e);
+        EL.geminiKeyStatus.textContent = "状態: 確認失敗";
+    }
+
+    EL.geminiCredsModal.classList.remove('hidden');
+    setTimeout(() => {
+        EL.geminiCredsModal.classList.remove('opacity-0');
+        EL.geminiCredsModal.classList.add('opacity-100');
+    }, 10);
+};
+
+const closeGeminiSettings = () => {
+    EL.geminiCredsModal.classList.replace('opacity-100', 'opacity-0');
+    setTimeout(() => {
+        EL.geminiCredsModal.classList.add('hidden');
+    }, 300);
+};
+
+EL.menuItemGeminiCreds.addEventListener('click', () => {
+    closeSettingsDropdown();
+    openGeminiSettings();
+});
+
+EL.btnCloseGeminiCreds.addEventListener('click', closeGeminiSettings);
+EL.btnCancelGeminiCreds.addEventListener('click', closeGeminiSettings);
+
+EL.btnSaveGeminiCreds.addEventListener('click', async () => {
+    const apiKey = EL.geminiApiKey.value.trim();
+    if (!apiKey) {
+        showToast("APIキーを入力してください。", 'warning');
+        return;
+    }
+
+    const btnOriginalText = EL.btnSaveGeminiCreds.innerHTML;
+    EL.btnSaveGeminiCreds.disabled = true;
+    EL.btnSaveGeminiCreds.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 保存中...';
+
+    try {
+        const res = await apiFetch('/api/gemini/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gemini_api_key: apiKey })
+        });
+        if (!res.ok) throw new Error(await res.text());
+
+        showToast("Gemini APIキーを保存しました。");
+        closeGeminiSettings();
+    } catch (e) {
+        console.error(e);
+        showToast("APIキーの保存に失敗しました: " + e.message, 'error');
+    } finally {
+        EL.btnSaveGeminiCreds.disabled = false;
+        EL.btnSaveGeminiCreds.innerHTML = btnOriginalText;
+    }
+});
+
+EL.btnDeleteGeminiCreds.addEventListener('click', async () => {
+    if (!await showConfirm("削除の確認", "Gemini APIキーを削除しますか？これ以降の解析はできなくなります。")) return;
+
+    try {
+        const resp = await apiFetch(`/api/gemini/credentials`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        showToast("Gemini APIキーを削除しました。");
+        closeGeminiSettings();
+    } catch (e) {
+        showToast("削除に失敗しました: " + e.message, 'error');
+    }
+});
+
 
 EL.btnCloseCreds.addEventListener('click', closeZaimSettings);
 EL.btnCancelCreds.addEventListener('click', () => {

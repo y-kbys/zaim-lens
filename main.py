@@ -3,6 +3,7 @@ import time
 import base64
 import uuid
 import random
+import asyncio
 from typing import List, Optional, Callable
 from fastapi import FastAPI, HTTPException, Body, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -11,8 +12,11 @@ import datetime
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-import google.generativeai as genai
-import google.api_core.exceptions
+import json
+import traceback
+from google import genai
+from google.genai import types
+from google.genai.errors import APIError
 from dotenv import load_dotenv
 import jwt
 import requests
@@ -203,10 +207,8 @@ app = FastAPI(title="Zaim Lens")
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Initialize Gemini
+# Load legacy API key if any
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index():
@@ -322,8 +324,13 @@ async def get_firebase_config():
 
 @app.post("/api/parse")
 async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Depends(verify_token)):
-    if not GEMINI_API_KEY:
-         raise HTTPException(status_code=500, detail="Gemini API Key is not configured on the server.")
+    config = get_user_config(user_id)
+    user_gemini_key = config.get("gemini_api_key")
+    if not user_gemini_key:
+        if GEMINI_API_KEY:
+            user_gemini_key = GEMINI_API_KEY
+        else:
+             raise HTTPException(status_code=400, detail="Gemini API Key is not configured. 歯車アイコンからAPIキーを設定してください。")
     try:
         base64_data = request.image_base64
         if ";" in base64_data and "base64," in base64_data:
@@ -339,13 +346,18 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
 
 {get_zaim_master_data("1", user_id)}"""
 
-        image_part = {"mime_type": "image/jpeg", "data": decoded_image_data}
+        image_part = types.Part.from_bytes(data=decoded_image_data, mime_type="image/jpeg",)
 
-        def run_gemini(model_name: str) -> ReceiptParserResult:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(
-                [prompt, image_part],
-                generation_config=genai.GenerationConfig(
+        async def run_gemini(model_name: str) -> ReceiptParserResult:
+            # Create a separate client instance to avoid global state and concurrency blocking issues
+            client = genai.Client(api_key=user_gemini_key)
+            response = await client.aio.models.generate_content(
+                model=model_name,
+                contents=[
+                    prompt, 
+                    image_part
+                ],
+                config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     response_schema=ReceiptParserResult,
                 )
@@ -354,11 +366,11 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
 
         try:
             # Default to the highly accurate model
-            gemini_result = run_gemini("gemini-flash-latest")
+            gemini_result = await run_gemini("gemini-2.5-flash")
         except Exception as e:
-            print(f"Fallback initiated due to error with gemini-flash-latest: {e}")
+            print(f"Fallback initiated due to error with gemini-2.5-flash: {e}")
             # Fallback to the lite model
-            gemini_result = run_gemini("gemini-2.5-flash-lite")
+            gemini_result = await run_gemini("gemini-2.5-flash-lite")
         
         result_dict = gemini_result.model_dump()
         cache_key = f"{user_id}_1" # Defaulting to account 1's master data for UI prompt if needed, though usually it matches current account
@@ -370,9 +382,11 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             result_dict["master_genres"] = []
         
         return result_dict
-    except google.api_core.exceptions.ResourceExhausted as e:
-        print(f"Gemini Rate Limit: {e}")
-        raise HTTPException(status_code=429, detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。")
+    except APIError as e:
+        print(f"Gemini APIError: {e}")
+        if e.code == 429:
+            raise HTTPException(status_code=429, detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。")
+        raise HTTPException(status_code=500, detail=f"レシートの解析に失敗しました。詳細: {e.message}")
     except Exception as e:
         print(f"Error calling Gemini: {e}")
         # Return detail as a string to handle non-JSON responses gracefully
@@ -715,6 +729,33 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         "failed_count": len(errors),
         "errors": errors
     }
+
+class GeminiCredentialsRequest(BaseModel):
+    gemini_api_key: str
+
+@app.get("/api/gemini/credentials")
+async def get_gemini_credentials(user_id: str = Depends(verify_token)):
+    config = get_user_config(user_id)
+    key = config.get("gemini_api_key")
+    return {
+        "is_configured": bool(key),
+        "api_key_last_4": key[-4:] if key and len(key) > 4 else ("*" * len(key) if key else "")
+    }
+
+@app.post("/api/gemini/credentials")
+async def save_gemini_credentials(req: GeminiCredentialsRequest, user_id: str = Depends(verify_token)):
+    config = get_user_config(user_id)
+    config["gemini_api_key"] = req.gemini_api_key
+    save_user_config(user_id, config)
+    return {"status": "success", "message": "Gemini API key saved successfully."}
+
+@app.delete("/api/gemini/credentials")
+async def delete_gemini_credentials(user_id: str = Depends(verify_token)):
+    config = get_user_config(user_id)
+    if "gemini_api_key" in config:
+        del config["gemini_api_key"]
+        save_user_config(user_id, config)
+    return {"status": "success", "message": "Gemini API key deleted."}
 
 class ZaimCredentialsRequest(BaseModel):
     account_id: Optional[str] = None  # None/empty means new account

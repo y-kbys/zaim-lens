@@ -114,6 +114,9 @@ def get_user_config(user_id: str = "default_user") -> Dict[str, Any]:
         if "token" in acc_data: acc_data["token"] = decrypt_value(acc_data["token"])
         if "token_secret" in acc_data: acc_data["token_secret"] = decrypt_value(acc_data["token_secret"])
         
+    if "gemini_api_key" in data:
+        data["gemini_api_key"] = decrypt_value(data["gemini_api_key"])
+        
     return data
 
 def save_user_config(user_id: str, config: Dict[str, Any]):
@@ -129,6 +132,9 @@ def save_user_config(user_id: str, config: Dict[str, Any]):
         if "consumer_secret" in acc_data: acc_data["consumer_secret"] = encrypt_value(acc_data.get("consumer_secret", ""))
         if "token" in acc_data: acc_data["token"] = encrypt_value(acc_data.get("token", ""))
         if "token_secret" in acc_data: acc_data["token_secret"] = encrypt_value(acc_data.get("token_secret", ""))
+        
+    if "gemini_api_key" in data_to_save:
+        data_to_save["gemini_api_key"] = encrypt_value(data_to_save.get("gemini_api_key", ""))
         
     if db is None:
         print("ERROR: Cannot save config. Firestore client (db) is not initialized.")

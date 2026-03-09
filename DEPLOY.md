@@ -31,7 +31,6 @@ npm run build:css
 デプロイ用の `env.yaml` を作成します。形式は以下の通りです。
 
 ```yaml
-GEMINI_API_KEY: "your_api_key"
 FIREBASE_API_KEY: "..."
 FIREBASE_PROJECT_ID: "..."
 # ... 他の必須変数 ...
