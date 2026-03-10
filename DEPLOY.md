@@ -4,11 +4,19 @@
 
 ## 1. 自動デプロイ (GitHub Actions)
 
-`main` ブランチへの push をトリガーとして、GitHub Actions により Cloud Run へ自動デプロイされます。
+本プロジェクトは、ブランチベースのデプロイフローを採用しています。
+
+- **`main` ブランチ**: 本番環境 (`prod`)。Cloud Run の `zaim-lens` サービスにデプロイされます。
+- **`develop` ブランチ**: 開発環境 (`dev`)。Cloud Run の `zaim-lens-dev` サービスにデプロイされます。
+
+### デプロイのトリガー
+それぞれのブランチへの push をトリガーとして、GitHub Actions により対応する環境へ自動デプロイされます。
 
 ### 事前準備
-デプロイを成功させるには、GCP と Firebase の設定、および GitHub Secrets の登録が必要です。
-詳細は **[CLOUD_SETUP.md](./CLOUD_SETUP.md)** を参照してください。
+1. **GCP/Firebase 設定**: 詳細は **[CLOUD_SETUP.md](./CLOUD_SETUP.md)** を参照してください。
+2. **GitHub Environments**:
+   - リポジトリの `Settings > Environments` から `prod` と `dev` を作成します。
+   - それぞれの Environment に、同じ名前で環境ごとの値を持つ Secrets を登録します（例: `FIREBASE_API_KEY`）。
 
 ### ビルドプロセス
 デプロイフローの中で以下のステップが自動的に実行されます：
