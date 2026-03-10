@@ -1,21 +1,9 @@
 import base64
 from typing import List, Dict, Any
-from pydantic import BaseModel
+from schemas import ReceiptItem, ReceiptParserResult
 from google import genai
 from google.genai import types, errors
 from fastapi import HTTPException
-
-class ReceiptItem(BaseModel):
-    name: str
-    price: int
-    category_id: int
-    genre_id: int
-
-class ReceiptParserResult(BaseModel):
-    date: str
-    store: str
-    items: List[ReceiptItem]
-    point_usage: int
 
 async def analyze_receipt(image_base64: str, user_gemini_key: str, master_data_context: str) -> Dict[str, Any]:
     """

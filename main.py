@@ -11,8 +11,12 @@ from firebase_admin import auth
 import datetime
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
-from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
+from schemas import (
+    ParseRequest, RegisterRequest, CopyItem, CopyRequest,
+    ZaimAccount, GeminiCredentialsRequest, ZaimCredentialsRequest,
+    ReceiptParserResult
+)
 import json
 import traceback
 from dotenv import load_dotenv
@@ -32,37 +36,7 @@ load_dotenv()
 
 SESSION_SECRET = os.environ.get("SESSION_SECRET", os.environ.get("ENCRYPTION_KEY", "temporary-secret-for-session"))
 
-# --- Pydantic Schemas ---
-# ReceiptParserResult from services.gemini
-class ParseRequest(BaseModel):
-    image_base64: str
-    account_id: Optional[str] = None
-
-class RegisterRequest(BaseModel):
-    receipt_data: ReceiptParserResult
-    force: bool = False
-    from_account_id: Optional[int] = None
-    target_account_id: str = "1"
-    receipt_id: Optional[int] = None
-
-class CopyItem(BaseModel):
-    mapping: int = 1
-    category_id: int
-    genre_id: int
-    amount: int
-    date: str
-    name: str
-    place: Optional[str] = None
-    comment: Optional[str] = None
-    group_id: Optional[int] = None
-    from_account_id: Optional[int] = None
-
-class CopyRequest(BaseModel):
-    source_account_id: str
-    destination_account_id: str
-    from_account_id: Optional[int] = None
-    items_to_copy: List[CopyItem]
-    force: bool = False
+# --- Pydantic Schemas from schemas.py ---
 
 def migrate_env_to_firestore():
     # Only run once at startup to populate default_user if empty
@@ -477,9 +451,7 @@ async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Dep
         print(f"Unexpected error in parse_screenshot: {e}")
         raise HTTPException(status_code=500, detail=f"予期せぬエラーが発生しました。詳細: {str(e)}")
 
-class ZaimAccount(BaseModel):
-    id: int
-    name: str
+
 
 @app.get("/api/zaim/accounts")
 async def get_zaim_accounts(account_id: str = "1", user_id: str = Depends(verify_token)):
@@ -728,8 +700,7 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         "errors": errors
     }
 
-class GeminiCredentialsRequest(BaseModel):
-    gemini_api_key: str
+
 
 @app.get("/api/gemini/credentials")
 async def get_gemini_credentials(user_id: str = Depends(verify_token)):
@@ -755,13 +726,7 @@ async def delete_gemini_credentials(user_id: str = Depends(verify_token)):
         save_user_config(user_id, config)
     return {"status": "success", "message": "Gemini API key deleted."}
 
-class ZaimCredentialsRequest(BaseModel):
-    account_id: Optional[str] = None  # None/empty means new account
-    name: str = "Default Account"
-    consumer_key: str
-    consumer_secret: str
-    token: str
-    token_secret: str
+
 
 @app.post("/api/zaim/credentials")
 async def save_zaim_credentials(req: ZaimCredentialsRequest, user_id: str = Depends(verify_token)):
