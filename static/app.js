@@ -1015,10 +1015,8 @@ EL.btnRegister.addEventListener('click', async () => {
         showLoading(force ? '強制的に登録中...' : 'Zaimに登録中...');
         try {
             const targetAccountId = EL.editTargetAccount.value;
-            // Reverse items so that the latest registered item appears at the top in Zaim UI
-            const reversedItems = [...appState.parsedData.items].reverse();
             const payload = {
-                receipt_data: { ...appState.parsedData, items: reversedItems },
+                receipt_data: appState.parsedData,
                 force: force,
                 from_account_id: (EL.editFromAccount.value && EL.editFromAccount.value !== "") ? parseInt(EL.editFromAccount.value) : null,
                 target_account_id: targetAccountId,
