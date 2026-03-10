@@ -423,7 +423,6 @@ EL.imageUpload.addEventListener('change', async (e) => {
     appState.currentImageUri = appState.queue[0].blobUri;
     EL.imagePreview.src = appState.currentImageUri;
     EL.imagePreviewContainer.classList.remove('hidden');
-    EL.uploadAccountSelectorContainer.classList.remove('hidden');
     EL.btnParse.classList.remove('hidden');
     EL.btnParse.disabled = true;
 
@@ -1121,7 +1120,6 @@ function resetApp() {
 
     EL.imageUpload.value = '';
     EL.imagePreviewContainer.classList.add('hidden');
-    EL.uploadAccountSelectorContainer.classList.add('hidden');
     EL.btnParse.classList.add('hidden');
     EL.successReceiptIdContainer.classList.add('hidden');
     switchState('state-upload');
@@ -1754,6 +1752,7 @@ const loadTargetAccounts = async () => {
 
         EL.editTargetAccount.innerHTML = html;
         EL.uploadTargetAccount.innerHTML = html;
+        EL.uploadAccountSelectorContainer.classList.remove('hidden');
 
         // Restore Edit Target preference
         const lastTarget = localStorage.getItem('lastUsedTargetAccount');
