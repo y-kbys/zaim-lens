@@ -22,7 +22,7 @@ from services.zaim_client import (
     get_master_data_from_cache, clear_master_data_cache,
     get_zaim_authorization_params, exchange_zaim_access_token,
     fetch_zaim_accounts_raw, check_zaim_duplicate, 
-    register_payment_item, fetch_money_history
+    register_payment_item, fetch_money_history, fetch_history_with_categories
 )
 import jwt
 import requests
