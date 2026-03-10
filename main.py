@@ -15,9 +15,8 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 import json
 import traceback
-from google import genai
-from google.genai import types, errors
 from dotenv import load_dotenv
+from services.gemini import ReceiptParserResult, analyze_receipt
 import jwt
 import requests
 from requests_oauthlib import OAuth1Session
@@ -32,18 +31,7 @@ ZAIM_CALLBACK_URL = os.environ.get("ZAIM_CALLBACK_URL")
 SESSION_SECRET = os.environ.get("SESSION_SECRET", os.environ.get("ENCRYPTION_KEY", "temporary-secret-for-session"))
 
 # --- Pydantic Schemas ---
-class ReceiptItem(BaseModel):
-    name: str
-    price: int
-    category_id: int
-    genre_id: int
-
-class ReceiptParserResult(BaseModel):
-    date: str
-    store: str
-    items: List[ReceiptItem]
-    point_usage: int
-
+# ReceiptParserResult from services.gemini
 class ParseRequest(BaseModel):
     image_base64: str
     account_id: Optional[str] = None
@@ -542,47 +530,9 @@ async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Dep
         target_account_id = list(accounts.keys())[0]
 
     try:
-        base64_data = request.image_base64
-        if ";" in base64_data and "base64," in base64_data:
-            base64_data = base64_data.split("base64,")[1]
-            
-        decoded_image_data = base64.b64decode(base64_data)
+        master_data_context = get_zaim_master_data(target_account_id, user_id)
+        result_dict = await analyze_receipt(request.image_base64, user_gemini_key, master_data_context)
         
-        prompt = f"""これは紙のレシートまたはオンラインストアやアプリの購入履歴画面のスクリーンショットである。
-UIのノイズを無視し、純粋な購入品名と金額、そしてもしあればポイント利用額（`point_usage`）を抽出せよ。ポイント利用がなければ `point_usage` は 0 とすること。
-購入日（`date`）はYYYY-MM-DD形式にすること。店舗名（`store`）も推測可能な限り抽出すること。
-さらに、以下のZaimのカテゴリ＆ジャンル一覧から、各品目に最も適した `category_id` と `genre_id` を推論して `items` 内に含めること。
-出力は指定されたJSONスキーマに厳格に従うこと。
-
-{get_zaim_master_data(target_account_id, user_id)}"""
-
-        image_part = types.Part.from_bytes(data=decoded_image_data, mime_type="image/jpeg",)
-
-        async def run_gemini(model_name: str) -> ReceiptParserResult:
-            # Create a separate client instance to avoid global state and concurrency blocking issues
-            client = genai.Client(api_key=user_gemini_key)
-            response = await client.aio.models.generate_content(
-                model=model_name,
-                contents=[
-                    prompt, 
-                    image_part
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=ReceiptParserResult,
-                )
-            )
-            return ReceiptParserResult.model_validate_json(response.text)
-
-        try:
-            # Default to the highly accurate model
-            gemini_result = await run_gemini("gemini-flash-latest")
-        except Exception as e:
-            print(f"Fallback initiated due to error with gemini-flash-latest: {e}")
-            # Fallback to the lite model
-            gemini_result = await run_gemini("gemini-2.5-flash-lite")
-        
-        result_dict = gemini_result.model_dump()
         cache_key = f"{user_id}_{target_account_id}" # Defaulting to selected account's master data
         if cache_key in MASTER_DATA_CACHE:
             result_dict["master_categories"] = MASTER_DATA_CACHE[cache_key]["categories"]
@@ -592,15 +542,12 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             result_dict["master_genres"] = []
         
         return result_dict
-    except errors.APIError as e:
-        print(f"Gemini APIError: {e}")
-        if e.code == 429:
-            raise HTTPException(status_code=429, detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。")
-        raise HTTPException(status_code=500, detail=f"レシートの解析に失敗しました。詳細: {e.message}")
     except Exception as e:
-        print(f"Error calling Gemini: {e}")
-        # Return detail as a string to handle non-JSON responses gracefully
-        raise HTTPException(status_code=500, detail=f"レシートの解析に失敗しました。Geminiからの応答が正しくないか、サーバーエラーが発生しました。詳細: {str(e)}")
+        # Avoid double-wrapping HTTPExceptions
+        if isinstance(e, HTTPException):
+            raise e
+        print(f"Unexpected error in parse_screenshot: {e}")
+        raise HTTPException(status_code=500, detail=f"予期せぬエラーが発生しました。詳細: {str(e)}")
 
 class ZaimAccount(BaseModel):
     id: int
