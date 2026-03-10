@@ -42,6 +42,8 @@ const EL = {
     imagePreviewContainer: document.getElementById('image-preview-container'),
     btnParse: document.getElementById('btn-parse'),
     btnManualEntry: document.getElementById('btn-manual-entry'),
+    uploadTargetAccount: document.getElementById('upload-target-account'),
+    uploadAccountSelectorContainer: document.getElementById('upload-account-selector-container'),
 
     // Edit State
     editDate: document.getElementById('edit-date'),
@@ -421,6 +423,7 @@ EL.imageUpload.addEventListener('change', async (e) => {
     appState.currentImageUri = appState.queue[0].blobUri;
     EL.imagePreview.src = appState.currentImageUri;
     EL.imagePreviewContainer.classList.remove('hidden');
+    EL.uploadAccountSelectorContainer.classList.remove('hidden');
     EL.btnParse.classList.remove('hidden');
     EL.btnParse.disabled = true;
 
@@ -503,10 +506,14 @@ async function startBackgroundParsing() {
                 item.compressedBase64 = await compressImage(item.file);
             }
 
+            const targetAccountId = EL.uploadTargetAccount.value;
             const response = await apiFetch('/api/parse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_base64: item.compressedBase64 })
+                body: JSON.stringify({
+                    image_base64: item.compressedBase64,
+                    account_id: targetAccountId
+                })
             });
 
             if (!response.ok) {
@@ -1114,6 +1121,7 @@ function resetApp() {
 
     EL.imageUpload.value = '';
     EL.imagePreviewContainer.classList.add('hidden');
+    EL.uploadAccountSelectorContainer.classList.add('hidden');
     EL.btnParse.classList.add('hidden');
     EL.successReceiptIdContainer.classList.add('hidden');
     switchState('state-upload');
@@ -1142,6 +1150,7 @@ async function refreshAllAccountDropdowns() {
 
         EL.sourceAccountSelect.innerHTML = html;
         EL.destAccountSelect.innerHTML = html;
+        EL.uploadTargetAccount.innerHTML = targetHtml;
         EL.editTargetAccount.innerHTML = targetHtml;
 
         // --- Restore Source Account Preference ---
@@ -1727,34 +1736,53 @@ EL.lightboxModal.addEventListener('click', (e) => {
 // (データ元は /api/accounts で共通だが、最後に使用したアカウントの復元など解析画面特有の処理を含む)
 const loadTargetAccounts = async () => {
     try {
-        const response = await apiFetch('/api/accounts');
+        const response = await apiFetch('/api/zaim/status'); // Use status for simple account check
         if (!response.ok) throw new Error(await response.text());
-        const accounts = await response.json();
+        const data = await response.json();
+        const accounts = data.accounts || [];
 
         if (accounts.length === 0) {
             EL.editTargetAccount.innerHTML = '<option value="">Zaim設定が必要です</option>';
-            return false; // Indicating no accounts
+            EL.uploadTargetAccount.innerHTML = '<option value="">Zaim設定が必要です</option>';
+            return false;
         }
 
         let html = '';
         accounts.forEach(a => {
             html += `<option value="${a.id}">${a.name}</option>`;
         });
-        EL.editTargetAccount.innerHTML = html;
 
+        EL.editTargetAccount.innerHTML = html;
+        EL.uploadTargetAccount.innerHTML = html;
+
+        // Restore Edit Target preference
         const lastTarget = localStorage.getItem('lastUsedTargetAccount');
         if (lastTarget && Array.from(EL.editTargetAccount.options).some(o => o.value === lastTarget)) {
             EL.editTargetAccount.value = lastTarget;
         }
+
+        // Restore Upload Target preference or default to Edit Target's preference
+        const lastUploadTarget = localStorage.getItem('lastUsedUploadTargetAccount') || lastTarget;
+        if (lastUploadTarget && Array.from(EL.uploadTargetAccount.options).some(o => o.value === lastUploadTarget)) {
+            EL.uploadTargetAccount.value = lastUploadTarget;
+        }
+
+        return true;
     } catch (err) {
         console.error("Failed to load target accounts", err);
         EL.editTargetAccount.innerHTML = '<option value="">設定エラー</option>';
+        EL.uploadTargetAccount.innerHTML = '<option value="">設定エラー</option>';
         throw err;
     }
 };
 
 EL.editTargetAccount.addEventListener('change', () => {
+    localStorage.setItem('lastUsedTargetAccount', EL.editTargetAccount.value);
     loadZaimAccounts();
+});
+
+EL.uploadTargetAccount.addEventListener('change', () => {
+    localStorage.setItem('lastUsedUploadTargetAccount', EL.uploadTargetAccount.value);
 });
 
 // --- Auth & Initial Load ---

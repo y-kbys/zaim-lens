@@ -46,6 +46,7 @@ class ReceiptParserResult(BaseModel):
 
 class ParseRequest(BaseModel):
     image_base64: str
+    account_id: Optional[str] = None
 
 class RegisterRequest(BaseModel):
     receipt_data: ReceiptParserResult
@@ -529,6 +530,17 @@ async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Dep
             user_gemini_key = GEMINI_API_KEY
         else:
              raise HTTPException(status_code=400, detail="Gemini API Key is not configured. 歯車アイコンからAPIキーを設定してください。")
+
+    # Find the target account
+    accounts = config.get("accounts", {})
+    if not accounts:
+        raise HTTPException(status_code=400, detail="Zaim連携が設定されていません。右上のアイコンからZaim連携を行ってください。")
+
+    target_account_id = request.account_id
+    if not target_account_id or target_account_id not in accounts:
+        # Default to the first account if not specified or invalid
+        target_account_id = list(accounts.keys())[0]
+
     try:
         base64_data = request.image_base64
         if ";" in base64_data and "base64," in base64_data:
@@ -542,7 +554,7 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
 さらに、以下のZaimのカテゴリ＆ジャンル一覧から、各品目に最も適した `category_id` と `genre_id` を推論して `items` 内に含めること。
 出力は指定されたJSONスキーマに厳格に従うこと。
 
-{get_zaim_master_data("1", user_id)}"""
+{get_zaim_master_data(target_account_id, user_id)}"""
 
         image_part = types.Part.from_bytes(data=decoded_image_data, mime_type="image/jpeg",)
 
@@ -571,7 +583,7 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             gemini_result = await run_gemini("gemini-2.5-flash-lite")
         
         result_dict = gemini_result.model_dump()
-        cache_key = f"{user_id}_1" # Defaulting to account 1's master data for UI prompt if needed, though usually it matches current account
+        cache_key = f"{user_id}_{target_account_id}" # Defaulting to selected account's master data
         if cache_key in MASTER_DATA_CACHE:
             result_dict["master_categories"] = MASTER_DATA_CACHE[cache_key]["categories"]
             result_dict["master_genres"] = MASTER_DATA_CACHE[cache_key]["genres"]
