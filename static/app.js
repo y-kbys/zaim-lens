@@ -2002,12 +2002,8 @@ const editExternalAccount = async (id) => {
 };
 
 const updateZaimCloseButtonVisibility = () => {
-    // Allow closing only if at least one account exists
-    if (appState.accounts.length > 0) {
-        EL.btnCloseCreds.classList.remove('hidden');
-    } else {
-        EL.btnCloseCreds.classList.add('hidden');
-    }
+    // Header Close button (X) is now always visible as per requirement
+    EL.btnCloseCreds.classList.remove('hidden');
 };
 
 const openZaimSettings = async () => {
@@ -2019,7 +2015,7 @@ const openZaimSettings = async () => {
     EL.zaimAccountName.value = "";
 
     EL.zaimFormContainer.classList.add('hidden');
-    EL.zaimButtonsContainer.classList.add('hidden');
+    EL.zaimButtonsContainer.classList.remove('hidden'); // Always show buttons container (Cancel button)
     EL.btnDeleteCreds.classList.add('hidden');
     EL.zaimAccountsList.parentElement.classList.remove('hidden');
 
