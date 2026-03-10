@@ -228,3 +228,19 @@ def fetch_history_with_categories(session: OAuth1Session, user_id: str, account_
         item["category_name"] = cat_map.get(item.get("category_id"))
         
     return history
+
+def get_zaim_session_wrapper(account_id: str, user_id: str, accounts_config: Dict[str, Any]):
+    return get_zaim_session(account_id, user_id, accounts_config)
+
+def get_account_from_id(account_id: str, user_id: str, accounts_config: Dict[str, Any]):
+    str_account_id = str(account_id)
+    acct = accounts_config.get(str_account_id)
+    
+    if not acct:
+        print(f"DEBUG: get_account_from_id failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts_config.keys())}")
+        raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
+        
+    return acct
+
+def get_zaim_master_data_wrapper(account_id: str, user_id: str, accounts_config: Dict[str, Any]):
+    return get_zaim_master_data(account_id, user_id, accounts_config)
