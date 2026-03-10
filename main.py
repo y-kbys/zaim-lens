@@ -17,17 +17,19 @@ import json
 import traceback
 from dotenv import load_dotenv
 from services.gemini import ReceiptParserResult, analyze_receipt
+from services.zaim_client import (
+    ZAIM_CALLBACK_URL, get_zaim_session, get_zaim_master_data, 
+    get_master_data_from_cache, clear_master_data_cache,
+    get_zaim_authorization_params, exchange_zaim_access_token,
+    fetch_zaim_accounts_raw, check_zaim_duplicate, 
+    register_payment_item, fetch_money_history
+)
 import jwt
 import requests
-from requests_oauthlib import OAuth1Session
 from db import get_user_config, save_user_config, delete_user_config, firebase_app
 
 load_dotenv()
 
-# --- Zaim OAuth Constants ---
-ZAIM_CONSUMER_KEY = os.environ.get("ZAIM_CONSUMER_KEY")
-ZAIM_CONSUMER_SECRET = os.environ.get("ZAIM_CONSUMER_SECRET")
-ZAIM_CALLBACK_URL = os.environ.get("ZAIM_CALLBACK_URL")
 SESSION_SECRET = os.environ.get("SESSION_SECRET", os.environ.get("ENCRYPTION_KEY", "temporary-secret-for-session"))
 
 # --- Pydantic Schemas ---
@@ -117,25 +119,9 @@ except Exception as e:
     traceback.print_exc()
 
 
-def get_zaim_session(account_id: str, user_id: str):
+def get_zaim_session_wrapper(account_id: str, user_id: str):
     config = get_user_config(user_id)
-    accounts = config.get("accounts", {})
-    str_account_id = str(account_id)
-    acct = accounts.get(str_account_id)
-    
-    if not acct:
-        print(f"DEBUG: get_zaim_session failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts.keys())}")
-        raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
-        
-    if not ZAIM_CONSUMER_KEY or not ZAIM_CONSUMER_SECRET:
-        raise HTTPException(status_code=500, detail="System Zaim Consumer credentials are not configured.")
-
-    return OAuth1Session(
-        ZAIM_CONSUMER_KEY,
-        client_secret=ZAIM_CONSUMER_SECRET,
-        resource_owner_key=acct["token"],
-        resource_owner_secret=acct["token_secret"]
-    )
+    return get_zaim_session(account_id, user_id, config.get("accounts", {}))
 
 def get_account_from_id(account_id: str, user_id: str):
     config = get_user_config(user_id)
@@ -149,51 +135,9 @@ def get_account_from_id(account_id: str, user_id: str):
         
     return acct
 
-# Caching master data per account to support multi-account switching
-MASTER_DATA_CACHE = {} # {account_id: {"categories": [], "genres": [], "prompt_context": ""}}
-
-def get_zaim_master_data(account_id: str, user_id: str):
-    global MASTER_DATA_CACHE
-    cache_key = f"{user_id}_{account_id}"
-    
-    # Return from cache if available
-    if cache_key in MASTER_DATA_CACHE:
-        return MASTER_DATA_CACHE[cache_key]["prompt_context"]
-
-    session = get_zaim_session(account_id, user_id)
-    cat_res = session.get("https://api.zaim.net/v2/home/category")
-    gen_res = session.get("https://api.zaim.net/v2/home/genre")
-    
-    categories = []
-    genres = []
-    
-    if cat_res.status_code == 200:
-        cat_data = cat_res.json().get("categories", [])
-        categories = [c for c in cat_data if c.get("mode") == "payment" and c.get("active") != -1]
-    
-    if gen_res.status_code == 200:
-        gen_data = gen_res.json().get("genres", [])
-        genres = [g for g in gen_data if g.get("active") != -1]
-        
-    lines = ["\n【Zaim カテゴリ＆ジャンル一覧】"]
-    for cat in categories:
-        c_id = cat["id"]
-        c_name = cat["name"]
-        cat_genres = [g for g in genres if g.get("category_id") == c_id]
-        if cat_genres:
-            g_texts = [f"ID:{g['id']} ({g['name']})" for g in cat_genres]
-            lines.append(f"- カテゴリID: {c_id} ({c_name}) 含まれるジャンル: " + ", ".join(g_texts))
-            
-    prompt_context = "\n".join(lines)
-    
-    # Store in cache
-    MASTER_DATA_CACHE[cache_key] = {
-        "categories": categories,
-        "genres": genres,
-        "prompt_context": prompt_context
-    }
-    
-    return prompt_context
+def get_zaim_master_data_wrapper(account_id: str, user_id: str):
+    config = get_user_config(user_id)
+    return get_zaim_master_data(account_id, user_id, config.get("accounts", {}))
 
 # --- App Initialization ---
 app = FastAPI(title="Zaim Lens")
@@ -361,33 +305,25 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
     print(f"DEBUG: zaim_login using callback_url={callback_url}")
 
     try:
-        zaim = OAuth1Session(ZAIM_CONSUMER_KEY, client_secret=ZAIM_CONSUMER_SECRET, callback_uri=callback_url)
-        request_token_url = "https://api.zaim.net/v2/auth/request"
-        fetch_response = zaim.fetch_request_token(request_token_url)
-        
-        oauth_token = fetch_response.get('oauth_token')
-        oauth_token_secret = fetch_response.get('oauth_token_secret')
+        auth_params = get_zaim_authorization_params(callback_url)
         
         # Save request token secret in session to use it in callback
         request.session['user_id'] = user_id
         request.session['zaim_pending_user_id'] = user_id
-        request.session['zaim_oauth_token_secret'] = oauth_token_secret
+        request.session['zaim_oauth_token_secret'] = auth_params["oauth_token_secret"]
         request.session['zaim_pending_name'] = name
         
         # Also save in global dictionary to survive strict SameSite cookie blocking
+        oauth_token = auth_params["oauth_token"]
         if oauth_token:
             OAUTH_SECRETS[oauth_token] = {
-                'secret': oauth_token_secret,
+                'secret': auth_params["oauth_token_secret"],
                 'name': name,
                 'user_id': user_id
             }
         
-        # Build authorize URL
-        base_authorization_url = "https://auth.zaim.net/users/auth"
-        # Passing request token explicitly as shown in the snippets, and explicit callback URL
-        authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=oauth_token, oauth_callback=callback_url)
-        print(f"DEBUG: zaim_login returning auth_url={authorization_url}")
-        return {"auth_url": authorization_url}
+        print(f"DEBUG: zaim_login returning auth_url={auth_params['auth_url']}")
+        return {"auth_url": auth_params["auth_url"]}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to initiate Zaim OAuth: {str(e)}")
@@ -415,15 +351,7 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
         raise HTTPException(status_code=400, detail="OAuth request token secret missing in session.")
 
     try:
-        zaim = OAuth1Session(
-            ZAIM_CONSUMER_KEY, 
-            client_secret=ZAIM_CONSUMER_SECRET,
-            resource_owner_key=oauth_token,
-            resource_owner_secret=request_token_secret
-        )
-        access_token_url = "https://api.zaim.net/v2/auth/access"
-        token_res = zaim.fetch_access_token(access_token_url, verifier=oauth_verifier)
-        
+        token_res = exchange_zaim_access_token(oauth_token, request_token_secret, oauth_verifier)
         final_token = token_res.get('oauth_token')
         final_token_secret = token_res.get('oauth_token_secret')
         
@@ -530,13 +458,13 @@ async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Dep
         target_account_id = list(accounts.keys())[0]
 
     try:
-        master_data_context = get_zaim_master_data(target_account_id, user_id)
+        master_data_context = get_zaim_master_data_wrapper(target_account_id, user_id)
         result_dict = await analyze_receipt(request.image_base64, user_gemini_key, master_data_context)
         
-        cache_key = f"{user_id}_{target_account_id}" # Defaulting to selected account's master data
-        if cache_key in MASTER_DATA_CACHE:
-            result_dict["master_categories"] = MASTER_DATA_CACHE[cache_key]["categories"]
-            result_dict["master_genres"] = MASTER_DATA_CACHE[cache_key]["genres"]
+        master_data = get_master_data_from_cache(user_id, target_account_id)
+        if master_data:
+            result_dict["master_categories"] = master_data["categories"]
+            result_dict["master_genres"] = master_data["genres"]
         else:
             result_dict["master_categories"] = []
             result_dict["master_genres"] = []
@@ -555,13 +483,8 @@ class ZaimAccount(BaseModel):
 
 @app.get("/api/zaim/accounts")
 async def get_zaim_accounts(account_id: str = "1", user_id: str = Depends(verify_token)):
-    session = get_zaim_session(account_id, user_id)
-    url = "https://api.zaim.net/v2/home/account"
-    res = session.get(url)
-    if res.status_code != 200:
-        raise HTTPException(status_code=res.status_code, detail=f"Failed to fetch accounts from Zaim: {res.text}")
-    
-    accounts = res.json().get("accounts", [])
+    session = get_zaim_session_wrapper(account_id, user_id)
+    accounts = fetch_zaim_accounts_raw(session)
     # 支払い元として利用可能なもの（active != -1）を返す
     return [ZaimAccount(id=a["id"], name=a["name"]) for a in accounts if a.get("active") != -1]
 
@@ -571,16 +494,16 @@ async def get_categories(account_id: str = "1", user_id: str = Depends(verify_to
     Returns master categories and genres for a specific account.
     """
     try:
-        # get_zaim_master_data populates MASTER_DATA_CACHE for the given account_id
-        get_zaim_master_data(account_id, user_id)
+        # get_zaim_master_data populates master data for the given account_id
+        get_zaim_master_data_wrapper(account_id, user_id)
         
-        cache_key = f"{user_id}_{account_id}"
-        if cache_key not in MASTER_DATA_CACHE:
+        master_data = get_master_data_from_cache(user_id, account_id)
+        if not master_data:
             raise HTTPException(status_code=500, detail="Failed to load master data cache.")
             
         return {
-            "master_categories": MASTER_DATA_CACHE[cache_key]["categories"],
-            "master_genres": MASTER_DATA_CACHE[cache_key]["genres"]
+            "master_categories": master_data["categories"],
+            "master_genres": master_data["genres"]
         }
     except Exception as e:
         print(f"Error fetching categories for {account_id} / {user_id}: {e}")
@@ -593,7 +516,7 @@ async def get_categories(account_id: str = "1", user_id: str = Depends(verify_to
 @app.post("/api/register")
 async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = Depends(verify_token)):
     print(f"Starting Registration to Zaim. Items: {len(request.receipt_data.items)}")
-    session = get_zaim_session(request.target_account_id, user_id)
+    session = get_zaim_session_wrapper(request.target_account_id, user_id)
     receipt_data = request.receipt_data
 
     # --- Duplicate Check Logic ---
@@ -601,38 +524,12 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
         # Calculate total amount of the current receipt
         total_amount = sum(item.price for item in receipt_data.items) - (receipt_data.point_usage or 0)
         
-        # Check Zaim history for the same date
-        url = "https://api.zaim.net/v2/home/money"
-        params = {
-            "mapping": 1,
-            "start_date": receipt_data.date,
-            "end_date": receipt_data.date
-        }
-        res = session.get(url, params=params)
-        if res.status_code == 200:
-            history = res.json().get("money", [])
-            # Group by receipt_id
-            groups = {}
-            for h_item in history:
-                if h_item.get("mode") != "payment":
-                    continue
-                rid = h_item.get("receipt_id")
-                if rid is None or rid == 0:
-                    # Treat each manual entry as its own "group" using a unique key
-                    groups[f"manual_{h_item.get('id')}"] = int(h_item.get("amount", 0))
-                else:
-                    if rid not in groups:
-                        groups[rid] = 0
-                    groups[rid] += int(h_item.get("amount", 0))
-            
-            # Compare totals
-            for rid, amt in groups.items():
-                if amt == total_amount:
-                    return {
-                        "status": "warning",
-                        "message": "重複の可能性がある支出が見つかりました（同一日付・同一金額）。",
-                        "duplicate_found": True
-                    }
+        if check_zaim_duplicate(session, receipt_data.date, total_amount):
+            return {
+                "status": "warning",
+                "message": "重複の可能性がある支出が見つかりました（同一日付・同一金額）。",
+                "duplicate_found": True
+            }
     # --- End Duplicate Check Logic ---
     
     # Use provided receipt_id or generate a new one
@@ -669,11 +566,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
             
         if receipt_data.store:
             payload["place"] = receipt_data.store
-        res = session.post(payment_url, data=payload)
-        if res.status_code != 200:
-            print(f"Payment registration failed for {item.name}: {res.text}")
-            # Consider atomic rollback here normally, but ignoring for basic flow
-        else:
+        if register_payment_item(session, payload):
             registered_items.append(item.name)
             
     # 3. Handle Point Usage (Negative expense)
@@ -692,10 +585,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
             
         if receipt_data.store:
             point_payload["place"] = receipt_data.store
-        pt_res = session.post(payment_url, data=point_payload)
-        if pt_res.status_code != 200:
-             print(f"Point usage registration failed: {pt_res.text}")
-        else:
+        if register_payment_item(session, point_payload):
              registered_items.append("ポイント利用 (割引)")
     
     return {
@@ -723,8 +613,7 @@ async def get_accounts(user_id: str = Depends(verify_token)):
 @app.get("/api/history")
 async def get_history(account_id: str, period: Optional[int] = 30, start_date: Optional[str] = None, end_date: Optional[str] = None, user_id: str = Depends(verify_token)):
     try:
-        session = get_zaim_session(account_id, user_id)
-        url = f"https://api.zaim.net/v2/home/money"
+        session = get_zaim_session_wrapper(account_id, user_id)
         
         now = datetime.datetime.now()
         
@@ -744,26 +633,10 @@ async def get_history(account_id: str, period: Optional[int] = 30, start_date: O
             "end_date": end_date_str
         }
         
-        # Ensure master data is loaded
-        get_zaim_master_data(account_id, user_id)
+        # Ensure master data is loaded and use specialized helper
+        get_zaim_master_data_wrapper(account_id, user_id)
+        history = fetch_history_with_categories(session, user_id, account_id, params)
         
-        res = session.get(url, params=params)
-        if res.status_code != 200:
-            raise HTTPException(status_code=res.status_code, detail=f"Failed to fetch history: {res.text}")
-        
-        data = res.json()
-        history = data.get("money", [])
-
-        cache_key = f"{user_id}_{account_id}"
-        if cache_key not in MASTER_DATA_CACHE:
-             print(f"Warning: Account {account_id} not found in MASTER_DATA_CACHE for user {user_id}. Forced blank map.")
-             cat_map = {}
-        else:
-             cat_map = {c["id"]: c["name"] for c in MASTER_DATA_CACHE[cache_key].get("categories", [])}
-             
-        for item in history:
-            item["category_name"] = cat_map.get(item.get("category_id"))
-            
         return {"history": history}
     except Exception as e:
         print(f"Error in get_history: {e}")
@@ -776,7 +649,7 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
     print(f"Starting History Copy from Account {request.source_account_id} to Account {request.destination_account_id}. Items: {len(request.items_to_copy)}")
     
     # Use destination account for writing
-    dest_session = get_zaim_session(request.destination_account_id, user_id)
+    dest_session = get_zaim_session_wrapper(request.destination_account_id, user_id)
     
     payment_url = "https://api.zaim.net/v2/home/money/payment"
     
@@ -794,38 +667,12 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         
         # Check destination account for each date
         for d in unique_dates:
-            params = {
-                "mapping": 1,
-                "start_date": d,
-                "end_date": d
-            }
-            history_res = dest_session.get("https://api.zaim.net/v2/home/money", params=params)
-            if history_res.status_code == 200:
-                history_data = history_res.json().get("money", [])
-                
-                # Group existing by receipt_id
-                existing_groups = {}
-                for h_item in history_data:
-                    if h_item.get("mode") != "payment":
-                        continue
-                    rid = h_item.get("receipt_id")
-                    if rid is None or rid == 0:
-                        existing_groups[f"manual_{h_item.get('id')}"] = int(h_item.get("amount", 0))
-                    else:
-                        if rid not in existing_groups:
-                            existing_groups[rid] = 0
-                        existing_groups[rid] += int(h_item.get("amount", 0))
-                
-                # Check for matches
-                for ig_id, ig_info in incoming_groups.items():
-                    if ig_info["date"] == d:
-                        for eg_amt in existing_groups.values():
-                            if eg_amt == ig_info["total"]:
-                                return {
-                                    "status": "warning",
-                                    "message": f"コピー先に重複の可能性がある支出が見つかりました（{d}・¥{ig_info['total']:,}）。続行しますか？",
-                                    "duplicate_found": True
-                                }
+            if check_zaim_duplicate(dest_session, d, incoming_groups[d]["total"]):
+                 return {
+                    "status": "warning",
+                    "message": f"コピー先に重複の可能性がある支出が見つかりました（{d}・¥{incoming_groups[d]['total']:,}）。続行しますか？",
+                    "duplicate_found": True
+                }
     # --- End Duplicate Check Logic ---
     
     # Track generated receipt IDs for groups to maintain original grouping
@@ -871,13 +718,7 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         if item.comment:
             payload["comment"] = item.comment
             
-        res = dest_session.post(payment_url, data=payload)
-        
-        if res.status_code != 200:
-            err_msg = f"Failed to register item '{item.name}': {res.text}"
-            print(err_msg)
-            errors.append(err_msg)
-        else:
+        if register_payment_item(dest_session, payload):
             success_count += 1
             
     return {
@@ -948,9 +789,7 @@ async def save_zaim_credentials(req: ZaimCredentialsRequest, user_id: str = Depe
     save_user_config(user_id, config)
 
     # Invalidate cache for this specific account
-    cache_key = f"{user_id}_{target_id}"
-    if cache_key in MASTER_DATA_CACHE:
-        del MASTER_DATA_CACHE[cache_key]
+    clear_master_data_cache(user_id, target_id)
     
     # Return updated list of simplified account info for UI
     return {
@@ -988,9 +827,7 @@ async def delete_zaim_credentials(account_id: str, user_id: str = Depends(verify
         save_user_config(user_id, config)
         
         # Invalidate cache
-        cache_key = f"{user_id}_{account_id}"
-        if cache_key in MASTER_DATA_CACHE:
-            del MASTER_DATA_CACHE[cache_key]
+        clear_master_data_cache(user_id, account_id)
             
         return {"status": "success", "message": f"Account {account_id} deleted."}
     else:
@@ -1005,9 +842,7 @@ async def delete_user_account(user_id: str = Depends(verify_token)):
     success = delete_user_config(user_id)
     if success:
         # Clear all cache entries for this user
-        keys_to_delete = [k for k in MASTER_DATA_CACHE.keys() if k.startswith(f"{user_id}_")]
-        for k in keys_to_delete:
-            del MASTER_DATA_CACHE[k]
+        clear_master_data_cache(user_id)
             
         return {"status": "success", "message": "User data completely removed."}
     else:
