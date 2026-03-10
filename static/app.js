@@ -363,42 +363,44 @@ EL.tabCopy.addEventListener('click', () => switchTab('copy'));
 // --- Image Compression & Resizing ---
 async function compressImage(file) {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = event => {
-            const img = new Image();
-            img.src = event.target.result;
-            img.onload = () => {
-                const MAX_WIDTH = 1024;
-                const MAX_HEIGHT = 1024;
-                let width = img.width;
-                let height = img.height;
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.src = objectUrl;
+        img.onload = () => {
+            // Clean up the object URL as soon as the image is loaded into the Image object
+            URL.revokeObjectURL(objectUrl);
 
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
+            const MAX_WIDTH = 1024;
+            const MAX_HEIGHT = 1024;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
                 }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
 
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
 
-                // Compress as JPEG
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                resolve(dataUrl);
-            };
-            img.onerror = error => reject(error);
+            // Compress as JPEG
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(dataUrl);
         };
-        reader.onerror = error => reject(error);
+        img.onerror = error => {
+            URL.revokeObjectURL(objectUrl);
+            reject(error);
+        };
     });
 }
 
@@ -2002,12 +2004,8 @@ const editExternalAccount = async (id) => {
 };
 
 const updateZaimCloseButtonVisibility = () => {
-    // Allow closing only if at least one account exists
-    if (appState.accounts.length > 0) {
-        EL.btnCloseCreds.classList.remove('hidden');
-    } else {
-        EL.btnCloseCreds.classList.add('hidden');
-    }
+    // Header Close button (X) is now always visible as per requirement
+    EL.btnCloseCreds.classList.remove('hidden');
 };
 
 const openZaimSettings = async () => {
@@ -2019,7 +2017,7 @@ const openZaimSettings = async () => {
     EL.zaimAccountName.value = "";
 
     EL.zaimFormContainer.classList.add('hidden');
-    EL.zaimButtonsContainer.classList.add('hidden');
+    EL.zaimButtonsContainer.classList.remove('hidden'); // Always show buttons container (Cancel button)
     EL.btnDeleteCreds.classList.add('hidden');
     EL.zaimAccountsList.parentElement.classList.remove('hidden');
 
