@@ -471,7 +471,7 @@ function updateBatchProgressUI() {
         return;
     }
 
-    EL.batchProgressText.textContent = `${appState.currentQueueIndex + 1} / ${appState.queue.length} 枚目を処理中...`;
+    EL.batchProgressText.textContent = `${appState.currentQueueIndex + 1} / ${appState.queue.length} 枚目`;
 
     // Check if next items are still parsing
     const hasParsing = appState.queue.some(item => item.status === 'parsing');
@@ -1363,6 +1363,10 @@ EL.btnFetchHistory.addEventListener('click', async () => {
                 if (receiptMap[rid]) {
                     receiptMap[rid].items.push(item);
                     receiptMap[rid].amount += item.amount;
+                    // Update representative metadata to the "last" item in the sequence
+                    receiptMap[rid].date = item.date;
+                    receiptMap[rid].category_name = item.category_name;
+                    receiptMap[rid].place = item.place;
                 } else {
                     receiptMap[rid] = {
                         isGroup: true,
@@ -1420,8 +1424,9 @@ function renderHistoryList() {
         // Format Date yyyy/mm/dd
         const dateStr = item.date.replace(/-/g, '/');
 
-        let firstItemName = item.items[0].name || "未設定";
-        let subText = firstItemName + (item.items.length > 1 ? " 等" : "");
+        const lastItem = item.items[item.items.length - 1];
+        let lastItemName = lastItem.name || "未設定";
+        let subText = lastItemName + (item.items.length > 1 ? " 等" : "");
         let catText = item.category_name || "未分類";
 
         li.innerHTML = `
@@ -1504,8 +1509,9 @@ EL.btnPrepareCopy.addEventListener('click', () => {
         const li = document.createElement('li');
         li.className = "flex flex-col bg-white dark:bg-gray-800 p-3 rounded shadow-sm border border-gray-100 dark:border-gray-700 space-y-3";
 
-        let firstItemName = (group.items[0].name || "未設定");
-        let textName = (group.category_name || "未分類") + " - " + firstItemName + (group.items.length > 1 ? ` 等 (${group.items.length}件)` : "");
+        const lastItem = group.items[group.items.length - 1];
+        let lastItemName = (lastItem.name || "未設定");
+        let textName = (group.category_name || "未分類") + " - " + lastItemName + (group.items.length > 1 ? ` 等 (${group.items.length}件)` : "");
 
         const batchVal = EL.destInternalAccountSelect.value;
         let defaultAccId = "";
@@ -1552,7 +1558,7 @@ EL.btnPrepareCopy.addEventListener('click', () => {
         li.innerHTML = `
             <div class="bg-blue-50 dark:bg-blue-900/20 -m-3 mb-1 p-2 px-3 border-b border-blue-100 dark:border-blue-900/40 rounded-t flex justify-between items-center">
                 <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Group: ${group.category_name || "未分類"}</span>
-                <span class="text-[10px] text-gray-400">${group.items[0].date}</span>
+                <span class="text-[10px] text-gray-400">${group.date}</span>
             </div>
             <div class="space-y-2">
                 ${itemsHtml}
