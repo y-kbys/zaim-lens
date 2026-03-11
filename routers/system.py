@@ -15,6 +15,7 @@ async def read_index(request: Request):
         {
             "request": request, 
             "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
+            "developer_emails": os.environ.get("DEVELOPER_EMAILS", ""),
             "app_version": os.environ.get("APP_VERSION", "v1.0.0")
         }
     )
@@ -25,7 +26,8 @@ async def read_privacy(request: Request):
         "privacy.html", 
         {
             "request": request, 
-            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID")
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
+            "developer_emails": os.environ.get("DEVELOPER_EMAILS", "")
         }
     )
 
@@ -35,9 +37,11 @@ async def read_terms(request: Request):
         "terms.html", 
         {
             "request": request, 
-            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID")
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
+            "developer_emails": os.environ.get("DEVELOPER_EMAILS", "")
         }
     )
+
 
 
 @router.get("/api/config")

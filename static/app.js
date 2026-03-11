@@ -1940,6 +1940,15 @@ const initFirebaseAuth = async () => {
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // GA Opt-out logic for developers
+                if (window.DEVELOPER_EMAILS && window.GA_MEASUREMENT_ID) {
+                    const devEmails = window.DEVELOPER_EMAILS.split(',').map(email => email.trim());
+                    if (devEmails.includes(user.email)) {
+                        window['ga-disable-' + window.GA_MEASUREMENT_ID] = true;
+                        console.log('Developer access detected: GA tracking disabled.');
+                    }
+                }
+
                 appState.user = user;
                 appState.idToken = await user.getIdToken();
 
