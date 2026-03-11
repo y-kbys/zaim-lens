@@ -1939,7 +1939,8 @@ const initFirebaseAuth = async () => {
 
                 // Hide login overlay immediately - don't wait for token etc.
                 if (!EL.loginOverlay.classList.contains('hidden')) {
-                    EL.loginOverlay.classList.add('opacity-0', 'hidden');
+                    EL.loginOverlay.classList.add('opacity-0');
+                    setTimeout(() => EL.loginOverlay.classList.add('hidden'), 300);
                 }
                 EL.userProfile.classList.remove('hidden');
                 EL.btnZaimSettings.classList.remove('hidden');
