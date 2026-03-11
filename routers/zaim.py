@@ -15,23 +15,7 @@ from schemas import (
     RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest
 )
 from db import get_user_config, save_user_config, get_zaim_master_data_from_db, save_zaim_master_data_to_db, clear_zaim_master_data_db
-import datetime
-
-def get_or_fetch_master_data(user_id: str, account_id: str, accounts: dict):
-    # Check Firestore cache directly
-    master_data = get_zaim_master_data_from_db(user_id, account_id)
-    if master_data and "last_updated_at" in master_data:
-        try:
-            last_updated = datetime.datetime.fromisoformat(master_data["last_updated_at"])
-            if datetime.datetime.utcnow() - last_updated < datetime.timedelta(hours=24):
-                return master_data
-        except Exception:
-            pass
-
-    # Cache miss or expired, fetch from Zaim API
-    fresh_data = get_zaim_master_data_wrapper(account_id, user_id, accounts)
-    save_zaim_master_data_to_db(user_id, account_id, fresh_data)
-    return fresh_data
+from services.master_data_service import get_or_fetch_master_data
 
 router = APIRouter()
 

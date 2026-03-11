@@ -4,24 +4,8 @@ from services.auth import verify_token
 from services.gemini import analyze_receipt
 from services.zaim_client import get_zaim_master_data_wrapper
 from schemas import ParseRequest, GeminiCredentialsRequest
-from db import get_user_config, save_user_config, get_zaim_master_data_from_db, save_zaim_master_data_to_db
-import datetime
-
-def get_or_fetch_master_data(user_id: str, account_id: str, accounts: dict):
-    master_data = get_zaim_master_data_from_db(user_id, account_id)
-    if master_data and "last_updated_at" in master_data:
-        try:
-            last_updated = datetime.datetime.fromisoformat(master_data["last_updated_at"])
-            if datetime.datetime.utcnow() - last_updated < datetime.timedelta(hours=24):
-                return master_data
-        except Exception:
-            pass
-
-    # Cache miss or expired
-    fresh_data = get_zaim_master_data_wrapper(account_id, user_id, accounts)
-    save_zaim_master_data_to_db(user_id, account_id, fresh_data)
-    # The saved data will get last_updated_at added by the db function, but we just need categories/genres here
-    return fresh_data
+from db import get_user_config, save_user_config
+from services.master_data_service import get_or_fetch_master_data
 
 def build_prompt_context(categories: list, genres: list) -> str:
     lines = ["\n【Zaim カテゴリ＆ジャンル一覧】"]
