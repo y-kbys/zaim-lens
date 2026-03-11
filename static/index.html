@@ -53,6 +53,19 @@
 
 <body
     class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
+    <!-- Splash Screen (Visible until JS hides it) -->
+    <div id="splash-screen"
+        style="position: fixed; inset: 0; z-index: 9999; background: #1e3a8a; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s ease-out;">
+        <div style="text-align: center;">
+            <div
+                style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; rotate: 12deg; padding: 10px;">
+                <img src="/static/app-icon.png" style="width: 60px; height: 60px; rotate: -12deg; object-fit: contain;" alt="Logo">
+            </div>
+            <h1 style="color: white; font-size: 24px; font-weight: 900; margin-bottom: 8px;">Zaim Lens</h1>
+            <div style="width: 40px; height: 3px; background: #3b82f6; margin: 0 auto; border-radius: 2px;"></div>
+        </div>
+    </div>
+
     <div
         class="max-w-md mx-auto min-h-screen bg-white dark:bg-gray-800 shadow-lg overflow-hidden flex flex-col relative transition-colors duration-200">
         <!-- Header -->
@@ -196,7 +209,7 @@
                         class="relative w-full h-64 border-2 border-dashed border-blue-400 dark:border-blue-500 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors">
                         <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 dark:text-blue-400 mb-4"></i>
                         <span class="text-blue-600 dark:text-blue-300 font-medium">画像をタップして選択（複数可）</span>
-                        <input type="file" id="image-upload" accept="image/*" class="hidden" multiple>
+                        <input type="file" id="image-upload" name="image-upload" accept="image/*" class="hidden" multiple>
 
                         <div id="image-preview-container"
                             class="hidden absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-white dark:bg-gray-800">
@@ -211,7 +224,7 @@
                         <label
                             class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 ml-1 text-center">登録先のZaimアカウントを選択</label>
                         <div id="upload-target-account-skeleton" class="w-full h-12 skeleton-shimmer rounded-xl mb-1"></div>
-                        <select id="upload-target-account"
+                        <select id="upload-target-account" name="upload-target-account"
                             class="hidden w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
                             <option value="">アカウントを読み込み中...</option>
                         </select>
@@ -254,14 +267,14 @@
                             <div class="relative">
                                 <i
                                     class="fa-solid fa-calendar-days absolute left-3 top-3 text-blue-500 dark:text-blue-400"></i>
-                                <input type="date" id="edit-date"
+                                <input type="date" id="edit-date" name="edit-date"
                                     class="w-full p-2 pl-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm">
                             </div>
                             <div class="relative">
                                 <i class="fa-solid fa-shop absolute left-3 top-3 text-blue-500 dark:text-blue-400"></i>
                                 <input type="text" id="edit-store"
                                     class="w-full p-2 pl-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm"
-                                    placeholder="店舗名">
+                                    placeholder="店舗名" name="edit-store" autocomplete="off">
                             </div>
                         </div>
                     </div>
@@ -274,7 +287,7 @@
                                 class="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
                                 <i class="fa-solid fa-user-circle mr-1"></i>登録先アカウント
                             </label>
-                            <select id="edit-target-account"
+                            <select id="edit-target-account" name="edit-target-account"
                                 class="w-full p-2 border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-medium">
                                 <option value="1">読込中...</option>
                             </select>
@@ -284,7 +297,7 @@
                                 class="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
                                 <i class="fa-solid fa-credit-card mr-1"></i>出金元
                             </label>
-                            <select id="edit-from-account"
+                            <select id="edit-from-account" name="edit-from-account"
                                 class="w-full p-2 border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-medium">
                                 <option value="">未指定（出金元なし）</option>
                             </select>
@@ -669,7 +682,7 @@
                         <label
                             class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">表示名
                         </label>
-                        <input type="text" id="zaim-account-name" placeholder="例: 個人用、共有用"
+                        <input type="text" id="zaim-account-name" name="zaim-account-name" placeholder="例: 個人用、共有用" autocomplete="off"
                             class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm">
                     </div>
 
@@ -741,7 +754,7 @@
                         <label
                             class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">API
                             Key</label>
-                        <input type="password" id="gemini-api-key" placeholder="AIZA..."
+                        <input type="password" id="gemini-api-key" name="gemini-api-key" placeholder="AIZA..." autocomplete="off"
                             class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-mono">
                         <p id="gemini-key-status" class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-2"></p>
                     </div>

@@ -98,6 +98,7 @@ const EL = {
     copyConfirmModal: document.getElementById('copy-confirm-modal'),
     copyConfirmModalContent: document.getElementById('copy-confirm-modal-content'),
     btnCloseModal: document.getElementById('btn-close-modal'),
+    splashScreen: document.getElementById('splash-screen'),
     confirmDestName: document.getElementById('confirm-dest-name'),
     confirmListContainer: document.getElementById('confirm-list-container'),
     btnExecuteCopy: document.getElementById('btn-execute-copy'),
@@ -301,6 +302,18 @@ function hideLoading() {
 }
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Returns a key for localStorage, optionally prefixed by user UID.
+ * @param {string} key 
+ * @param {boolean} isGlobal 
+ */
+function getPrefixedKey(key, isGlobal = false) {
+    if (!isGlobal && appState.user && appState.user.uid) {
+        return `user_${appState.user.uid}_${key}`;
+    }
+    return key;
+}
 
 function switchState(stateId) {
     EL.stateUpload.classList.add('hidden');
@@ -770,7 +783,7 @@ async function loadZaimAccounts() {
 
         // Restore last used interior account for THIS target account
         const storageKey = `lastUsedAccountId_${targetAccountId}`;
-        const lastUsedId = localStorage.getItem(storageKey);
+        const lastUsedId = localStorage.getItem(getPrefixedKey(storageKey));
         if (lastUsedId !== null) {
             const exists = Array.from(EL.editFromAccount.options).some(opt => opt.value === lastUsedId);
             if (exists) {
@@ -1049,8 +1062,8 @@ EL.btnRegister.addEventListener('click', async () => {
             }
 
             // Save preference
-            localStorage.setItem('lastUsedTargetAccount', targetAccountId);
-            localStorage.setItem(`lastUsedAccountId_${targetAccountId}`, EL.editFromAccount.value);
+            localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), targetAccountId);
+            localStorage.setItem(getPrefixedKey(`lastUsedAccountId_${targetAccountId}`), EL.editFromAccount.value);
 
             console.log(result);
 
@@ -1163,7 +1176,7 @@ async function refreshAllAccountDropdowns() {
         if (EL.btnFetchHistory) EL.btnFetchHistory.classList.remove('hidden');
 
         // --- Restore Source Account Preference ---
-        const lastSourceId = localStorage.getItem('lastUsedSourceAccountId');
+        const lastSourceId = localStorage.getItem(getPrefixedKey('lastUsedSourceAccountId'));
         if (lastSourceId && Array.from(EL.sourceAccountSelect.options).some(o => o.value === lastSourceId)) {
             EL.sourceAccountSelect.value = lastSourceId;
         }
@@ -1213,7 +1226,7 @@ function updateDestAccountOptions() {
 EL.sourceAccountSelect.addEventListener('change', () => {
     // Save preference
     if (EL.sourceAccountSelect.value) {
-        localStorage.setItem('lastUsedSourceAccountId', EL.sourceAccountSelect.value);
+        localStorage.setItem(getPrefixedKey('lastUsedSourceAccountId'), EL.sourceAccountSelect.value);
     }
     updateDestAccountOptions();
 
@@ -1239,7 +1252,7 @@ EL.destAccountSelect.addEventListener('change', async () => {
 EL.destInternalAccountSelect.addEventListener('change', () => {
     const destId = EL.destAccountSelect.value;
     if (destId) {
-        localStorage.setItem(`lastUsedCopyAccountId_${destId}`, EL.destInternalAccountSelect.value);
+        localStorage.setItem(getPrefixedKey(`lastUsedCopyAccountId_${destId}`), EL.destInternalAccountSelect.value);
     }
 });
 
@@ -1271,7 +1284,7 @@ async function loadDestInternalAccounts() {
 
         // Restore last used account for this destination
         const storageKey = `lastUsedCopyAccountId_${destId}`;
-        const lastUsedId = localStorage.getItem(storageKey);
+        const lastUsedId = localStorage.getItem(getPrefixedKey(storageKey));
         if (lastUsedId !== null && Array.from(EL.destInternalAccountSelect.options).some(o => o.value === lastUsedId)) {
             EL.destInternalAccountSelect.value = lastUsedId;
         }
@@ -1683,7 +1696,7 @@ EL.btnExecuteCopy.addEventListener('click', async () => {
             }
 
             // Save last used account for copy
-            localStorage.setItem('lastUsedCopyAccountId', EL.destInternalAccountSelect.value);
+            localStorage.setItem(getPrefixedKey('lastUsedCopyAccountId'), EL.destInternalAccountSelect.value);
 
             EL.copyStepConfig.classList.add('hidden');
             EL.copyStepList.classList.add('hidden');
@@ -1784,13 +1797,13 @@ const loadTargetAccounts = async () => {
         if (EL.btnParse) EL.btnParse.classList.remove('hidden');
 
         // Restore Edit Target preference
-        const lastTarget = localStorage.getItem('lastUsedTargetAccount');
+        const lastTarget = localStorage.getItem(getPrefixedKey('lastUsedTargetAccount'));
         if (lastTarget && Array.from(EL.editTargetAccount.options).some(o => o.value === lastTarget)) {
             EL.editTargetAccount.value = lastTarget;
         }
 
         // Restore Upload Target preference or default to Edit Target's preference
-        const lastUploadTarget = localStorage.getItem('lastUsedUploadTargetAccount') || lastTarget;
+        const lastUploadTarget = localStorage.getItem(getPrefixedKey('lastUsedUploadTargetAccount')) || lastTarget;
         if (lastUploadTarget && Array.from(EL.uploadTargetAccount.options).some(o => o.value === lastUploadTarget)) {
             EL.uploadTargetAccount.value = lastUploadTarget;
         }
@@ -1805,16 +1818,26 @@ const loadTargetAccounts = async () => {
 };
 
 EL.editTargetAccount.addEventListener('change', () => {
-    localStorage.setItem('lastUsedTargetAccount', EL.editTargetAccount.value);
+    localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), EL.editTargetAccount.value);
     loadZaimAccounts();
 });
 
 EL.uploadTargetAccount.addEventListener('change', () => {
-    localStorage.setItem('lastUsedUploadTargetAccount', EL.uploadTargetAccount.value);
+    localStorage.setItem(getPrefixedKey('lastUsedUploadTargetAccount'), EL.uploadTargetAccount.value);
 });
 
 // --- Auth & Initial Load ---
 const initFirebaseAuth = async () => {
+    // Hide splash screen as soon as initialization logic starts
+    if (EL.splashScreen) {
+        EL.splashScreen.style.opacity = '0';
+        EL.splashScreen.style.pointerEvents = 'none'; // Unblock UI immediately
+        setTimeout(() => {
+            EL.splashScreen.classList.add('hidden');
+            EL.splashScreen.style.display = 'none'; // Ensure display:none overrides inline flex
+        }, 300);
+    }
+
     const setupFirebase = (config) => {
         const fireApp = initializeApp(config);
         const auth = getAuth(fireApp);
@@ -1918,9 +1941,10 @@ const initFirebaseAuth = async () => {
                 appState.user = user;
                 appState.idToken = await user.getIdToken();
 
-                // Hide login overlay if it was shown
+                // Hide login overlay immediately - don't wait for token etc.
                 if (!EL.loginOverlay.classList.contains('hidden')) {
                     EL.loginOverlay.classList.add('opacity-0');
+                    EL.loginOverlay.style.pointerEvents = 'none'; // Allow clicks to pass through while fading
                     setTimeout(() => EL.loginOverlay.classList.add('hidden'), 300);
                 }
                 EL.userProfile.classList.remove('hidden');
@@ -1929,8 +1953,12 @@ const initFirebaseAuth = async () => {
 
                 (async () => {
                     try {
-                        await loadAccounts();
-                        const hasTarget = await loadTargetAccounts();
+                        // Parallel load of accounts and target accounts
+                        const [_, hasTarget] = await Promise.all([
+                            loadAccounts(),
+                            loadTargetAccounts()
+                        ]);
+
                         if (hasTarget !== false) {
                             try {
                                 await loadZaimAccounts();
