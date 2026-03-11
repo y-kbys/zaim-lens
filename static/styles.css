@@ -76,7 +76,7 @@ input[type="number"] {
     }
 }
 
-.thumbnail-loading {
+.thumbnail-loading, .skeleton-shimmer {
     background: linear-gradient(90deg,
             var(--skeleton-bg) 25%,
             var(--skeleton-highlight) 50%,

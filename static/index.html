@@ -207,17 +207,19 @@
                         </div>
                     </label>
 
-                    <div id="upload-account-selector-container" class="w-full hidden">
+                    <div id="upload-account-selector-container" class="w-full">
                         <label
                             class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 ml-1 text-center">登録先のZaimアカウントを選択</label>
+                        <div id="upload-target-account-skeleton" class="w-full h-12 skeleton-shimmer rounded-xl mb-1"></div>
                         <select id="upload-target-account"
-                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                            class="hidden w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
                             <option value="">アカウントを読み込み中...</option>
                         </select>
                     </div>
 
-                    <button id="btn-parse"
-                        class="w-full py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition transform active:scale-95 text-lg mt-4 hidden">
+                    <div id="btn-parse-skeleton" class="w-full h-14 skeleton-shimmer rounded-full mt-4"></div>
+                    <button id="btn-parse" disabled
+                        class="hidden w-full py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition transform active:scale-95 text-lg mt-4">
                         <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> 解析を実行
                     </button>
 
@@ -345,8 +347,9 @@
                     <div>
                         <label
                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">コピー元アカウント</label>
+                        <div id="source-account-skeleton" class="w-full h-12 skeleton-shimmer rounded mb-1"></div>
                         <select id="source-account-select"
-                            class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                            class="hidden w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
                             <option value="">読込中...</option>
                         </select>
                     </div>
@@ -391,8 +394,9 @@
                             </div>
                         </div>
 
+                        <div id="btn-fetch-history-skeleton" class="w-full h-12 skeleton-shimmer rounded-xl"></div>
                         <button id="btn-fetch-history"
-                            class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition transform active:scale-95">
+                            class="hidden w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition transform active:scale-95">
                             <i class="fa-solid fa-download mr-2"></i>履歴を取得
                         </button>
                     </div>

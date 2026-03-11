@@ -44,6 +44,8 @@ const EL = {
     btnManualEntry: document.getElementById('btn-manual-entry'),
     uploadTargetAccount: document.getElementById('upload-target-account'),
     uploadAccountSelectorContainer: document.getElementById('upload-account-selector-container'),
+    uploadTargetAccountSkeleton: document.getElementById('upload-target-account-skeleton'),
+    btnParseSkeleton: document.getElementById('btn-parse-skeleton'),
 
     // Edit State
     editDate: document.getElementById('edit-date'),
@@ -84,6 +86,8 @@ const EL = {
     periodCustomInputContainer: document.getElementById('period-custom-input-container'),
     periodStartInput: document.getElementById('period-start-input'),
     periodEndInput: document.getElementById('period-end-input'),
+    sourceAccountSkeleton: document.getElementById('source-account-skeleton'),
+    btnFetchHistorySkeleton: document.getElementById('btn-fetch-history-skeleton'),
     btnFetchHistory: document.getElementById('btn-fetch-history'),
     historyListContainer: document.getElementById('history-list-container'),
     btnSelectAll: document.getElementById('btn-select-all'),
@@ -1121,6 +1125,7 @@ function resetApp() {
     EL.imageUpload.value = '';
     EL.imagePreviewContainer.classList.add('hidden');
     EL.btnParse.classList.add('hidden');
+    EL.btnParse.disabled = true;
     EL.successReceiptIdContainer.classList.add('hidden');
     switchState('state-upload');
 }
@@ -1150,6 +1155,12 @@ async function refreshAllAccountDropdowns() {
         EL.destAccountSelect.innerHTML = html;
         EL.uploadTargetAccount.innerHTML = targetHtml;
         EL.editTargetAccount.innerHTML = targetHtml;
+
+        // Hide skeletons in Copy tab
+        if (EL.sourceAccountSkeleton) EL.sourceAccountSkeleton.classList.add('hidden');
+        if (EL.sourceAccountSelect) EL.sourceAccountSelect.classList.remove('hidden');
+        if (EL.btnFetchHistorySkeleton) EL.btnFetchHistorySkeleton.classList.add('hidden');
+        if (EL.btnFetchHistory) EL.btnFetchHistory.classList.remove('hidden');
 
         // --- Restore Source Account Preference ---
         const lastSourceId = localStorage.getItem('lastUsedSourceAccountId');
@@ -1353,6 +1364,10 @@ EL.btnFetchHistory.addEventListener('click', async () => {
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
 
+        // Ensure skeletons are hidden if they weren't already
+        if (EL.btnFetchHistorySkeleton) EL.btnFetchHistorySkeleton.classList.add('hidden');
+        if (EL.btnFetchHistory) EL.btnFetchHistory.classList.remove('hidden');
+
         const rawPayments = data.history.filter(h => h.mode === "payment");
         const groupedHistory = [];
         const receiptMap = {};
@@ -1397,6 +1412,8 @@ EL.btnFetchHistory.addEventListener('click', async () => {
         appState.selectedHistoryIds.clear();
         renderHistoryList();
 
+        // Hide loading and show app
+        hideLoading();
         EL.copyStepList.classList.remove('hidden');
         EL.copyStepList.classList.add('flex');
         EL.copyStepDest.classList.remove('hidden');
@@ -1760,6 +1777,12 @@ const loadTargetAccounts = async () => {
         EL.uploadTargetAccount.innerHTML = html;
         EL.uploadAccountSelectorContainer.classList.remove('hidden');
 
+        // Hide skeletons in Upload tab
+        if (EL.uploadTargetAccountSkeleton) EL.uploadTargetAccountSkeleton.classList.add('hidden');
+        if (EL.uploadTargetAccount) EL.uploadTargetAccount.classList.remove('hidden');
+        if (EL.btnParseSkeleton) EL.btnParseSkeleton.classList.add('hidden');
+        if (EL.btnParse) EL.btnParse.classList.remove('hidden');
+
         // Restore Edit Target preference
         const lastTarget = localStorage.getItem('lastUsedTargetAccount');
         if (lastTarget && Array.from(EL.editTargetAccount.options).some(o => o.value === lastTarget)) {
@@ -1792,13 +1815,9 @@ EL.uploadTargetAccount.addEventListener('change', () => {
 
 // --- Auth & Initial Load ---
 const initFirebaseAuth = async () => {
-    try {
-        const res = await fetch('/api/config');
-        if (!res.ok) throw new Error("Failed to fetch Firebase config");
-        const { firebaseConfig } = await res.json();
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+    const setupFirebase = (config) => {
+        const fireApp = initializeApp(config);
+        const auth = getAuth(fireApp);
         const provider = new GoogleAuthProvider();
 
         EL.btnGoogleLogin.addEventListener('click', async () => {
@@ -1812,7 +1831,6 @@ const initFirebaseAuth = async () => {
             } catch (error) {
                 console.error("Login failed", error);
                 showToast("ログインに失敗しました: " + error.message, 'error');
-                // Restore button state
                 EL.btnGoogleLogin.disabled = false;
                 EL.btnGoogleLogin.innerHTML = `
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
@@ -1868,34 +1886,23 @@ const initFirebaseAuth = async () => {
             if (await showConfirm("アカウント削除の警告", confirmMsg)) {
                 try {
                     showToast("アカウントを削除しています...", "info");
-
-                    // 1. Delete data from backend (Firestore)
                     const res = await fetch('/api/user', {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${appState.idToken}`
                         }
                     });
-
-                    if (!res.ok) {
-                        throw new Error(`Failed to delete backend data: ${res.statusText}`);
-                    }
-
-                    // 2. Delete user from Firebase Auth
+                    if (!res.ok) throw new Error(`Failed to delete backend data: ${res.statusText}`);
                     const user = auth.currentUser;
                     if (user) {
                         import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js').then(async (module) => {
                             const { deleteUser } = module;
                             await deleteUser(user);
                             showToast("アカウントを正常に削除しました", "success");
-                        }).catch(err => {
-                            console.error("Firebase module load failed", err);
-                            throw err;
                         });
                     }
                 } catch (error) {
                     console.error("Account deletion failed", error);
-                    // Special error handling for specific Firebase requirement
                     if (error.code === 'auth/requires-recent-login') {
                         showToast("セキュリティのため、再度ログインしてからもう一度削除を実行してください。", "error");
                         await signOut(auth);
@@ -1906,14 +1913,12 @@ const initFirebaseAuth = async () => {
             }
         });
 
-        let isFirstAuthCheck = true;
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Logged In
                 appState.user = user;
                 appState.idToken = await user.getIdToken();
 
-                // Show app shell IMMEDIATELY
+                // Hide login overlay if it was shown
                 if (!EL.loginOverlay.classList.contains('hidden')) {
                     EL.loginOverlay.classList.add('opacity-0');
                     setTimeout(() => EL.loginOverlay.classList.add('hidden'), 300);
@@ -1922,7 +1927,6 @@ const initFirebaseAuth = async () => {
                 EL.btnZaimSettings.classList.remove('hidden');
                 if (user.photoURL) EL.userAvatar.src = user.photoURL;
 
-                // Load initial data (Asynchronously)
                 (async () => {
                     try {
                         await loadAccounts();
@@ -1943,26 +1947,47 @@ const initFirebaseAuth = async () => {
                     }
                 })();
             } else {
-                // Not Logged In
                 appState.user = null;
                 appState.idToken = null;
 
+                // ONLY show login overlay if auth state is confirmed negative
                 EL.loginOverlay.classList.remove('hidden');
                 setTimeout(() => EL.loginOverlay.classList.remove('opacity-0'), 10);
                 EL.userProfile.classList.add('hidden');
                 EL.btnZaimSettings.classList.add('hidden');
                 EL.userAvatar.src = "";
 
-                // Reset login button state if it was loading
                 EL.btnGoogleLogin.disabled = false;
                 EL.btnGoogleLogin.innerHTML = `
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
                     <span>Googleでログイン</span>
                 `;
             }
-            isFirstAuthCheck = false;
         });
+    };
 
+    // Try to get config from cache first for instant initialization
+    const cachedConfig = localStorage.getItem('firebaseConfig');
+    if (cachedConfig) {
+        try {
+            setupFirebase(JSON.parse(cachedConfig));
+            // Still fetch fresh config in background to ensure it's up to date
+            fetch('/api/config').then(res => res.json()).then(data => {
+                localStorage.setItem('firebaseConfig', JSON.stringify(data.firebaseConfig));
+            }).catch(() => {});
+            return;
+        } catch (e) {
+            console.error("Failed to parse cached firebase config", e);
+        }
+    }
+
+    // No cache or failed cache: fetch from API
+    try {
+        const res = await fetch('/api/config');
+        if (!res.ok) throw new Error("Failed to fetch Firebase config");
+        const { firebaseConfig } = await res.json();
+        localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
+        setupFirebase(firebaseConfig);
     } catch (e) {
         console.error("Error initializing Firebase Auth:", e);
         showToast("システムの設定エラーによりログイン機能が起動できませんでした。", 'error');
