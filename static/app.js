@@ -1559,8 +1559,10 @@ EL.btnPrepareCopy.addEventListener('click', () => {
         }
 
         // Render each item within the group with category/genre selects
+        // Note: We reverse items for display to show "natural" receipt order (items first, adjustments last)
         let itemsHtml = '';
-        group.items.forEach((item, itemIdx) => {
+        [...group.items].reverse().forEach((item, rIdx) => {
+            const itemIdx = group.items.length - 1 - rIdx; // Original index
             const catOptions = generateCategoryOptions(appState.copyMasterData.master_categories, item.category_id);
             const genOptions = generateGenreOptions(appState.copyMasterData.master_genres, item.category_id, item.genre_id);
 
@@ -1587,7 +1589,7 @@ EL.btnPrepareCopy.addEventListener('click', () => {
 
         li.innerHTML = `
             <div class="bg-blue-50 dark:bg-blue-900/20 -m-3 mb-1 p-2 px-3 border-b border-blue-100 dark:border-blue-900/40 rounded-t flex justify-between items-center">
-                <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Group: ${group.category_name || "未分類"}</span>
+                <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">${group.place || group.category_name || "未分類"}</span>
                 <span class="text-[10px] text-gray-400">${group.date}</span>
             </div>
             <div class="space-y-2">

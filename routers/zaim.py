@@ -344,9 +344,8 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
                     "from_account_id": item.from_account_id
                 })
             
-            # [IMPORTANT] Zaim history API returns items in newest-first order.
-            # To restore original top-to-bottom order for registration, we reverse the list.
-            items_list.reverse()
+            # [IMPORTANT] The frontend now sends items in the natural order (top-to-bottom).
+            # We process them as-is to ensure Zaim registers them in that same order.
             
             # Register this entire receipt group via service
             success_count = zaim_service.register_receipt_items(
