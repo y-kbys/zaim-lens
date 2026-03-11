@@ -41,14 +41,17 @@
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/styles.css">
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MGZERW5Q9P"></script>
+    {% if ga_measurement_id %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
 
-        gtag('config', 'G-MGZERW5Q9P');
+        gtag('config', '{{ ga_measurement_id }}');
     </script>
+    {% endif %}
+
 </head>
 
 <body
@@ -780,7 +783,8 @@
         </div>
     </div>
 
-    <script type="module" src="/static/app.js?v={{APP_VERSION}}"></script>
+    <script type="module" src="/static/app.js?v={{ app_version }}"></script>
+
 </body>
 
 </html>

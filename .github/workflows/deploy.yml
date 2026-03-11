@@ -44,17 +44,16 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Update SW and App Cache Version
+      - name: Update SW version (App version passed via Env)
         run: |
           VERSION="v${{ github.run_number }}"
           sed -i "s/const CACHE_NAME = '.*';/const CACHE_NAME = 'zaim-lens-${VERSION}';/" static/sw.js
-          sed -i "s/{{APP_VERSION}}/${VERSION}/" static/index.html
           echo "SW Cache Name updated to: zaim-lens-${VERSION}"
-          echo "App Cache Version updated to: ${VERSION}"
 
       - name: Generate env.yaml
         run: |
           echo '${{ toJson(secrets) }}' | jq -r 'to_entries | .[] | select((.key | ascii_upcase) | IN("WIF_PROVIDER", "WIF_SERVICE_ACCOUNT", "GITHUB_TOKEN") | not) | "\(.key): \(.value | @json)"' > env.yaml
+          echo "APP_VERSION: \"v${{ github.run_number }}\"" >> env.yaml
           echo "Generated env.yaml for environment: ${{ github.event.repository.default_branch == github.ref_name && 'prod' || 'dev' }}"
           # Show non-sensitive keys for debugging
           cat env.yaml | sed 's/: .*/: ***/'
@@ -62,10 +61,13 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           SERVICE_NAME=${{ github.ref == 'refs/heads/main' && 'zaim-lens' || 'zaim-lens-dev' }}
+          GA_ID=${{ github.ref == 'refs/heads/main' && secrets.GA_MEASUREMENT_ID_PROD || secrets.GA_MEASUREMENT_ID_DEV }}
           echo "Deploying to Service: $SERVICE_NAME"
           gcloud run deploy $SERVICE_NAME \
             --source . \
             --region asia-northeast1 \
             --allow-unauthenticated \
             --env-vars-file env.yaml \
+            --update-env-vars GA_MEASUREMENT_ID=$GA_ID \
             --cpu-boost
+

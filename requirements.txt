@@ -9,3 +9,4 @@ firebase-admin>=6.5.0
 cryptography>=42.0.0
 itsdangerous
 PyJWT>=2.8.0
+jinja2
