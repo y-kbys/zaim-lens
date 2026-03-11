@@ -54,7 +54,6 @@ jobs:
         run: |
           echo '${{ toJson(secrets) }}' | jq -r 'to_entries | .[] | select((.key | ascii_upcase) | IN("WIF_PROVIDER", "WIF_SERVICE_ACCOUNT", "GITHUB_TOKEN") | not) | "\(.key): \(.value | @json)"' > env.yaml
           echo "APP_VERSION: \"v${{ github.run_number }}\"" >> env.yaml
-          echo "GA_MEASUREMENT_ID: \"${{ secrets.GA_MEASUREMENT_ID }}\"" >> env.yaml
           echo "Generated env.yaml for environment: ${{ github.event.repository.default_branch == github.ref_name && 'prod' || 'dev' }}"
           # Show non-sensitive keys for debugging
           cat env.yaml | sed 's/: .*/: ***/'
