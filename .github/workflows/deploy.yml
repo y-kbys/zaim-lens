@@ -67,4 +67,5 @@ jobs:
             --source . \
             --region asia-northeast1 \
             --allow-unauthenticated \
-            --env-vars-file env.yaml
+            --env-vars-file env.yaml \
+            --cpu-boost
