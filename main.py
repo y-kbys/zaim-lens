@@ -1,6 +1,7 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
 from db import get_user_config, save_user_config, firebase_app
@@ -52,7 +53,10 @@ except Exception as e:
 # --- App Initialization ---
 app = FastAPI(title="Zaim Lens")
 os.makedirs("static", exist_ok=True)
+os.makedirs("templates", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
 
 # Add SessionMiddleware for OAuth 1.0a request token secret storage
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)

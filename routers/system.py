@@ -1,18 +1,44 @@
 import os
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from services.auth import verify_token
 from db import delete_user_config, clear_zaim_master_data_db
 
 router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 
 @router.get("/", response_class=HTMLResponse)
-async def read_index():
-    try:
-        with open("static/index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        return "index.html not found in static/"
+async def read_index(request: Request):
+    return templates.TemplateResponse(
+        "index.html", 
+        {
+            "request": request, 
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
+            "app_version": os.environ.get("APP_VERSION", "v1.0.0")
+        }
+    )
+
+@router.get("/privacy.html", response_class=HTMLResponse)
+async def read_privacy(request: Request):
+    return templates.TemplateResponse(
+        "privacy.html", 
+        {
+            "request": request, 
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID")
+        }
+    )
+
+@router.get("/terms.html", response_class=HTMLResponse)
+async def read_terms(request: Request):
+    return templates.TemplateResponse(
+        "terms.html", 
+        {
+            "request": request, 
+            "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID")
+        }
+    )
+
 
 @router.get("/api/config")
 async def get_firebase_config():
