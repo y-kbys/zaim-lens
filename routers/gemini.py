@@ -2,7 +2,6 @@ import os
 from fastapi import APIRouter, HTTPException, Body, Depends
 from services.auth import verify_token
 from services.gemini import analyze_receipt
-from services.zaim_client import get_zaim_master_data_wrapper
 from schemas import ParseRequest, GeminiCredentialsRequest
 from db import get_user_config, save_user_config
 from services.master_data_service import get_or_fetch_master_data

@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 from services.auth import verify_token, verify_token_optional, verify_token_manually
 from services.zaim_client import (
     ZAIM_CONSUMER_KEY, ZAIM_CONSUMER_SECRET, ZAIM_CALLBACK_URL,
-    get_zaim_session_wrapper, get_zaim_master_data_wrapper,
+    get_zaim_session_wrapper,
     get_zaim_authorization_params, exchange_zaim_access_token,
     fetch_zaim_accounts_raw, check_zaim_duplicate, 
     register_payment_item, fetch_history_with_categories
@@ -14,7 +14,7 @@ from services.zaim_client import (
 from schemas import (
     RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest
 )
-from db import get_user_config, save_user_config, get_zaim_master_data_from_db, save_zaim_master_data_to_db, clear_zaim_master_data_db
+from db import get_user_config, save_user_config, clear_zaim_master_data_db
 from services.master_data_service import get_or_fetch_master_data
 
 router = APIRouter()
