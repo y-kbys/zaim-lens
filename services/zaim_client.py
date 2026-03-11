@@ -8,6 +8,27 @@ ZAIM_CONSUMER_KEY = os.environ.get("ZAIM_CONSUMER_KEY")
 ZAIM_CONSUMER_SECRET = os.environ.get("ZAIM_CONSUMER_SECRET")
 ZAIM_CALLBACK_URL = os.environ.get("ZAIM_CALLBACK_URL")
 
+def get_zaim_session(account_id: str, user_id: str, accounts_config: Dict[str, Any]) -> OAuth1Session:
+    """
+    Creates an OAuth1Session for Zaim API based on user configuration.
+    """
+    str_account_id = str(account_id)
+    acct = accounts_config.get(str_account_id)
+    
+    if not acct:
+        print(f"DEBUG: get_zaim_session failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts_config.keys())}")
+        raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
+        
+    if not ZAIM_CONSUMER_KEY or not ZAIM_CONSUMER_SECRET:
+        raise HTTPException(status_code=500, detail="System Zaim Consumer credentials are not configured.")
+
+    return OAuth1Session(
+        ZAIM_CONSUMER_KEY,
+        client_secret=ZAIM_CONSUMER_SECRET,
+        resource_owner_key=acct["token"],
+        resource_owner_secret=acct["token_secret"]
+    )
+
 def get_zaim_master_data(account_id: str, user_id: str, accounts_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Fetches categories and genres from Zaim.
