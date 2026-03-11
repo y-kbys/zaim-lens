@@ -1831,7 +1831,11 @@ const initFirebaseAuth = async () => {
     // Hide splash screen as soon as initialization logic starts
     if (EL.splashScreen) {
         EL.splashScreen.style.opacity = '0';
-        setTimeout(() => EL.splashScreen.classList.add('hidden'), 300);
+        EL.splashScreen.style.pointerEvents = 'none'; // Unblock UI immediately
+        setTimeout(() => {
+            EL.splashScreen.classList.add('hidden');
+            EL.splashScreen.style.display = 'none'; // Ensure display:none overrides inline flex
+        }, 300);
     }
 
     const setupFirebase = (config) => {
@@ -1940,6 +1944,7 @@ const initFirebaseAuth = async () => {
                 // Hide login overlay immediately - don't wait for token etc.
                 if (!EL.loginOverlay.classList.contains('hidden')) {
                     EL.loginOverlay.classList.add('opacity-0');
+                    EL.loginOverlay.style.pointerEvents = 'none'; // Allow clicks to pass through while fading
                     setTimeout(() => EL.loginOverlay.classList.add('hidden'), 300);
                 }
                 EL.userProfile.classList.remove('hidden');
