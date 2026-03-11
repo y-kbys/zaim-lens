@@ -98,6 +98,7 @@ const EL = {
     copyConfirmModal: document.getElementById('copy-confirm-modal'),
     copyConfirmModalContent: document.getElementById('copy-confirm-modal-content'),
     btnCloseModal: document.getElementById('btn-close-modal'),
+    splashScreen: document.getElementById('splash-screen'),
     confirmDestName: document.getElementById('confirm-dest-name'),
     confirmListContainer: document.getElementById('confirm-list-container'),
     btnExecuteCopy: document.getElementById('btn-execute-copy'),
@@ -1827,6 +1828,12 @@ EL.uploadTargetAccount.addEventListener('change', () => {
 
 // --- Auth & Initial Load ---
 const initFirebaseAuth = async () => {
+    // Hide splash screen as soon as initialization logic starts
+    if (EL.splashScreen) {
+        EL.splashScreen.style.opacity = '0';
+        setTimeout(() => EL.splashScreen.classList.add('hidden'), 300);
+    }
+
     const setupFirebase = (config) => {
         const fireApp = initializeApp(config);
         const auth = getAuth(fireApp);
@@ -1930,10 +1937,9 @@ const initFirebaseAuth = async () => {
                 appState.user = user;
                 appState.idToken = await user.getIdToken();
 
-                // Hide login overlay if it was shown
+                // Hide login overlay immediately - don't wait for token etc.
                 if (!EL.loginOverlay.classList.contains('hidden')) {
-                    EL.loginOverlay.classList.add('opacity-0');
-                    setTimeout(() => EL.loginOverlay.classList.add('hidden'), 300);
+                    EL.loginOverlay.classList.add('opacity-0', 'hidden');
                 }
                 EL.userProfile.classList.remove('hidden');
                 EL.btnZaimSettings.classList.remove('hidden');
@@ -1941,8 +1947,12 @@ const initFirebaseAuth = async () => {
 
                 (async () => {
                     try {
-                        await loadAccounts();
-                        const hasTarget = await loadTargetAccounts();
+                        // Parallel load of accounts and target accounts
+                        const [_, hasTarget] = await Promise.all([
+                            loadAccounts(),
+                            loadTargetAccounts()
+                        ]);
+
                         if (hasTarget !== false) {
                             try {
                                 await loadZaimAccounts();
