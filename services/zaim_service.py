@@ -30,9 +30,8 @@ def register_receipt_items(
     
     success_count = 0
     
-    # [IMPORTANT] To prevent reverse ordering in Zaim UI, we register items in reverse order.
-    # Zaim usually displays most recently added items at the top of the day.
-    for item in reversed(items):
+    # Register items in the order they are provided.
+    for item in items:
         payload = {
             "mapping": 1,
             "category_id": item.get("category_id"),
