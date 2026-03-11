@@ -2,9 +2,20 @@ import os
 from fastapi import APIRouter, HTTPException, Body, Depends
 from services.auth import verify_token
 from services.gemini import analyze_receipt
-from services.zaim_client import get_zaim_master_data_wrapper, get_master_data_from_cache
 from schemas import ParseRequest, GeminiCredentialsRequest
 from db import get_user_config, save_user_config
+from services.master_data_service import get_or_fetch_master_data
+
+def build_prompt_context(categories: list, genres: list) -> str:
+    lines = ["\n【Zaim カテゴリ＆ジャンル一覧】"]
+    for cat in categories:
+        c_id = cat.get("id")
+        c_name = cat.get("name")
+        cat_genres = [g for g in genres if g.get("category_id") == c_id]
+        if cat_genres:
+            g_texts = [f"ID:{g['id']} ({g['name']})" for g in cat_genres]
+            lines.append(f"- カテゴリID: {c_id} ({c_name}) 含まれるジャンル: " + ", ".join(g_texts))
+    return "\n".join(lines)
 
 router = APIRouter()
 
@@ -29,16 +40,15 @@ async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Dep
         target_account_id = list(accounts.keys())[0]
 
     try:
-        master_data_context = get_zaim_master_data_wrapper(target_account_id, user_id, accounts)
+        master_data = get_or_fetch_master_data(user_id, target_account_id, accounts)
+        master_categories = master_data.get("categories", [])
+        master_genres = master_data.get("genres", [])
+        
+        master_data_context = build_prompt_context(master_categories, master_genres)
         result_dict = await analyze_receipt(request.image_base64, user_gemini_key, master_data_context)
         
-        master_data = get_master_data_from_cache(user_id, target_account_id)
-        if master_data:
-            result_dict["master_categories"] = master_data["categories"]
-            result_dict["master_genres"] = master_data["genres"]
-        else:
-            result_dict["master_categories"] = []
-            result_dict["master_genres"] = []
+        result_dict["master_categories"] = master_categories
+        result_dict["master_genres"] = master_genres
         
         return result_dict
     except Exception as e:

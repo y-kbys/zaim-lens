@@ -2,8 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from services.auth import verify_token
-from services.zaim_client import clear_master_data_cache
-from db import delete_user_config
+from db import delete_user_config, clear_zaim_master_data_db
 
 router = APIRouter()
 
@@ -39,7 +38,7 @@ async def delete_user_account(user_id: str = Depends(verify_token)):
     success = delete_user_config(user_id)
     if success:
         # Clear all cache entries for this user
-        clear_master_data_cache(user_id)
+        clear_zaim_master_data_db(user_id)
             
         return {"status": "success", "message": "User data completely removed."}
     else:
