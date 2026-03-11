@@ -7,7 +7,6 @@ from services.auth import verify_token, verify_token_optional, verify_token_manu
 from services.zaim_client import (
     ZAIM_CONSUMER_KEY, ZAIM_CONSUMER_SECRET, ZAIM_CALLBACK_URL,
     get_zaim_session_wrapper, get_zaim_master_data_wrapper,
-    get_master_data_from_cache, clear_master_data_cache,
     get_zaim_authorization_params, exchange_zaim_access_token,
     fetch_zaim_accounts_raw, check_zaim_duplicate, 
     register_payment_item, fetch_history_with_categories
@@ -15,7 +14,24 @@ from services.zaim_client import (
 from schemas import (
     RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest
 )
-from db import get_user_config, save_user_config
+from db import get_user_config, save_user_config, get_zaim_master_data_from_db, save_zaim_master_data_to_db, clear_zaim_master_data_db
+import datetime
+
+def get_or_fetch_master_data(user_id: str, account_id: str, accounts: dict):
+    # Check Firestore cache directly
+    master_data = get_zaim_master_data_from_db(user_id, account_id)
+    if master_data and "last_updated_at" in master_data:
+        try:
+            last_updated = datetime.datetime.fromisoformat(master_data["last_updated_at"])
+            if datetime.datetime.utcnow() - last_updated < datetime.timedelta(hours=24):
+                return master_data
+        except Exception:
+            pass
+
+    # Cache miss or expired, fetch from Zaim API
+    fresh_data = get_zaim_master_data_wrapper(account_id, user_id, accounts)
+    save_zaim_master_data_to_db(user_id, account_id, fresh_data)
+    return fresh_data
 
 router = APIRouter()
 
@@ -178,15 +194,11 @@ async def get_zaim_accounts(account_id: str = "1", user_id: str = Depends(verify
 async def get_categories(account_id: str = "1", user_id: str = Depends(verify_token)):
     try:
         config = get_user_config(user_id)
-        get_zaim_master_data_wrapper(account_id, user_id, config.get("accounts", {}))
+        master_data = get_or_fetch_master_data(user_id, account_id, config.get("accounts", {}))
         
-        master_data = get_master_data_from_cache(user_id, account_id)
-        if not master_data:
-            raise HTTPException(status_code=500, detail="Failed to load master data cache.")
-            
         return {
-            "master_categories": master_data["categories"],
-            "master_genres": master_data["genres"]
+            "master_categories": master_data.get("categories", []),
+            "master_genres": master_data.get("genres", [])
         }
     except Exception as e:
         print(f"Error fetching categories for {account_id} / {user_id}: {e}")
@@ -295,8 +307,8 @@ async def get_history(account_id: str, period: Optional[int] = 30, start_date: O
             "end_date": end_date_str
         }
         
-        get_zaim_master_data_wrapper(account_id, user_id, config.get("accounts", {}))
-        history = fetch_history_with_categories(session, user_id, account_id, params)
+        master_data = get_or_fetch_master_data(user_id, account_id, config.get("accounts", {}))
+        history = fetch_history_with_categories(session, master_data, params)
         return {"history": history}
     except Exception as e:
         print(f"Error in get_history: {e}")
@@ -408,7 +420,7 @@ async def save_zaim_credentials(req: ZaimCredentialsRequest, user_id: str = Depe
     }
     config["accounts"] = accounts
     save_user_config(user_id, config)
-    clear_master_data_cache(user_id, target_id)
+    clear_zaim_master_data_db(user_id, target_id)
     return {
         "status": "success", 
         "message": "Zaim credentials saved.",
@@ -423,7 +435,7 @@ async def delete_zaim_credentials(account_id: str, user_id: str = Depends(verify
         del accounts[account_id]
         config["accounts"] = accounts
         save_user_config(user_id, config)
-        clear_master_data_cache(user_id, account_id)
+        clear_zaim_master_data_db(user_id, account_id)
         return {"status": "success", "message": f"Account {account_id} deleted."}
     else:
         raise HTTPException(status_code=404, detail="Account not found.")

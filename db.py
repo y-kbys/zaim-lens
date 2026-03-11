@@ -159,3 +159,58 @@ def delete_user_config(user_id: str) -> bool:
     except Exception as e:
         print(f"Failed to delete user {user_id}: {e}")
         return False
+
+# --- Zaim Master Data Cache ---
+def get_zaim_master_data_from_db(user_id: str, account_id: str) -> Dict[str, Any]:
+    """
+    Retrieve Zaim master data (categories, genres) from Firestore.
+    """
+    if db is None:
+        print("ERROR: Firestore client (db) is not initialized.")
+        return {}
+        
+    doc_ref = db.collection("users").document(user_id).collection("zaim_master_data").document(str(account_id))
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        return {}
+        
+    return doc.to_dict()
+
+def save_zaim_master_data_to_db(user_id: str, account_id: str, data: Dict[str, Any]):
+    """
+    Save Zaim master data to Firestore, automatically adding last_updated_at.
+    """
+    if db is None:
+        print("ERROR: Cannot save master data. Firestore client (db) is not initialized.")
+        return
+        
+    import datetime
+    data_to_save = copy.deepcopy(data)
+    data_to_save["last_updated_at"] = datetime.datetime.utcnow().isoformat()
+    
+    doc_ref = db.collection("users").document(user_id).collection("zaim_master_data").document(str(account_id))
+    doc_ref.set(data_to_save)
+
+def clear_zaim_master_data_db(user_id: str, account_id: str = None) -> bool:
+    """
+    Delete Zaim master data from Firestore.
+    """
+    if db is None:
+        print("ERROR: Cannot delete master data. Firestore client (db) is not initialized.")
+        return False
+        
+    try:
+        master_data_ref = db.collection("users").document(user_id).collection("zaim_master_data")
+        if account_id:
+            doc_ref = master_data_ref.document(str(account_id))
+            doc_ref.delete()
+        else:
+            # Delete all documents in the collection
+            docs = master_data_ref.stream()
+            for doc in docs:
+                doc.reference.delete()
+        return True
+    except Exception as e:
+        print(f"Failed to delete master data cache for user {user_id}: {e}")
+        return False
