@@ -301,72 +301,78 @@ async def get_history(account_id: str, period: Optional[int] = 30, start_date: O
 
 @router.post("/api/copy")
 async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(verify_token)):
-    print(f"Starting History Copy from Account {request.source_account_id} to Account {request.destination_account_id}. Items: {len(request.items_to_copy)}")
-    config = get_user_config(user_id)
-    dest_session = get_zaim_session_wrapper(request.destination_account_id, user_id, config.get("accounts", {}))
-    
-    if not request.force:
-        incoming_groups = {}
+    try:
+        print(f"Starting History Copy from Account {request.source_account_id} to Account {request.destination_account_id}. Items: {len(request.items_to_copy)}")
+        config = get_user_config(user_id)
+        dest_session = get_zaim_session_wrapper(request.destination_account_id, user_id, config.get("accounts", {}))
+        
+        if not request.force:
+            receipt_totals = {} # key: (date, group_id), value: total_amount
+            for item in request.items_to_copy:
+                gid = item.group_id if item.group_id is not None else f"single_{int(time.time())}_{id(item)}"
+                key = (item.date, gid)
+                receipt_totals[key] = receipt_totals.get(key, 0) + item.amount
+            
+            for (date, gid), total in receipt_totals.items():
+                if check_zaim_duplicate(dest_session, date, total):
+                     return {
+                        "status": "warning",
+                        "message": f"コピー先に重複の可能性がある支出が見つかりました（{date}・¥{total:,}）。続行しますか？",
+                        "duplicate_found": True
+                    }
+        
+        group_receipt_id_map = {}
+        last_pseudo_id = int(time.time())
+        success_count = 0
+        errors = []
+        
         for item in request.items_to_copy:
-            gid = item.group_id if item.group_id is not None else f"single_{int(time.time())}_{id(item)}"
-            if gid not in incoming_groups:
-                incoming_groups[gid] = {"date": item.date, "total": 0}
-            incoming_groups[gid]["total"] += item.amount
-        
-        unique_dates = list(set(g["date"] for g in incoming_groups.values()))
-        for d in unique_dates:
-            if check_zaim_duplicate(dest_session, d, incoming_groups[d]["total"]):
-                 return {
-                    "status": "warning",
-                    "message": f"コピー先に重複の可能性がある支出が見つかりました（{d}・¥{incoming_groups[d]['total']:,}）。続行しますか？",
-                    "duplicate_found": True
-                }
-    
-    group_receipt_id_map = {}
-    last_pseudo_id = int(time.time())
-    success_count = 0
-    errors = []
-    
-    for item in request.items_to_copy:
-        if item.group_id is not None:
-             if item.group_id not in group_receipt_id_map:
-                  new_id = max(int(time.time()), last_pseudo_id + 1)
-                  group_receipt_id_map[item.group_id] = new_id
-                  last_pseudo_id = new_id
-             receipt_id = group_receipt_id_map[item.group_id]
-        else:
-             new_id = max(int(time.time()), last_pseudo_id + 1)
-             receipt_id = new_id
-             last_pseudo_id = new_id
-             
-        payload = {
-            "mapping": 1,
-            "category_id": item.category_id,
-            "genre_id": item.genre_id,
-            "amount": item.amount,
-            "date": item.date,
-            "name": item.name,
-            "receipt_id": receipt_id
+            if item.group_id is not None:
+                 if item.group_id not in group_receipt_id_map:
+                      new_id = max(int(time.time()), last_pseudo_id + 1)
+                      group_receipt_id_map[item.group_id] = new_id
+                      last_pseudo_id = new_id
+                 receipt_id = group_receipt_id_map[item.group_id]
+            else:
+                 new_id = max(int(time.time()), last_pseudo_id + 1)
+                 receipt_id = new_id
+                 last_pseudo_id = new_id
+                 
+            payload = {
+                "mapping": 1,
+                "category_id": item.category_id,
+                "genre_id": item.genre_id,
+                "amount": item.amount,
+                "date": item.date,
+                "name": item.name,
+                "receipt_id": receipt_id
+            }
+            
+            effective_from_account_id = item.from_account_id if item.from_account_id is not None else request.from_account_id
+            if effective_from_account_id is not None and str(effective_from_account_id) != "":
+                 payload["from_account_id"] = effective_from_account_id
+                 
+            if item.place:
+                payload["place"] = item.place
+            if item.comment:
+                payload["comment"] = item.comment
+                
+            if register_payment_item(dest_session, payload):
+                success_count += 1
+            else:
+                errors.append(f"Failed to register item: {item.name}")
+                
+        return {
+            "status": "success" if len(errors) == 0 else "partial_success",
+            "success_count": success_count,
+            "failed_count": len(errors),
+            "errors": errors
         }
-        
-        effective_from_account_id = item.from_account_id if item.from_account_id is not None else request.from_account_id
-        if effective_from_account_id is not None and effective_from_account_id != "":
-             payload["from_account_id"] = effective_from_account_id
-             
-        if item.place:
-            payload["place"] = item.place
-        if item.comment:
-            payload["comment"] = item.comment
-            
-        if register_payment_item(dest_session, payload):
-            success_count += 1
-            
-    return {
-        "status": "success" if len(errors) == 0 else "partial_success",
-        "success_count": success_count,
-        "failed_count": len(errors),
-        "errors": errors
-    }
+    except Exception as e:
+        print(f"Error in copy_history: {e}")
+        traceback.print_exc()
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/zaim/credentials/{account_id}")
 async def get_zaim_credentials(account_id: str, user_id: str = Depends(verify_token)):
