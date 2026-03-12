@@ -1,31 +1,34 @@
 version: 2
 updates:
-  # Python (pip) dependencies
+  # Python (pip)
   - package-ecosystem: "pip"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "thursday"
-      time: "09:00" # JST 09:00
+      time: "09:00" 
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
 
-  # Node.js (npm) dependencies (devDependencies in package.json)
+  # Node.js (npm)
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "thursday"
-      time: "09:00" # JST 09:00
+      time: "09:00"
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
       day: "thursday"
-      time: "09:00" # JST 09:00
+      time: "09:00"
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
