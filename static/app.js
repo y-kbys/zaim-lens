@@ -1809,23 +1809,18 @@ const loadTargetAccounts = async () => {
         EL.uploadTargetAccount.innerHTML = html;
         EL.uploadAccountSelectorContainer.classList.remove('hidden');
 
+        // Restore Target Account preference
+        const lastTarget = localStorage.getItem(getPrefixedKey('lastUsedTargetAccount'));
+        if (lastTarget && Array.from(EL.editTargetAccount.options).some(o => o.value === lastTarget)) {
+            EL.editTargetAccount.value = lastTarget;
+            EL.uploadTargetAccount.value = lastTarget;
+        }
+
         // Hide skeletons in Upload tab
         if (EL.uploadTargetAccountSkeleton) EL.uploadTargetAccountSkeleton.classList.add('hidden');
         if (EL.uploadTargetAccount) EL.uploadTargetAccount.classList.remove('hidden');
         if (EL.btnParseSkeleton) EL.btnParseSkeleton.classList.add('hidden');
         if (EL.btnParse) EL.btnParse.classList.remove('hidden');
-
-        // Restore Edit Target preference
-        const lastTarget = localStorage.getItem(getPrefixedKey('lastUsedTargetAccount'));
-        if (lastTarget && Array.from(EL.editTargetAccount.options).some(o => o.value === lastTarget)) {
-            EL.editTargetAccount.value = lastTarget;
-        }
-
-        // Restore Upload Target preference or default to Edit Target's preference
-        const lastUploadTarget = localStorage.getItem(getPrefixedKey('lastUsedUploadTargetAccount')) || lastTarget;
-        if (lastUploadTarget && Array.from(EL.uploadTargetAccount.options).some(o => o.value === lastUploadTarget)) {
-            EL.uploadTargetAccount.value = lastUploadTarget;
-        }
 
         return true;
     } catch (err) {
@@ -1837,12 +1832,17 @@ const loadTargetAccounts = async () => {
 };
 
 EL.editTargetAccount.addEventListener('change', () => {
-    localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), EL.editTargetAccount.value);
+    const val = EL.editTargetAccount.value;
+    EL.uploadTargetAccount.value = val;
+    localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), val);
     loadZaimAccounts();
 });
 
 EL.uploadTargetAccount.addEventListener('change', () => {
-    localStorage.setItem(getPrefixedKey('lastUsedUploadTargetAccount'), EL.uploadTargetAccount.value);
+    const val = EL.uploadTargetAccount.value;
+    EL.editTargetAccount.value = val;
+    localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), val);
+    loadZaimAccounts();
 });
 
 // --- Auth & Initial Load ---
