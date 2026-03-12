@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "thursday"
-      time: "00:00" # UTC 00:00 = JST 09:00
+      time: "09:00" # JST 09:00
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
 
@@ -16,7 +16,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "thursday"
-      time: "00:00" # UTC 00:00 = JST 09:00
+      time: "09:00" # JST 09:00
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
 
@@ -26,6 +26,6 @@ updates:
     schedule:
       interval: "weekly"
       day: "thursday"
-      time: "00:00" # UTC 00:00 = JST 09:00
+      time: "09:00" # JST 09:00
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 10
