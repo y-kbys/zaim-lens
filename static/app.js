@@ -24,6 +24,15 @@ let appState = {
     lastReceiptId: 0,
 };
 
+/**
+ * Helper to send GA4 custom events safely
+ */
+const sendGAEvent = (eventName, params = {}) => {
+    if (typeof window.gtag === 'function') {
+        window.gtag('event', eventName, params);
+    }
+};
+
 const EL = {
     tabParse: document.getElementById('tab-parse'),
     tabCopy: document.getElementById('tab-copy'),
@@ -673,6 +682,7 @@ EL.btnParse.addEventListener('click', async () => {
 
     // Start background parsing for all items in the queue
     startBackgroundParsing();
+    sendGAEvent('execute_receipt_analysis');
 
     // If the first item is already parsed (shouldn't happen yet normally), setupEditState
     const currentItem = appState.queue[appState.currentQueueIndex];
@@ -1061,11 +1071,11 @@ EL.btnRegister.addEventListener('click', async () => {
                 return;
             }
 
-            // Save preference
             localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), targetAccountId);
             localStorage.setItem(getPrefixedKey(`lastUsedAccountId_${targetAccountId}`), EL.editFromAccount.value);
 
             console.log(result);
+            sendGAEvent('save_receipt_result');
 
             // If in batch mode, advance to next or show success if finished
             if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
@@ -1183,6 +1193,11 @@ async function refreshAllAccountDropdowns() {
 
         // --- Handle Initial Destination Selection ---
         updateDestAccountOptions();
+
+        if (sessionStorage.getItem('zaim_auth_pending') === 'true') {
+            sendGAEvent('zaim_auth_completed');
+            sessionStorage.removeItem('zaim_auth_pending');
+        }
 
         return appState.accounts;
     } catch (err) {
@@ -1424,6 +1439,7 @@ EL.btnFetchHistory.addEventListener('click', async () => {
 
         appState.selectedHistoryIds.clear();
         renderHistoryList();
+        sendGAEvent('fetch_zaim_history');
 
         // Hide loading and show app
         hideLoading();
@@ -1699,6 +1715,7 @@ EL.btnExecuteCopy.addEventListener('click', async () => {
 
             // Save last used account for copy
             localStorage.setItem(getPrefixedKey('lastUsedCopyAccountId'), EL.destInternalAccountSelect.value);
+            sendGAEvent('copy_zaim_history');
 
             EL.copyStepConfig.classList.add('hidden');
             EL.copyStepList.classList.add('hidden');
@@ -2113,6 +2130,7 @@ EL.btnZaimSettings.addEventListener('click', (e) => {
     const isHidden = EL.settingsDropdown.classList.contains('hidden');
     if (isHidden) {
         EL.settingsDropdown.classList.remove('hidden');
+        sendGAEvent('open_settings');
         setTimeout(() => {
             EL.settingsDropdown.classList.remove('opacity-0', 'scale-95');
             EL.settingsDropdown.classList.add('opacity-100', 'scale-100');
@@ -2207,6 +2225,7 @@ EL.btnSaveGeminiCreds.addEventListener('click', async () => {
         if (!res.ok) throw new Error(await res.text());
 
         showToast("Gemini APIキーを保存しました。");
+        sendGAEvent('gemini_key_saved');
         closeGeminiSettings();
     } catch (e) {
         console.error(e);
@@ -2269,6 +2288,7 @@ EL.btnZaimConnect.addEventListener('click', async () => {
 
         const data = await res.json();
         if (data.auth_url) {
+            sessionStorage.setItem('zaim_auth_pending', 'true');
             window.location.href = data.auth_url;
         } else {
             throw new Error("Invalid response from server. No auth_url found.");
