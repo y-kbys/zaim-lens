@@ -177,6 +177,7 @@ const EL = {
     zaimButtonsContainer: document.getElementById('zaim-buttons-container'),
     btnCopyGuideZaim: document.getElementById('btn-copy-guide-zaim'),
     btnCopyGuideGemini: document.getElementById('btn-copy-guide-gemini'),
+    bulkCategorySelect: document.getElementById('bulk-category-select'),
 };
 
 /**
@@ -789,6 +790,9 @@ async function loadZaimAccounts() {
 
             // Re-render items list to update category/genre dropdown options
             renderItemsList();
+
+            // Update bulk category select
+            EL.bulkCategorySelect.innerHTML = '<option value="" disabled selected>一括カテゴリ変更...</option>' + generateCategoryOptions(masterData.master_categories, "");
         }
 
         // Restore last used interior account for THIS target account
@@ -963,6 +967,32 @@ window.updateItemCategory = (index, catIdStr) => {
 window.updateItemGenre = (index, genreId) => {
     appState.parsedData.items[index].genre_id = parseInt(genreId);
 };
+
+// 5. Bulk Category Change Handler
+EL.bulkCategorySelect.addEventListener('change', async (e) => {
+    const catId = parseInt(e.target.value);
+    if (!catId || !appState.parsedData) return;
+
+    const confirmMsg = `全品目のカテゴリを「${e.target.options[e.target.selectedIndex].text}」に変更しますか？`;
+    if (!await showConfirm("一括変更の確認", confirmMsg)) {
+        EL.bulkCategorySelect.value = "";
+        return;
+    }
+
+    const firstGenre = appState.parsedData.master_genres.find(g => g.category_id == catId);
+    const genId = firstGenre ? firstGenre.id : 0;
+
+    appState.parsedData.items.forEach(item => {
+        if (!item.deleted) {
+            item.category_id = catId;
+            item.genre_id = genId;
+        }
+    });
+
+    renderItemsList();
+    showToast("すべてのカテゴリを更新しました。", "success");
+    EL.bulkCategorySelect.value = ""; // Reset to placeholder
+});
 
 // --- History Copy Confirmation Handlers ---
 window.updateCopyItemCategory = (groupIdx, itemIdx, catIdStr) => {
