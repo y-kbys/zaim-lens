@@ -1065,13 +1065,12 @@ EL.btnRegister.addEventListener('click', async () => {
     appState.parsedData.store = EL.editStore.value;
     appState.parsedData.point_usage = 0; // Handled directly in items now
 
-    // Purge logically deleted items
-    appState.parsedData.items = appState.parsedData.items.filter(i => !i.deleted);
+    // Prepare a clean list of items for registration without destroying appState
+    let itemsToRegister = [...appState.parsedData.items]
+        .filter(i => !i.deleted)
+        .filter(i => i.name.trim() !== '' || i.price !== 0);
 
-    // Filter empty (Allow items with price even if name is empty)
-    appState.parsedData.items = appState.parsedData.items.filter(i => i.name.trim() !== '' || i.price !== 0);
-
-    if (appState.parsedData.items.length === 0 && appState.parsedData.point_usage === 0) {
+    if (itemsToRegister.length === 0 && appState.parsedData.point_usage === 0) {
         showToast('登録する品目がありません。', 'warning');
         return;
     }
@@ -1106,8 +1105,8 @@ EL.btnRegister.addEventListener('click', async () => {
         }
     }
 
-    // Default name for items with empty name but price
-    appState.parsedData.items.forEach(item => {
+    // Default name for items with empty name but price (apply to the list for registration)
+    itemsToRegister.forEach(item => {
         if (item.name.trim() === '') {
             item.name = '支出';
         }
@@ -1117,8 +1116,12 @@ EL.btnRegister.addEventListener('click', async () => {
         showLoading(force ? '強制的に登録中...' : 'Zaimに登録中...');
         try {
             const targetAccountId = EL.editTargetAccount.value;
+            
+            // Create a payload with the filtered items
+            const registerData = { ...appState.parsedData, items: itemsToRegister };
+            
             const payload = {
-                receipt_data: appState.parsedData,
+                receipt_data: registerData,
                 force: force,
                 from_account_id: (EL.editFromAccount.value && EL.editFromAccount.value !== "") ? parseInt(EL.editFromAccount.value) : null,
                 target_account_id: targetAccountId,
