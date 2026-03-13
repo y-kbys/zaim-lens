@@ -1004,11 +1004,11 @@ window.applyBulkCategoryGenre = async (catId, genId, genName) => {
     const catName = appState.parsedData.master_categories.find(c => c.id == catId).name;
     const confirmMsg = `全品目のカテゴリを「${catName} / ${genName}」に変更しますか？`;
     
-    const confirmed = await showConfirm("一括変更の確認", confirmMsg);
-    
-    // Always close menu after confirm (regardless of OK or Cancel)
+    // Immediate close menu before confirm dialog
     EL.bulkMenuDropdown.classList.remove('show');
 
+    const confirmed = await showConfirm("一括変更の確認", confirmMsg);
+    
     if (!confirmed) {
         return;
     }
