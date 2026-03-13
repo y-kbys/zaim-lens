@@ -976,7 +976,7 @@ function renderBulkMenuCategories(categories) {
     if (!categories) return;
     EL.bulkMenuCategories.innerHTML = categories.map(c => `
         <button class="bulk-menu-item" onmouseenter="showBulkMenuGenres(${c.id})" onclick="showBulkMenuGenres(${c.id})">
-            ${c.name} <i class="fa-solid fa-chevron-right"></i>
+            <i class="fa-solid fa-chevron-left mr-2 opacity-30"></i> ${c.name}
         </button>
     `).join('');
 }
@@ -1004,7 +1004,12 @@ window.applyBulkCategoryGenre = async (catId, genId, genName) => {
     const catName = appState.parsedData.master_categories.find(c => c.id == catId).name;
     const confirmMsg = `全品目のカテゴリを「${catName} / ${genName}」に変更しますか？`;
     
-    if (!await showConfirm("一括変更の確認", confirmMsg)) {
+    const confirmed = await showConfirm("一括変更の確認", confirmMsg);
+    
+    // Always close menu after confirm (regardless of OK or Cancel)
+    EL.bulkMenuDropdown.classList.remove('show');
+
+    if (!confirmed) {
         return;
     }
 

@@ -248,13 +248,13 @@ input[type="number"] {
     flex-direction: column;
 }
 
-.bulk-menu-column:first-child {
-    border-right: 1px solid #f3f4f6;
+.bulk-menu-column:last-child {
+    border-left: 1px solid #f3f4f6;
     background: #f9fafb;
 }
 
-.dark .bulk-menu-column:first-child {
-    border-right-color: #374151;
+.dark .bulk-menu-column:last-child {
+    border-left-color: #374151;
     background: #111827;
 }
 
