@@ -177,7 +177,10 @@ const EL = {
     zaimButtonsContainer: document.getElementById('zaim-buttons-container'),
     btnCopyGuideZaim: document.getElementById('btn-copy-guide-zaim'),
     btnCopyGuideGemini: document.getElementById('btn-copy-guide-gemini'),
-    bulkCategorySelect: document.getElementById('bulk-category-select'),
+    btnBulkMenu: document.getElementById('btn-bulk-menu'),
+    bulkMenuDropdown: document.getElementById('bulk-menu-dropdown'),
+    bulkMenuCategories: document.getElementById('bulk-menu-categories'),
+    bulkMenuGenres: document.getElementById('bulk-menu-genres'),
 };
 
 /**
@@ -791,8 +794,8 @@ async function loadZaimAccounts() {
             // Re-render items list to update category/genre dropdown options
             renderItemsList();
 
-            // Update bulk category select
-            EL.bulkCategorySelect.innerHTML = '<option value="" disabled selected>一括カテゴリ変更...</option>' + generateCategoryOptions(masterData.master_categories, "");
+            // Update bulk menu categories
+            renderBulkMenuCategories(masterData.master_categories);
         }
 
         // Restore last used interior account for THIS target account
@@ -968,19 +971,42 @@ window.updateItemGenre = (index, genreId) => {
     appState.parsedData.items[index].genre_id = parseInt(genreId);
 };
 
-// 5. Bulk Category Change Handler
-EL.bulkCategorySelect.addEventListener('change', async (e) => {
-    const catId = parseInt(e.target.value);
-    if (!catId || !appState.parsedData) return;
+// 5. Bulk Category & Genre Menu Logic
+function renderBulkMenuCategories(categories) {
+    if (!categories) return;
+    EL.bulkMenuCategories.innerHTML = categories.map(c => `
+        <button class="bulk-menu-item" onmouseenter="showBulkMenuGenres(${c.id})" onclick="showBulkMenuGenres(${c.id})">
+            ${c.name} <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    `).join('');
+}
 
-    const confirmMsg = `全品目のカテゴリを「${e.target.options[e.target.selectedIndex].text}」に変更しますか？`;
+window.showBulkMenuGenres = (catId) => {
+    // Update active state in category list
+    const categoryButtons = EL.bulkMenuCategories.querySelectorAll('.bulk-menu-item');
+    categoryButtons.forEach(btn => {
+        if (btn.textContent.trim().includes(appState.parsedData.master_categories.find(c => c.id == catId).name)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    const genres = appState.parsedData.master_genres.filter(g => g.category_id == catId);
+    EL.bulkMenuGenres.innerHTML = genres.map(g => `
+        <button class="bulk-menu-item" onclick="applyBulkCategoryGenre(${catId}, ${g.id}, '${g.name}')">
+            ${g.name}
+        </button>
+    `).join('');
+};
+
+window.applyBulkCategoryGenre = async (catId, genId, genName) => {
+    const catName = appState.parsedData.master_categories.find(c => c.id == catId).name;
+    const confirmMsg = `全品目のカテゴリを「${catName} / ${genName}」に変更しますか？`;
+    
     if (!await showConfirm("一括変更の確認", confirmMsg)) {
-        EL.bulkCategorySelect.value = "";
         return;
     }
-
-    const firstGenre = appState.parsedData.master_genres.find(g => g.category_id == catId);
-    const genId = firstGenre ? firstGenre.id : 0;
 
     appState.parsedData.items.forEach(item => {
         if (!item.deleted) {
@@ -990,8 +1016,20 @@ EL.bulkCategorySelect.addEventListener('change', async (e) => {
     });
 
     renderItemsList();
-    showToast("すべてのカテゴリを更新しました。", "success");
-    EL.bulkCategorySelect.value = ""; // Reset to placeholder
+    showToast("すべてのカテゴリ・ジャンルを更新しました。", "success");
+    EL.bulkMenuDropdown.classList.remove('show');
+};
+
+EL.btnBulkMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    EL.bulkMenuDropdown.classList.toggle('show');
+});
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!EL.bulkMenuDropdown.contains(e.target) && e.target !== EL.btnBulkMenu) {
+        EL.bulkMenuDropdown.classList.remove('show');
+    }
 });
 
 // --- History Copy Confirmation Handlers ---
