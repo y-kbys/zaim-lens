@@ -219,6 +219,13 @@
                         <span class="text-blue-600 dark:text-blue-300 font-medium">画像をタップして選択（複数可）</span>
                         <input type="file" id="image-upload" name="image-upload" accept="image/*" class="hidden" multiple>
 
+                        <!-- Direct Camera Access -->
+                        <button id="btn-camera" type="button"
+                            class="absolute bottom-4 right-4 w-12 h-12 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-10 border border-blue-100 dark:border-gray-700">
+                            <i class="fa-solid fa-camera text-xl"></i>
+                        </button>
+                        <input type="file" id="camera-capture" name="camera-capture" accept="image/*" capture="environment" class="hidden">
+
                         <div id="image-preview-container"
                             class="hidden absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-white dark:bg-gray-800">
                             <img id="image-preview" class="w-full h-full object-cover">

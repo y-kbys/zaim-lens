@@ -55,6 +55,8 @@ const EL = {
     uploadAccountSelectorContainer: document.getElementById('upload-account-selector-container'),
     uploadTargetAccountSkeleton: document.getElementById('upload-target-account-skeleton'),
     btnParseSkeleton: document.getElementById('btn-parse-skeleton'),
+    btnCamera: document.getElementById('btn-camera'),
+    cameraCapture: document.getElementById('camera-capture'),
 
     // Edit State
     editDate: document.getElementById('edit-date'),
@@ -437,8 +439,7 @@ async function compressImage(file) {
 // --- Event Listeners ---
 
 // 1. Image Upload Selection
-EL.imageUpload.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
+const handleImageFiles = async (files) => {
     if (files.length === 0) return;
 
     // Reset Queue
@@ -482,6 +483,21 @@ EL.imageUpload.addEventListener('change', async (e) => {
         showToast("画像の処理に失敗しました。", 'error');
         console.error(err);
     }
+};
+
+EL.imageUpload.addEventListener('change', async (e) => {
+    await handleImageFiles(Array.from(e.target.files));
+});
+
+// Direct Camera Capture
+EL.btnCamera.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    EL.cameraCapture.click();
+});
+
+EL.cameraCapture.addEventListener('change', async (e) => {
+    await handleImageFiles(Array.from(e.target.files));
 });
 
 function updateBatchProgressUI() {
