@@ -198,3 +198,98 @@ input[type="number"] {
     transform: scale(1);
     opacity: 1;
 }
+
+/* Custom Bulk Menu Styles */
+.bulk-menu-container {
+    position: relative;
+    display: inline-block;
+}
+
+#bulk-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.2), 0 10px 15px -10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+    width: 300px;
+    height: 350px;
+    transform: scale(0.95);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.2s cubic-bezier(0.165, 0.84, 0.44, 1), opacity 0.2s;
+    transform-origin: top right;
+}
+
+.dark #bulk-menu-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.6);
+}
+
+#bulk-menu-dropdown.show {
+    display: flex;
+    transform: scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.bulk-menu-column {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    scrollbar-width: thin;
+    display: flex;
+    flex-direction: column;
+}
+
+.bulk-menu-column:last-child {
+    border-left: 1px solid #f3f4f6;
+    background: #f9fafb;
+}
+
+.dark .bulk-menu-column:last-child {
+    border-left-color: #374151;
+    background: #111827;
+}
+
+.bulk-menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #4b5563;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.dark .bulk-menu-item {
+    color: #9ca3af;
+}
+
+.bulk-menu-item:hover, .bulk-menu-item.active {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.dark .bulk-menu-item:hover, .dark .bulk-menu-item.active {
+    background: #1e3a8a;
+    color: #93c5fd;
+}
+
+.bulk-menu-item i {
+    font-size: 0.6rem;
+    opacity: 0.5;
+}
