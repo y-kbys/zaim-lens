@@ -303,6 +303,9 @@ input[type="number"] {
 
 #btn-camera {
     animation: cameraPulse 2s infinite;
+    /* Ensure placement in case utility classes are inconsistent on some mobile browsers */
+    right: 1rem !important;
+    bottom: 1rem !important;
 }
 
 #btn-camera:hover {

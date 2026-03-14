@@ -213,29 +213,27 @@
                         <p class="text-gray-600 dark:text-gray-300 mb-2">購入履歴の画像を選択</p>
                     </div>
 
-                    <div class="relative w-full">
-                        <label for="image-upload"
-                            class="w-full h-64 border-2 border-dashed border-blue-400 dark:border-blue-500 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors">
-                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 dark:text-blue-400 mb-4"></i>
-                            <span class="text-blue-600 dark:text-blue-300 font-medium">画像をタップして選択（複数可）</span>
-                            <input type="file" id="image-upload" name="image-upload" accept="image/*" class="hidden" multiple>
+                    <label for="image-upload"
+                        class="relative w-full h-64 border-2 border-dashed border-blue-400 dark:border-blue-500 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors">
+                        <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 dark:text-blue-400 mb-4"></i>
+                        <span class="text-blue-600 dark:text-blue-300 font-medium">画像をタップして選択（複数可）</span>
+                        <input type="file" id="image-upload" name="image-upload" accept="image/*" class="hidden" multiple>
 
-                            <div id="image-preview-container"
-                                class="hidden absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-white dark:bg-gray-800">
-                                <img id="image-preview" class="w-full h-full object-cover">
-                                <div class="absolute inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center">
-                                    <span class="text-white font-bold"><i class="fa-solid fa-pen"></i> 変更</span>
-                                </div>
-                            </div>
-                        </label>
-
-                        <!-- Direct Camera Access - Placed outside label to avoid flex centering -->
+                        <!-- Direct Camera Access - Back inside the label -->
                         <button id="btn-camera" type="button"
                             class="absolute bottom-4 right-4 w-12 h-12 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-10 border border-blue-100 dark:border-gray-700">
                             <i class="fa-solid fa-camera text-xl"></i>
                         </button>
                         <input type="file" id="camera-capture" name="camera-capture" accept="image/*" capture="environment" class="hidden">
-                    </div>
+
+                        <div id="image-preview-container"
+                            class="hidden absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-white dark:bg-gray-800">
+                            <img id="image-preview" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center">
+                                <span class="text-white font-bold"><i class="fa-solid fa-pen"></i> 変更</span>
+                            </div>
+                        </div>
+                    </label>
 
                     <div id="upload-account-selector-container" class="w-full">
                         <label
