@@ -878,10 +878,10 @@ function renderItemsList() {
                 <button class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" onclick="removeItem(${index})">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-                <input type="text" class="flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}" onchange="updateItemName(${index}, this.value)">
+                <input type="text" class="flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}" onfocus="this.select()" onchange="updateItemName(${index}, this.value)">
                 <div class="relative flex-shrink-0 transition-all duration-200" style="width: calc(${Math.max(3, String(item.price).length)}ch + 2.5rem);">
                     <span class="absolute left-2 top-2 ${item.price < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} text-sm">¥</span>
-                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${item.price < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="if(this.value === '0') this.select();" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
+                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${item.price < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="this.select()" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
                 </div>
             </div>
             <div class="flex items-center space-x-2 pl-10">
