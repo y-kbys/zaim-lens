@@ -55,6 +55,8 @@ const EL = {
     uploadAccountSelectorContainer: document.getElementById('upload-account-selector-container'),
     uploadTargetAccountSkeleton: document.getElementById('upload-target-account-skeleton'),
     btnParseSkeleton: document.getElementById('btn-parse-skeleton'),
+    btnCamera: document.getElementById('btn-camera'),
+    cameraCapture: document.getElementById('camera-capture'),
 
     // Edit State
     editDate: document.getElementById('edit-date'),
@@ -437,8 +439,7 @@ async function compressImage(file) {
 // --- Event Listeners ---
 
 // 1. Image Upload Selection
-EL.imageUpload.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
+const handleImageFiles = async (files) => {
     if (files.length === 0) return;
 
     // Reset Queue
@@ -482,6 +483,21 @@ EL.imageUpload.addEventListener('change', async (e) => {
         showToast("画像の処理に失敗しました。", 'error');
         console.error(err);
     }
+};
+
+EL.imageUpload.addEventListener('change', async (e) => {
+    await handleImageFiles(Array.from(e.target.files));
+});
+
+// Direct Camera Capture
+EL.btnCamera.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    EL.cameraCapture.click();
+});
+
+EL.cameraCapture.addEventListener('change', async (e) => {
+    await handleImageFiles(Array.from(e.target.files));
 });
 
 function updateBatchProgressUI() {
@@ -862,10 +878,10 @@ function renderItemsList() {
                 <button class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" onclick="removeItem(${index})">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-                <input type="text" class="flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}" onchange="updateItemName(${index}, this.value)">
+                <input type="text" class="flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}" onfocus="this.select()" onchange="updateItemName(${index}, this.value)">
                 <div class="relative flex-shrink-0 transition-all duration-200" style="width: calc(${Math.max(3, String(item.price).length)}ch + 2.5rem);">
                     <span class="absolute left-2 top-2 ${item.price < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} text-sm">¥</span>
-                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${item.price < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="if(this.value === '0') this.select();" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
+                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${item.price < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="this.select()" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
                 </div>
             </div>
             <div class="flex items-center space-x-2 pl-10">
@@ -1065,13 +1081,12 @@ EL.btnRegister.addEventListener('click', async () => {
     appState.parsedData.store = EL.editStore.value;
     appState.parsedData.point_usage = 0; // Handled directly in items now
 
-    // Purge logically deleted items
-    appState.parsedData.items = appState.parsedData.items.filter(i => !i.deleted);
+    // Prepare a clean list of items for registration without destroying appState
+    let itemsToRegister = [...appState.parsedData.items]
+        .filter(i => !i.deleted)
+        .filter(i => i.name.trim() !== '' || i.price !== 0);
 
-    // Filter empty (Allow items with price even if name is empty)
-    appState.parsedData.items = appState.parsedData.items.filter(i => i.name.trim() !== '' || i.price !== 0);
-
-    if (appState.parsedData.items.length === 0 && appState.parsedData.point_usage === 0) {
+    if (itemsToRegister.length === 0 && appState.parsedData.point_usage === 0) {
         showToast('登録する品目がありません。', 'warning');
         return;
     }
@@ -1106,8 +1121,8 @@ EL.btnRegister.addEventListener('click', async () => {
         }
     }
 
-    // Default name for items with empty name but price
-    appState.parsedData.items.forEach(item => {
+    // Default name for items with empty name but price (apply to the list for registration)
+    itemsToRegister.forEach(item => {
         if (item.name.trim() === '') {
             item.name = '支出';
         }
@@ -1117,8 +1132,12 @@ EL.btnRegister.addEventListener('click', async () => {
         showLoading(force ? '強制的に登録中...' : 'Zaimに登録中...');
         try {
             const targetAccountId = EL.editTargetAccount.value;
+            
+            // Create a payload with the filtered items
+            const registerData = { ...appState.parsedData, items: itemsToRegister };
+            
             const payload = {
-                receipt_data: appState.parsedData,
+                receipt_data: registerData,
                 force: force,
                 from_account_id: (EL.editFromAccount.value && EL.editFromAccount.value !== "") ? parseInt(EL.editFromAccount.value) : null,
                 target_account_id: targetAccountId,
