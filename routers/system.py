@@ -44,6 +44,12 @@ async def read_terms(request: Request):
 
 
 
+@router.get("/api/health")
+async def health_check():
+    """Lightweight endpoint for Cloud Run keep-warm ping."""
+    return {"status": "ok"}
+
+
 @router.get("/api/config")
 async def get_firebase_config():
     """Provides Firebase config from environment variables to the frontend."""
