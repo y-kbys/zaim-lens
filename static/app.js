@@ -1043,6 +1043,13 @@ window.applyBulkCategoryGenre = async (catId, genId, genName) => {
 
 EL.btnBulkMenu.addEventListener('click', (e) => {
     e.stopPropagation();
+    closeSettingsDropdown();
+    const avatarDropdown = EL.avatarDropdown;
+    if (avatarDropdown && !avatarDropdown.classList.contains('hidden')) {
+        avatarDropdown.classList.remove('opacity-100', 'scale-100');
+        avatarDropdown.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => avatarDropdown.classList.add('hidden'), 200);
+    }
     EL.bulkMenuDropdown.classList.toggle('show');
 });
 
@@ -1974,8 +1981,19 @@ const initFirebaseAuth = async () => {
         });
 
         // Avatar Dropdown Toggle
+        const closeAvatarDropdown = () => {
+            if (!EL.avatarDropdown.classList.contains('hidden')) {
+                EL.avatarDropdown.classList.remove('opacity-100', 'scale-100');
+                EL.avatarDropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => EL.avatarDropdown.classList.add('hidden'), 200);
+            }
+        };
+
         EL.btnUserAvatar.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeSettingsDropdown();
+            if (EL.bulkMenuDropdown) EL.bulkMenuDropdown.classList.remove('show');
+            
             const dropdown = EL.avatarDropdown;
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
@@ -1984,9 +2002,7 @@ const initFirebaseAuth = async () => {
                     dropdown.classList.add('opacity-100', 'scale-100');
                 }, 10);
             } else {
-                dropdown.classList.remove('opacity-100', 'scale-100');
-                dropdown.classList.add('opacity-0', 'scale-95');
-                setTimeout(() => dropdown.classList.add('hidden'), 200);
+                closeAvatarDropdown();
             }
         });
 
@@ -1994,9 +2010,7 @@ const initFirebaseAuth = async () => {
         document.addEventListener('click', (e) => {
             if (!EL.btnUserAvatar.contains(e.target) && !EL.avatarDropdown.contains(e.target)) {
                 if (!EL.avatarDropdown.classList.contains('hidden')) {
-                    EL.avatarDropdown.classList.remove('opacity-100', 'scale-100');
-                    EL.avatarDropdown.classList.add('opacity-0', 'scale-95');
-                    setTimeout(() => EL.avatarDropdown.classList.add('hidden'), 200);
+                    closeAvatarDropdown();
                 }
             }
         });
@@ -2219,6 +2233,17 @@ const closeZaimSettings = () => {
 // Open Settings Dropdown
 EL.btnZaimSettings.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Use the function defined in the closure if available, or find it
+    // Actually, since it's defined inside setupFirebase, it might not be globally accessible.
+    // However, EL.avatarDropdown is.
+    const avatarDropdown = EL.avatarDropdown;
+    if (avatarDropdown && !avatarDropdown.classList.contains('hidden')) {
+        avatarDropdown.classList.remove('opacity-100', 'scale-100');
+        avatarDropdown.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => avatarDropdown.classList.add('hidden'), 200);
+    }
+    if (EL.bulkMenuDropdown) EL.bulkMenuDropdown.classList.remove('show');
+
     const isHidden = EL.settingsDropdown.classList.contains('hidden');
     if (isHidden) {
         EL.settingsDropdown.classList.remove('hidden');
