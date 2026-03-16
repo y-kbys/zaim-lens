@@ -1877,8 +1877,6 @@ const closeLightbox = () => {
 
 EL.receiptThumbnailContainer.addEventListener('click', openLightbox);
 EL.lightboxClose.addEventListener('click', closeLightbox);
-
-// Close lightbox on background click or clicking the container spacing
 EL.lightboxModal.addEventListener('click', (e) => {
     if (e.target === EL.lightboxModal || e.target.classList.contains('select-none')) {
         closeLightbox();
@@ -2233,6 +2231,10 @@ const closeZaimSettings = () => {
     }, 300);
 };
 
+EL.zaimCredsModal.addEventListener('click', (e) => {
+    if (e.target === EL.zaimCredsModal) closeZaimSettings();
+});
+
 // Open Settings Dropdown
 EL.btnZaimSettings.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2324,6 +2326,9 @@ EL.menuItemGeminiCreds.addEventListener('click', () => {
 
 EL.btnCloseGeminiCreds.addEventListener('click', closeGeminiSettings);
 EL.btnCancelGeminiCreds.addEventListener('click', closeGeminiSettings);
+EL.geminiCredsModal.addEventListener('click', (e) => {
+    if (e.target === EL.geminiCredsModal) closeGeminiSettings();
+});
 
 EL.btnSaveGeminiCreds.addEventListener('click', async () => {
     const apiKey = EL.geminiApiKey.value.trim();
