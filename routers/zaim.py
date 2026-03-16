@@ -12,7 +12,7 @@ from services.zaim_client import (
     register_payment_item, fetch_history_with_categories
 )
 from schemas import (
-    RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest
+    RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest, ZaimAccountUpdateRequest
 )
 from db import get_user_config, save_user_config, clear_zaim_master_data_db
 from services.master_data_service import get_or_fetch_master_data
@@ -411,6 +411,18 @@ async def save_zaim_credentials(req: ZaimCredentialsRequest, user_id: str = Depe
         "message": "Zaim credentials saved.",
         "accounts": [{"id": acc["id"], "name": acc["name"]} for acc in accounts.values()]
     }
+
+@router.patch("/api/zaim/credentials/{account_id}/name")
+async def update_zaim_account_name(account_id: str, name_req: ZaimAccountUpdateRequest, user_id: str = Depends(verify_token)):
+    config = get_user_config(user_id)
+    accounts = config.get("accounts", {})
+    if account_id in accounts:
+        accounts[account_id]["name"] = name_req.name
+        config["accounts"] = accounts
+        save_user_config(user_id, config)
+        return {"status": "success", "message": "Account name updated."}
+    else:
+        raise HTTPException(status_code=404, detail="Account not found.")
 
 @router.delete("/api/zaim/credentials/{account_id}")
 async def delete_zaim_credentials(account_id: str, user_id: str = Depends(verify_token)):
