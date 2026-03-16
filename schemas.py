@@ -61,3 +61,6 @@ class ZaimCredentialsRequest(BaseModel):
 class ZaimAccount(BaseModel):
     id: int
     name: str
+
+class ZaimAccountUpdateRequest(BaseModel):
+    name: str

@@ -179,6 +179,7 @@ const EL = {
     zaimButtonsContainer: document.getElementById('zaim-buttons-container'),
     btnCopyGuideZaim: document.getElementById('btn-copy-guide-zaim'),
     btnCopyGuideGemini: document.getElementById('btn-copy-guide-gemini'),
+    btnSaveZaimCreds: document.getElementById('btn-save-zaim-creds'),
     btnBulkMenu: document.getElementById('btn-bulk-menu'),
     bulkMenuDropdown: document.getElementById('bulk-menu-dropdown'),
     bulkMenuCategories: document.getElementById('bulk-menu-categories'),
@@ -1043,6 +1044,13 @@ window.applyBulkCategoryGenre = async (catId, genId, genName) => {
 
 EL.btnBulkMenu.addEventListener('click', (e) => {
     e.stopPropagation();
+    closeSettingsDropdown();
+    const avatarDropdown = EL.avatarDropdown;
+    if (avatarDropdown && !avatarDropdown.classList.contains('hidden')) {
+        avatarDropdown.classList.remove('opacity-100', 'scale-100');
+        avatarDropdown.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => avatarDropdown.classList.add('hidden'), 200);
+    }
     EL.bulkMenuDropdown.classList.toggle('show');
 });
 
@@ -1974,8 +1982,19 @@ const initFirebaseAuth = async () => {
         });
 
         // Avatar Dropdown Toggle
+        const closeAvatarDropdown = () => {
+            if (!EL.avatarDropdown.classList.contains('hidden')) {
+                EL.avatarDropdown.classList.remove('opacity-100', 'scale-100');
+                EL.avatarDropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => EL.avatarDropdown.classList.add('hidden'), 200);
+            }
+        };
+
         EL.btnUserAvatar.addEventListener('click', (e) => {
             e.stopPropagation();
+            closeSettingsDropdown();
+            if (EL.bulkMenuDropdown) EL.bulkMenuDropdown.classList.remove('show');
+            
             const dropdown = EL.avatarDropdown;
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
@@ -1984,9 +2003,7 @@ const initFirebaseAuth = async () => {
                     dropdown.classList.add('opacity-100', 'scale-100');
                 }, 10);
             } else {
-                dropdown.classList.remove('opacity-100', 'scale-100');
-                dropdown.classList.add('opacity-0', 'scale-95');
-                setTimeout(() => dropdown.classList.add('hidden'), 200);
+                closeAvatarDropdown();
             }
         });
 
@@ -1994,9 +2011,7 @@ const initFirebaseAuth = async () => {
         document.addEventListener('click', (e) => {
             if (!EL.btnUserAvatar.contains(e.target) && !EL.avatarDropdown.contains(e.target)) {
                 if (!EL.avatarDropdown.classList.contains('hidden')) {
-                    EL.avatarDropdown.classList.remove('opacity-100', 'scale-100');
-                    EL.avatarDropdown.classList.add('opacity-0', 'scale-95');
-                    setTimeout(() => EL.avatarDropdown.classList.add('hidden'), 200);
+                    closeAvatarDropdown();
                 }
             }
         });
@@ -2178,6 +2193,7 @@ const editExternalAccount = async (id) => {
     EL.btnZaimConnect.parentElement.classList.add('hidden');
 
     EL.zaimButtonsContainer.classList.remove('hidden');
+    EL.btnSaveZaimCreds.classList.remove('hidden');
     EL.btnDeleteCreds.classList.remove('hidden');
     EL.zaimAccountsList.parentElement.classList.add('hidden');
 };
@@ -2197,6 +2213,7 @@ const openZaimSettings = async () => {
 
     EL.zaimFormContainer.classList.add('hidden');
     EL.zaimButtonsContainer.classList.remove('hidden'); // Always show buttons container (Cancel button)
+    EL.btnSaveZaimCreds.classList.add('hidden');
     EL.btnDeleteCreds.classList.add('hidden');
     EL.zaimAccountsList.parentElement.classList.remove('hidden');
 
@@ -2219,6 +2236,17 @@ const closeZaimSettings = () => {
 // Open Settings Dropdown
 EL.btnZaimSettings.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Use the function defined in the closure if available, or find it
+    // Actually, since it's defined inside setupFirebase, it might not be globally accessible.
+    // However, EL.avatarDropdown is.
+    const avatarDropdown = EL.avatarDropdown;
+    if (avatarDropdown && !avatarDropdown.classList.contains('hidden')) {
+        avatarDropdown.classList.remove('opacity-100', 'scale-100');
+        avatarDropdown.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => avatarDropdown.classList.add('hidden'), 200);
+    }
+    if (EL.bulkMenuDropdown) EL.bulkMenuDropdown.classList.remove('show');
+
     const isHidden = EL.settingsDropdown.classList.contains('hidden');
     if (isHidden) {
         EL.settingsDropdown.classList.remove('hidden');
@@ -2364,6 +2392,7 @@ EL.btnAddNewAccount.addEventListener('click', () => {
     EL.btnZaimConnect.parentElement.classList.remove('hidden');
     // We don't show the "save" button anymore, OAuth handles it
     EL.zaimButtonsContainer.classList.remove('hidden');
+    EL.btnSaveZaimCreds.classList.add('hidden');
     EL.btnDeleteCreds.classList.add('hidden');
     EL.zaimAccountsList.parentElement.classList.add('hidden');
 });
@@ -2390,6 +2419,45 @@ EL.btnZaimConnect.addEventListener('click', async () => {
         showToast("連携の開始に失敗しました: " + e.message, 'error');
         EL.btnZaimConnect.disabled = false;
         EL.btnZaimConnect.innerHTML = btnOriginalText;
+    }
+});
+
+EL.btnSaveZaimCreds.addEventListener('click', async () => {
+    if (!appState.editingAccountId) return;
+    const newName = EL.zaimAccountName.value.trim();
+    if (!newName) {
+        showToast("表示名を入力してください。", 'warning');
+        return;
+    }
+
+    const btnOriginalText = EL.btnSaveZaimCreds.innerHTML;
+    EL.btnSaveZaimCreds.disabled = true;
+    EL.btnSaveZaimCreds.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 保存中...';
+
+    try {
+        const resp = await apiFetch(`/api/zaim/credentials/${appState.editingAccountId}/name`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+
+        showToast("表示名を変更しました。");
+        await refreshAllAccountDropdowns();
+        renderZaimAccountsList();
+
+        // Go back to list
+        EL.zaimFormContainer.classList.add('hidden');
+        EL.btnSaveZaimCreds.classList.add('hidden');
+        EL.btnDeleteCreds.classList.add('hidden');
+        EL.zaimAccountsList.parentElement.classList.remove('hidden');
+        updateZaimCloseButtonVisibility();
+    } catch (e) {
+        console.error(e);
+        showToast("保存に失敗しました: " + e.message, 'error');
+    } finally {
+        EL.btnSaveZaimCreds.disabled = false;
+        EL.btnSaveZaimCreds.innerHTML = btnOriginalText;
     }
 });
 
