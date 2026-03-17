@@ -2,7 +2,7 @@ const CACHE_NAME = 'zaim-lens-dev';
 const ASSETS_TO_CACHE = [
     '/',
     '/static/index.html',
-    '/static/app.js',
+    '/static/js/main.js',
     '/static/styles.css',
     '/static/manifest.json',
     '/static/favicon.ico',
