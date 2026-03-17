@@ -3,6 +3,7 @@ import { EL, showToast, showLoading, hideLoading, showConfirm, generateCategoryO
 import { apiFetch } from '../api/backend.js';
 import { getPrefixedKey } from '../utils/common.js';
 import { sendGAEvent } from '../utils/analytics.js';
+import { updateDestAccountOptions, loadDestInternalAccounts } from '../api/zaim.js';
 
 /**
  * Render list of fetched history items
@@ -437,4 +438,38 @@ export const initHistoryFeatures = () => {
     });
 
     EL.btnResetCopy.addEventListener('click', resetCopyApp);
+
+    // Missing event listeners from app.js refactor
+    EL.sourceAccountSelect.addEventListener('change', () => {
+        // Save preference
+        if (EL.sourceAccountSelect.value) {
+            localStorage.setItem(getPrefixedKey('lastUsedSourceAccountId'), EL.sourceAccountSelect.value);
+        }
+        updateDestAccountOptions();
+
+        // Clear history list and hide selection steps to prevent confusion
+        appState.fetchedHistory = [];
+        appState.selectedHistoryIds.clear();
+        EL.historyListContainer.innerHTML = '';
+        EL.copyStepList.classList.add('hidden');
+        EL.copyStepList.classList.remove('flex');
+        EL.copyStepDest.classList.add('hidden');
+        updateCopyCountUI();
+    });
+
+    EL.destAccountSelect.addEventListener('change', async () => {
+        const destAccountId = EL.destAccountSelect.value;
+        if (!destAccountId) {
+            EL.destInternalAccountSelect.innerHTML = '<option value="">出金元を選択...</option>';
+            return;
+        }
+        await loadDestInternalAccounts();
+    });
+
+    EL.destInternalAccountSelect.addEventListener('change', () => {
+        const destId = EL.destAccountSelect.value;
+        if (destId) {
+            localStorage.setItem(getPrefixedKey(`lastUsedCopyAccountId_${destId}`), EL.destInternalAccountSelect.value);
+        }
+    });
 };

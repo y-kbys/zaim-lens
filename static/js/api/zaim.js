@@ -3,17 +3,74 @@ import { EL, showToast } from '../utils/dom.js';
 import { apiFetch } from './backend.js';
 import { getPrefixedKey } from '../utils/common.js';
 import { sendGAEvent } from '../utils/analytics.js';
-import { loadDestInternalAccounts, updateDestAccountOptions } from './zaim.js';
-
 /**
  * Ensures Destination account cannot be the same as Source account
  */
-export { updateDestAccountOptions };
+export function updateDestAccountOptions() {
+    const src = EL.sourceAccountSelect.value;
+    let firstValidValue = "";
+
+    Array.from(EL.destAccountSelect.options).forEach(opt => {
+        if (opt.value === "") return;
+
+        if (opt.value === src) {
+            opt.disabled = true;
+        } else {
+            opt.disabled = false;
+            if (!firstValidValue) firstValidValue = opt.value;
+        }
+    });
+
+    // If destination is now invalid (same as source), or if it's currently empty, pick the first valid one
+    if (EL.destAccountSelect.value === src || EL.destAccountSelect.value === "") {
+        if (firstValidValue) {
+            EL.destAccountSelect.value = firstValidValue;
+            // Trigger loading internal accounts for this new selection
+            loadDestInternalAccounts();
+        }
+    }
+}
 
 /**
  * Load internal accounts (payment sources) for the destination account
  */
-export { loadDestInternalAccounts };
+export async function loadDestInternalAccounts() {
+    const destId = EL.destAccountSelect.value;
+    if (!destId) return;
+
+    try {
+        const [accRes, catRes] = await Promise.all([
+            apiFetch(`/api/zaim/accounts?account_id=${destId}`),
+            apiFetch(`/api/zaim/categories?account_id=${destId}`)
+        ]);
+
+        if (!accRes.ok) throw new Error(await accRes.text());
+        if (!catRes.ok) throw new Error(await catRes.text());
+
+        const accounts = await accRes.json();
+        const masterData = await catRes.json();
+
+        appState.destInternalAccounts = accounts;
+        appState.copyMasterData = masterData; // Store master data for copy confirmation
+
+        let optionsHtml = '<option value="">未指定（出金元なし）</option>';
+        optionsHtml += '<option value="keep">コピー元の出金元をそのまま使う</option>';
+        accounts.forEach(a => {
+            optionsHtml += `<option value="${a.id}">${a.name}</option>`;
+        });
+        EL.destInternalAccountSelect.innerHTML = optionsHtml;
+
+        // Restore last used account for this destination
+        const storageKey = `lastUsedCopyAccountId_${destId}`;
+        const lastUsedId = localStorage.getItem(getPrefixedKey(storageKey));
+        if (lastUsedId !== null && Array.from(EL.destInternalAccountSelect.options).some(o => o.value === lastUsedId)) {
+            EL.destInternalAccountSelect.value = lastUsedId;
+        }
+    } catch (err) {
+        console.error("Failed to load destination internal accounts/categories", err);
+        EL.destInternalAccountSelect.innerHTML = '<option value="">読込失敗</option>';
+    }
+}
 
 /**
  * Refresh all account-related dropdowns in the app
