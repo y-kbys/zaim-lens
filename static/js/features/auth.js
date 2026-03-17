@@ -119,6 +119,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
                     if (!res.ok) throw new Error(`Failed to delete backend data: ${res.statusText}`);
                     const user = auth.currentUser;
                     if (user) {
+                        // @ts-ignore
                         import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js').then(async (module) => {
                             const { deleteUser } = module;
                             await deleteUser(user);
@@ -140,12 +141,9 @@ export const initFirebaseAuth = async (callbacks = {}) => {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 // GA Opt-out logic for developers
-                // @ts-ignore
                 if (window.DEVELOPER_EMAILS && window.GA_MEASUREMENT_ID) {
-                    // @ts-ignore
                     const devEmails = window.DEVELOPER_EMAILS.split(',').map(email => email.trim());
                     if (devEmails.includes(user.email)) {
-                        // @ts-ignore
                         window['ga-disable-' + window.GA_MEASUREMENT_ID] = true;
                         console.log('Developer access detected: GA tracking disabled.');
                     }

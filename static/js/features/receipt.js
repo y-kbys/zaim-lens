@@ -455,7 +455,7 @@ export const initReceiptFeatures = () => {
     };
 
     window.updateItemPrice = (index, price) => {
-        appState.parsedData.items[index].price = parseInt(price) || 0;
+        appState.parsedData.items[index].price = parseInt(String(price)) || 0;
         renderItemsList();
     };
 
@@ -469,7 +469,7 @@ export const initReceiptFeatures = () => {
     };
 
     window.updateItemGenre = (index, genreId) => {
-        appState.parsedData.items[index].genre_id = parseInt(genreId);
+        appState.parsedData.items[index].genre_id = parseInt(String(genreId));
     };
 
     window.showBulkMenuGenres = (catId) => {
