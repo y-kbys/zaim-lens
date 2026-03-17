@@ -1,8 +1,8 @@
+/// <reference lib="webworker" />
 const CACHE_NAME = 'zaim-lens-dev';
 const ASSETS_TO_CACHE = [
     '/',
-    '/static/index.html',
-    '/static/app.js',
+    '/static/js/main.js',
     '/static/styles.css',
     '/static/manifest.json',
     '/static/favicon.ico',
@@ -11,15 +11,17 @@ const ASSETS_TO_CACHE = [
     '/static/icon-512.png'
 ];
 
-self.addEventListener('install', (event) => {
+const sw = /** @type {ServiceWorkerGlobalScope & typeof globalThis} */ (/** @type {unknown} */ (self));
+
+sw.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => cache.addAll(ASSETS_TO_CACHE))
-            .then(() => self.skipWaiting())
+            .then(() => sw.skipWaiting())
     );
 });
 
-self.addEventListener('activate', (event) => {
+sw.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
@@ -29,11 +31,11 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => sw.clients.claim())
     );
 });
 
-self.addEventListener('fetch', (event) => {
+sw.addEventListener('fetch', (event) => {
     // Only cache GET requests (don't break our API POSTs)
     if (event.request.method !== 'GET') {
         return;
