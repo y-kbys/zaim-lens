@@ -1,5 +1,5 @@
 import { appState } from '../state.js';
-import { EL, showToast, showLoading, hideLoading, switchState, showConfirm } from '../utils/dom.js';
+import { EL, showToast, showLoading, hideLoading, switchState, showConfirm, generateCategoryOptions, generateGenreOptions } from '../utils/dom.js';
 import { apiFetch } from '../api/backend.js';
 import { getPrefixedKey, sleep } from '../utils/common.js';
 import { sendGAEvent } from '../utils/analytics.js';
