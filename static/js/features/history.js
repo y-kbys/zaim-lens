@@ -42,7 +42,7 @@ export function renderHistoryList() {
                     </div>
                 </div>
                 <div class="font-mono font-bold text-gray-800 dark:text-gray-100">
-                    ¥${parseInt(item.amount).toLocaleString()}
+                    ¥${item.amount.toLocaleString()}
                 </div>
             </label>
         `;
@@ -50,9 +50,11 @@ export function renderHistoryList() {
 
         li.addEventListener('click', (e) => {
             if (e.target instanceof HTMLElement && e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
-                const cb = (document.getElementById(`hist-${index}`));
-                cb.checked = !cb.checked;
-                window.toggleHistorySelection(index, cb.checked);
+                const cb = EL.historyListContainer.querySelector(`#hist-${index}`);
+                if (cb instanceof HTMLInputElement) {
+                    cb.checked = !cb.checked;
+                    window.toggleHistorySelection(index, cb.checked);
+                }
             }
         });
     });
@@ -60,7 +62,7 @@ export function renderHistoryList() {
 
 export function updateCopyCountUI() {
     const count = appState.selectedHistoryIds.size;
-    EL.selectedCopyCount.textContent = count;
+    EL.selectedCopyCount.textContent = String(count);
     EL.btnPrepareCopy.disabled = count === 0;
 }
 
@@ -103,14 +105,14 @@ export const initHistoryFeatures = () => {
 
     window.updateCopyItemCategory = (groupIdx, itemIdx, catIdStr) => {
         const catId = parseInt(catIdStr);
-        const genSel = document.getElementById(`copy-gen-${groupIdx}-${itemIdx}`);
+        const genSel = /** @type {HTMLSelectElement} */ (document.getElementById(`copy-gen-${groupIdx}-${itemIdx}`));
         if (genSel && appState.copyMasterData) {
             genSel.innerHTML = generateGenreOptions(appState.copyMasterData.master_genres, catId, 0);
         }
     };
 
     EL.historyPeriodSelect.addEventListener('change', (e) => {
-        const mode = e.target.value;
+        const mode = /** @type {HTMLSelectElement} */ (e.target).value;
         EL.periodMonthInputContainer.classList.add('hidden');
         EL.periodCustomInputContainer.classList.add('hidden');
 
@@ -251,7 +253,8 @@ export const initHistoryFeatures = () => {
         const isAllSelected = appState.selectedHistoryIds.size === appState.fetchedHistory.length;
         const checkboxes = EL.historyListContainer.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach((cb, index) => {
-            cb.checked = !isAllSelected;
+            const input = /** @type {HTMLInputElement} */ (cb);
+            input.checked = !isAllSelected;
             window.toggleHistorySelection(index, !isAllSelected);
         });
         EL.btnSelectAll.textContent = isAllSelected ? "全選択" : "全解除";
@@ -264,9 +267,9 @@ export const initHistoryFeatures = () => {
             return;
         }
 
-        const destName = EL.destAccountSelect.options[EL.destAccountSelect.selectedIndex].text;
+        const destSelect = EL.destAccountSelect;
+        const destName = destSelect.options[destSelect.selectedIndex].text;
         EL.confirmDestName.textContent = destName;
-
         EL.confirmListContainer.innerHTML = '';
         const selectedIndices = Array.from(appState.selectedHistoryIds).sort((a, b) => a - b);
 
@@ -357,17 +360,17 @@ export const initHistoryFeatures = () => {
         const itemsToCopy = [];
         const groupContainers = EL.confirmListContainer.querySelectorAll('li');
         groupContainers.forEach(container => {
-            const accSelect = container.querySelector('.group-account-select');
-            const gIdx = parseInt(accSelect.dataset.groupIdx);
+            const accSelect = /** @type {HTMLSelectElement} */ (container.querySelector('.group-account-select'));
+            const gIdx = parseInt(String(accSelect.dataset.groupIdx));
             const accountId = accSelect.value;
             const group = appState.fetchedHistory[gIdx];
 
             const itemConfigs = container.querySelectorAll('.item-copy-config');
             itemConfigs.forEach(itemConfig => {
-                const iIdx = parseInt(itemConfig.dataset.itemIdx);
+                const iIdx = parseInt(String(/** @type {HTMLElement} */ (itemConfig).dataset.itemIdx));
                 const original = group.items[iIdx];
-                const catSelect = itemConfig.querySelector('.item-category-select');
-                const genSelect = itemConfig.querySelector('.item-genre-select');
+                const catSelect = /** @type {HTMLSelectElement} */ (itemConfig.querySelector('.item-category-select'));
+                const genSelect = /** @type {HTMLSelectElement} */ (itemConfig.querySelector('.item-genre-select'));
 
                 itemsToCopy.push({
                     category_id: parseInt(catSelect.value),
@@ -467,9 +470,9 @@ export const initHistoryFeatures = () => {
     });
 
     EL.destInternalAccountSelect.addEventListener('change', () => {
-        const destId = EL.destAccountSelect.value;
+        const destId = (/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value;
         if (destId) {
-            localStorage.setItem(getPrefixedKey(`lastUsedCopyAccountId_${destId}`), EL.destInternalAccountSelect.value);
+            localStorage.setItem(getPrefixedKey(`lastUsedCopyAccountId_${destId}`), (/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).value);
         }
     });
 };

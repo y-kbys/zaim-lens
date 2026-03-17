@@ -38,7 +38,7 @@ export const renderZaimAccountsList = () => {
 export const editExternalAccount = async (id) => {
     appState.editingAccountId = id;
     const acc = appState.accounts.find(a => a.id == id);
-    EL.zaimAccountName.value = acc ? acc.name : "";
+    (/** @type {HTMLInputElement} */ (EL.zaimAccountName)).value = acc ? acc.name : "";
 
     EL.zaimFormContainer.classList.remove('hidden');
     EL.btnZaimConnect.parentElement.classList.add('hidden');
@@ -62,7 +62,7 @@ export const openZaimSettings = async () => {
     renderZaimAccountsList();
 
     // Reset form
-    EL.zaimAccountName.value = "";
+    (/** @type {HTMLInputElement} */ (EL.zaimAccountName)).value = "";
 
     EL.zaimFormContainer.classList.add('hidden');
     EL.zaimButtonsContainer.classList.remove('hidden');
@@ -97,7 +97,7 @@ export const closeSettingsDropdown = () => {
 // --- Gemini Settings ---
 export const openGeminiSettings = async () => {
     // Reset form
-    EL.geminiApiKey.value = "";
+    (/** @type {HTMLInputElement} */ (EL.geminiApiKey)).value = "";
     EL.geminiKeyStatus.textContent = "状態: 取得中...";
     EL.geminiKeyStatus.className = "text-sm font-bold mt-2 text-gray-500";
 
@@ -165,7 +165,7 @@ export const initSettingsFeatures = () => {
     });
 
     document.addEventListener('click', (e) => {
-        if (!EL.settingsDropdown.contains(e.target) && e.target !== EL.btnZaimSettings) {
+        if (!EL.settingsDropdown.contains(/** @type {Node} */ (e.target)) && e.target !== EL.btnZaimSettings) {
             closeSettingsDropdown();
         }
     });
@@ -187,14 +187,14 @@ export const initSettingsFeatures = () => {
     });
 
     EL.btnSaveGeminiCreds.addEventListener('click', async () => {
-        const apiKey = EL.geminiApiKey.value.trim();
+        const apiKey = (/** @type {HTMLInputElement} */ (EL.geminiApiKey)).value.trim();
         if (!apiKey) {
             showToast("APIキーを入力してください。", 'warning');
             return;
         }
 
         const btnOriginalText = EL.btnSaveGeminiCreds.innerHTML;
-        EL.btnSaveGeminiCreds.disabled = true;
+        (/** @type {HTMLButtonElement} */ (EL.btnSaveGeminiCreds)).disabled = true;
         EL.btnSaveGeminiCreds.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 保存中...';
 
         try {
@@ -212,7 +212,7 @@ export const initSettingsFeatures = () => {
             console.error(e);
             showToast("APIキーの保存に失敗しました: " + e.message, 'error');
         } finally {
-            EL.btnSaveGeminiCreds.disabled = false;
+            (/** @type {HTMLButtonElement} */ (EL.btnSaveGeminiCreds)).disabled = false;
             EL.btnSaveGeminiCreds.innerHTML = btnOriginalText;
         }
     });
@@ -244,7 +244,7 @@ export const initSettingsFeatures = () => {
 
     EL.btnAddNewAccount.addEventListener('click', () => {
         appState.editingAccountId = null;
-        EL.zaimAccountName.value = "";
+        (/** @type {HTMLInputElement} */ (EL.zaimAccountName)).value = "";
         EL.zaimFormContainer.classList.remove('hidden');
         EL.btnZaimConnect.parentElement.classList.remove('hidden');
         EL.zaimButtonsContainer.classList.remove('hidden');
@@ -254,9 +254,9 @@ export const initSettingsFeatures = () => {
     });
 
     EL.btnZaimConnect.addEventListener('click', async () => {
-        const name = EL.zaimAccountName.value.trim() || "Zaim Account";
+        const name = (/** @type {HTMLInputElement} */ (EL.zaimAccountName)).value.trim() || "Zaim Account";
         const btnOriginalText = EL.btnZaimConnect.innerHTML;
-        EL.btnZaimConnect.disabled = true;
+        (/** @type {HTMLButtonElement} */ (EL.btnZaimConnect)).disabled = true;
         EL.btnZaimConnect.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 連携中...';
 
         try {
@@ -272,21 +272,21 @@ export const initSettingsFeatures = () => {
         } catch (e) {
             console.error(e);
             showToast("連携の開始に失敗しました: " + e.message, 'error');
-            EL.btnZaimConnect.disabled = false;
+            (/** @type {HTMLButtonElement} */ (EL.btnZaimConnect)).disabled = false;
             EL.btnZaimConnect.innerHTML = btnOriginalText;
         }
     });
 
     EL.btnSaveZaimCreds.addEventListener('click', async () => {
         if (!appState.editingAccountId) return;
-        const newName = EL.zaimAccountName.value.trim();
+        const newName = (/** @type {HTMLInputElement} */ (EL.zaimAccountName)).value.trim();
         if (!newName) {
             showToast("表示名を入力してください。", 'warning');
             return;
         }
 
         const btnOriginalText = EL.btnSaveZaimCreds.innerHTML;
-        EL.btnSaveZaimCreds.disabled = true;
+        (/** @type {HTMLButtonElement} */ (EL.btnSaveZaimCreds)).disabled = true;
         EL.btnSaveZaimCreds.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 保存中...';
 
         try {
@@ -310,7 +310,7 @@ export const initSettingsFeatures = () => {
             console.error(e);
             showToast("保存に失敗しました: " + e.message, 'error');
         } finally {
-            EL.btnSaveZaimCreds.disabled = false;
+            (/** @type {HTMLButtonElement} */ (EL.btnSaveZaimCreds)).disabled = false;
             EL.btnSaveZaimCreds.innerHTML = btnOriginalText;
         }
     });

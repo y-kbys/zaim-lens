@@ -34,8 +34,8 @@ export async function compressImage(file) {
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
+            const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+            if (ctx) ctx.drawImage(img, 0, 0, width, height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             resolve(dataUrl);
         };
@@ -367,7 +367,7 @@ export function renderItemsList() {
 
     appState.parsedData.items.forEach((item, index) => {
         if (item.deleted) return;
-        total += item.price;
+        total += Number(item.price);
         visibleCount++;
 
         const itemRow = document.createElement('div');
@@ -379,8 +379,8 @@ export function renderItemsList() {
                 </button>
                 <input type="text" class="flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}" onfocus="this.select()" onchange="updateItemName(${index}, this.value)">
                 <div class="relative flex-shrink-0 transition-all duration-200" style="width: calc(${Math.max(3, String(item.price).length)}ch + 2.5rem);">
-                    <span class="absolute left-2 top-2 ${item.price < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} text-sm">¥</span>
-                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${item.price < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="this.select()" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
+                    <span class="absolute left-2 top-2 ${Number(item.price) < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} text-sm">¥</span>
+                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${Number(item.price) < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="this.select()" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
                 </div>
             </div>
             <div class="flex items-center space-x-2 pl-10">
@@ -396,7 +396,7 @@ export function renderItemsList() {
     });
 
     EL.totalAmount.textContent = `¥${total.toLocaleString()}`;
-    EL.btnRegisterCount.textContent = visibleCount;
+    EL.btnRegisterCount.textContent = String(visibleCount);
 }
 
 export function finalizeDeletion() {
@@ -510,7 +510,7 @@ export const initReceiptFeatures = () => {
 
     // DOM Level 2 Event Listeners
     EL.imageUpload.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(e.target.files));
+        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
     });
 
     EL.btnCamera.addEventListener('click', (e) => {
@@ -520,7 +520,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.cameraCapture.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(e.target.files));
+        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
     });
 
     EL.btnParse.addEventListener('click', async () => {
@@ -564,7 +564,7 @@ export const initReceiptFeatures = () => {
     });
 
     document.addEventListener('click', (e) => {
-        if (!EL.bulkMenuDropdown.contains(e.target) && e.target !== EL.btnBulkMenu) {
+        if (!EL.bulkMenuDropdown.contains(/** @type {Node} */ (e.target)) && e.target !== EL.btnBulkMenu) {
             EL.bulkMenuDropdown.classList.remove('show');
         }
     });
@@ -581,6 +581,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.btnRegister.addEventListener('click', async () => {
+        if (!appState.parsedData) return;
         appState.parsedData.date = EL.editDate.value;
         appState.parsedData.store = EL.editStore.value;
         appState.parsedData.point_usage = 0;
@@ -601,7 +602,7 @@ export const initReceiptFeatures = () => {
         }
 
         const parts = appState.parsedData.date.split('-');
-        const inputDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        const inputDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -670,7 +671,7 @@ export const initReceiptFeatures = () => {
                     advanceQueue();
                 } else {
                     EL.successReceiptIdContainer.classList.remove('hidden');
-                    EL.successReceiptId.textContent = appState.parsedData.receipt_id;
+                    EL.successReceiptId.textContent = String(appState.parsedData.receipt_id);
                     switchState('state-success');
                 }
             } catch (err) {

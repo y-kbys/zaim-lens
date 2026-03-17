@@ -7,10 +7,10 @@ import { sendGAEvent } from '../utils/analytics.js';
  * Ensures Destination account cannot be the same as Source account
  */
 export function updateDestAccountOptions() {
-    const src = EL.sourceAccountSelect.value;
+    const src = (/** @type {HTMLSelectElement} */ (EL.sourceAccountSelect)).value;
     let firstValidValue = "";
 
-    Array.from(EL.destAccountSelect.options).forEach(opt => {
+    Array.from((/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).options).forEach(opt => {
         if (opt.value === "") return;
 
         if (opt.value === src) {
@@ -22,9 +22,9 @@ export function updateDestAccountOptions() {
     });
 
     // If destination is now invalid (same as source), or if it's currently empty, pick the first valid one
-    if (EL.destAccountSelect.value === src || EL.destAccountSelect.value === "") {
+    if ((/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value === src || (/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value === "") {
         if (firstValidValue) {
-            EL.destAccountSelect.value = firstValidValue;
+            (/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value = firstValidValue;
             // Trigger loading internal accounts for this new selection
             loadDestInternalAccounts();
         }
@@ -35,7 +35,7 @@ export function updateDestAccountOptions() {
  * Load internal accounts (payment sources) for the destination account
  */
 export async function loadDestInternalAccounts() {
-    const destId = EL.destAccountSelect.value;
+    const destId = (/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value;
     if (!destId) return;
 
     try {
@@ -63,8 +63,8 @@ export async function loadDestInternalAccounts() {
         // Restore last used account for this destination
         const storageKey = `lastUsedCopyAccountId_${destId}`;
         const lastUsedId = localStorage.getItem(getPrefixedKey(storageKey));
-        if (lastUsedId !== null && Array.from(EL.destInternalAccountSelect.options).some(o => o.value === lastUsedId)) {
-            EL.destInternalAccountSelect.value = lastUsedId;
+        if (lastUsedId !== null && Array.from((/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).options).some(o => o.value === lastUsedId)) {
+            (/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).value = lastUsedId;
         }
     } catch (err) {
         console.error("Failed to load destination internal accounts/categories", err);
@@ -102,8 +102,8 @@ export async function refreshAllAccountDropdowns() {
 
         // --- Restore Source Account Preference ---
         const lastSourceId = localStorage.getItem(getPrefixedKey('lastUsedSourceAccountId'));
-        if (lastSourceId && Array.from(EL.sourceAccountSelect.options).some(o => o.value === lastSourceId)) {
-            EL.sourceAccountSelect.value = lastSourceId;
+        if (lastSourceId && Array.from((/** @type {HTMLSelectElement} */ (EL.sourceAccountSelect)).options).some(o => o.value === lastSourceId)) {
+            (/** @type {HTMLSelectElement} */ (EL.sourceAccountSelect)).value = lastSourceId;
         }
 
         // --- Handle Initial Destination Selection ---
@@ -173,9 +173,9 @@ export const loadTargetAccounts = async () => {
 
         // Restore Target Account preference
         const lastTarget = localStorage.getItem(getPrefixedKey('lastUsedTargetAccount'));
-        if (lastTarget && Array.from(EL.editTargetAccount.options).some(o => o.value === lastTarget)) {
-            EL.editTargetAccount.value = lastTarget;
-            EL.uploadTargetAccount.value = lastTarget;
+        if (lastTarget && Array.from((/** @type {HTMLSelectElement} */ (EL.editTargetAccount)).options).some(o => o.value === lastTarget)) {
+            (/** @type {HTMLSelectElement} */ (EL.editTargetAccount)).value = lastTarget;
+            (/** @type {HTMLSelectElement} */ (EL.uploadTargetAccount)).value = lastTarget;
         }
 
         // Hide skeletons in Upload tab

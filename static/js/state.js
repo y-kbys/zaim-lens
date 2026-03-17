@@ -1,24 +1,88 @@
 /**
+ * @typedef {Object} ZaimAccount
+ * @property {number|string} id
+ * @property {string} name
+ */
+
+/**
+ * @typedef {Object} ParsedItem
+ * @property {string} name
+ * @property {number|string} price
+ * @property {number} [category_id]
+ * @property {number} [genre_id]
+ * @property {boolean} [deleted]
+ */
+
+/**
+ * @typedef {Object} ParsedData
+ * @property {string} [date]
+ * @property {string} [store]
+ * @property {ParsedItem[]} [items]
+ * @property {number|string} [receipt_id]
+ * @property {number|string} [point_usage]
+ * @property {any[]} [master_categories]
+ * @property {any[]} [master_genres]
+ */
+
+/**
+ * @typedef {Object} HistoryItem
+ * @property {string} date
+ * @property {number} amount
+ * @property {string} store_name
+ * @property {number} category_id
+ * @property {string} [category_name]
+ * @property {number} genre_id
+ * @property {string} [genre_name]
+ * @property {string} comment
+ * @property {number} id
+ * @property {string} [place]
+ * @property {number|string} [receipt_id]
+ * @property {any[]} [items]
+ */
+
+/**
+ * @typedef {Object} QueueItem
+ * @property {File} file
+ * @property {'idle'|'parsing'|'complete'|'error'} status
+ * @property {any} result
+ * @property {string} [blobUri]
+ * @property {string} [compressedBase64]
+ */
+
+/**
  * Store application state
  */
 export const appState = {
-    compressedImageBase64: null, // Holds the resized image to prevent double upload
+    compressedImageBase64: null, 
+    /** @type {ParsedData|null} */
     parsedData: null,
-    accounts: [], // Store available Zaim accounts
-    fetchedHistory: [], // Store fetched history items
-    selectedHistoryIds: new Set(), // Track selected item IDs based on index
-    currentImageUri: null, // Holds the Blob URI for the original image
-    lastDeleted: null, // Holds { item, index } for Undo
-    deletionTimer: null, // Timer for actual removal
+    /** @type {ZaimAccount[]} */
+    accounts: [],
+    /** @type {HistoryItem[]} */
+    fetchedHistory: [],
+    /** @type {Set<number>} */
+    selectedHistoryIds: new Set(),
+    /** @type {string|null} */
+    currentImageUri: null,
+    /** @type {any} */
+    lastDeleted: null,
+    /** @type {any} */
+    deletionTimer: null,
 
     // --- Batch Queue ---
-    queue: [], // Array of { file, status: 'idle'|'parsing'|'complete'|'error', result: null, blobUri: null, compressedBase64: null }
-    currentQueueIndex: -1, // -1 means no batch processing active
-    isParsingLoopRunning: false, // Concurrency guard
+    /** @type {QueueItem[]} */
+    queue: [],
+    currentQueueIndex: -1,
+    isParsingLoopRunning: false,
 
     // --- Auth & Multi-User ---
+    /** @type {any} */
     user: null,
+    /** @type {string|null} */
     idToken: null,
-    editingAccountId: null, // null means creating a new record
+    /** @type {number|string|null} */
+    editingAccountId: null,
     lastReceiptId: 0,
+    /** @type {any} */
+    copyMasterData: null,
 };
