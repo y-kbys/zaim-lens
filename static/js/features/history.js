@@ -92,6 +92,7 @@ export const resetCopyApp = () => {
  */
 export const initHistoryFeatures = () => {
     // Window globals for inline events
+    // @ts-ignore
     window.toggleHistorySelection = (index, isChecked) => {
         if (isChecked) {
             appState.selectedHistoryIds.add(index);
@@ -101,6 +102,7 @@ export const initHistoryFeatures = () => {
         updateCopyCountUI();
     };
 
+    // @ts-ignore
     window.updateCopyItemCategory = (groupIdx, itemIdx, catIdStr) => {
         const catId = parseInt(catIdStr);
         const genSel = document.getElementById(`copy-gen-${groupIdx}-${itemIdx}`);

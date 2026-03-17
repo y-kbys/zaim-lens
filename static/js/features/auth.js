@@ -1,4 +1,6 @@
+// @ts-ignore
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+// @ts-ignore
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { appState } from '../state.js';
 import { EL, showToast, showConfirm } from '../utils/dom.js';
@@ -46,7 +48,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
 
         EL.btnGoogleLogin.addEventListener('click', async () => {
             try {
-                EL.btnGoogleLogin.disabled = true;
+                /** @type {HTMLButtonElement} */ (EL.btnGoogleLogin).disabled = true;
                 EL.btnGoogleLogin.innerHTML = `
                     <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-600 mr-3"></div>
                     <span>ログイン処理中...</span>
@@ -55,7 +57,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
             } catch (error) {
                 console.error("Login failed", error);
                 showToast("ログインに失敗しました: " + error.message, 'error');
-                EL.btnGoogleLogin.disabled = false;
+                /** @type {HTMLButtonElement} */ (EL.btnGoogleLogin).disabled = false;
                 EL.btnGoogleLogin.innerHTML = `
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
                     <span>Googleでログイン</span>
@@ -82,7 +84,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (!EL.btnUserAvatar.contains(e.target) && !EL.avatarDropdown.contains(e.target)) {
+            if (e.target instanceof Node && !EL.btnUserAvatar.contains(e.target) && !EL.avatarDropdown.contains(e.target)) {
                 if (!EL.avatarDropdown.classList.contains('hidden')) {
                     closeAvatarDropdown();
                 }
@@ -138,9 +140,12 @@ export const initFirebaseAuth = async (callbacks = {}) => {
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 // GA Opt-out logic for developers
+                // @ts-ignore
                 if (window.DEVELOPER_EMAILS && window.GA_MEASUREMENT_ID) {
+                    // @ts-ignore
                     const devEmails = window.DEVELOPER_EMAILS.split(',').map(email => email.trim());
                     if (devEmails.includes(user.email)) {
+                        // @ts-ignore
                         window['ga-disable-' + window.GA_MEASUREMENT_ID] = true;
                         console.log('Developer access detected: GA tracking disabled.');
                     }
@@ -157,7 +162,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
                 }
                 EL.userProfile.classList.remove('hidden');
                 EL.btnZaimSettings.classList.remove('hidden');
-                if (user.photoURL) EL.userAvatar.src = user.photoURL;
+                if (user.photoURL) /** @type {HTMLImageElement} */ (EL.userAvatar).src = user.photoURL;
 
                 (async () => {
                     try {
@@ -193,9 +198,9 @@ export const initFirebaseAuth = async (callbacks = {}) => {
                 setTimeout(() => EL.loginOverlay.classList.remove('opacity-0'), 10);
                 EL.userProfile.classList.add('hidden');
                 EL.btnZaimSettings.classList.add('hidden');
-                EL.userAvatar.src = "";
+                /** @type {HTMLImageElement} */ (EL.userAvatar).src = "";
 
-                EL.btnGoogleLogin.disabled = false;
+                /** @type {HTMLButtonElement} */ (EL.btnGoogleLogin).disabled = false;
                 EL.btnGoogleLogin.innerHTML = `
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
                     <span>Googleでログイン</span>
