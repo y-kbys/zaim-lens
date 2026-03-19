@@ -543,7 +543,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.lightboxModal.addEventListener('click', (e) => {
-        if (e.target === EL.lightboxModal) {
+        if (e.target !== EL.lightboxImage) {
             EL.lightboxClose.click();
         }
     });
