@@ -509,6 +509,29 @@ export const initReceiptFeatures = () => {
     };
 
     // DOM Level 2 Event Listeners
+    EL.receiptThumbnailContainer.addEventListener('click', () => {
+        if (!appState.currentImageUri) return;
+        EL.lightboxImage.src = appState.currentImageUri;
+        EL.lightboxModal.classList.remove('hidden');
+        // Force reflow
+        void EL.lightboxModal.offsetWidth;
+        EL.lightboxModal.classList.remove('opacity-0');
+    });
+
+    EL.lightboxClose.addEventListener('click', () => {
+        EL.lightboxModal.classList.add('opacity-0');
+        setTimeout(() => {
+            EL.lightboxModal.classList.add('hidden');
+            EL.lightboxImage.src = "";
+        }, 300);
+    });
+
+    EL.lightboxModal.addEventListener('click', (e) => {
+        if (e.target === EL.lightboxModal) {
+            EL.lightboxClose.click();
+        }
+    });
+
     EL.imageUpload.addEventListener('change', async (e) => {
         await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
     });
