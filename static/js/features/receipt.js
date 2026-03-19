@@ -645,15 +645,15 @@ export const initReceiptFeatures = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(today.getFullYear() - 1);
-        oneYearAgo.setHours(0, 0, 0, 0);
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(today.getMonth() - 1);
+        oneMonthAgo.setHours(0, 0, 0, 0);
 
-        if (inputDate > today || inputDate < oneYearAgo) {
+        if (inputDate > today || inputDate < oneMonthAgo) {
             const dateStr = appState.parsedData.date.replace(/-/g, '/');
             const alertMsg = inputDate > today
                 ? `未来の日付（${dateStr}）が指定されています。`
-                : `1年以上前の日付（${dateStr}）が指定されています。`;
+                : `1か月以上前の日付（${dateStr}）が指定されています。`;
             const confirmMsg = `⚠️ ${alertMsg}\n解析に誤りがある可能性があります。このまま登録しますか？`;
             if (!await showConfirm("日付の確認", confirmMsg)) {
                 EL.editDate.focus();
