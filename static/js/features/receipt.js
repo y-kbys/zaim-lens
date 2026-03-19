@@ -133,6 +133,7 @@ export async function resetApp() {
     appState.compressedImageBase64 = null;
     appState.currentImageUri = null;
     appState.parsedData = null;
+    appState.isParsingLoopRunning = false;
 
     appState.queue.forEach(item => {
         if (item.blobUri) {
@@ -155,9 +156,10 @@ export async function startBackgroundParsing() {
     if (appState.isParsingLoopRunning) return;
     appState.isParsingLoopRunning = true;
 
-    for (let i = 0; i < appState.queue.length; i++) {
-        const item = appState.queue[i];
-        if (item.status !== 'idle') continue;
+    try {
+        for (let i = 0; i < appState.queue.length; i++) {
+            const item = appState.queue[i];
+            if (item.status !== 'idle') continue;
 
         item.status = 'parsing';
         updateBatchProgressUI();
@@ -228,7 +230,9 @@ export async function startBackgroundParsing() {
             await sleep(1000);
         }
     }
-    appState.isParsingLoopRunning = false;
+    } finally {
+        appState.isParsingLoopRunning = false;
+    }
 }
 
 export function advanceQueue() {
@@ -263,10 +267,19 @@ export async function setupEditState(data) {
         data.receipt_id = Math.max(now, appState.lastReceiptId + 1);
         appState.lastReceiptId = data.receipt_id;
     }
-    appState.parsedData = data;
+    appState.parsedData = JSON.parse(JSON.stringify(data));
     EL.editReceiptId.textContent = `ID: ${data.receipt_id}`;
 
-    await loadZaimAccounts();
+    EL.btnSkip.disabled = true;
+    EL.btnRegister.disabled = true;
+    try {
+        await loadZaimAccounts();
+    } finally {
+        EL.btnSkip.disabled = false;
+        EL.btnRegister.disabled = false;
+    }
+
+    if (!appState.parsedData || appState.parsedData.receipt_id !== data.receipt_id) return;
 
     EL.editDate.value = data.date || "";
     EL.editStore.value = data.store || "";
@@ -280,6 +293,9 @@ export async function setupEditState(data) {
             EL.receiptThumbnail.onload = () => {
                 EL.receiptThumbnailContainer.classList.remove('thumbnail-loading');
                 EL.receiptThumbnail.classList.remove('opacity-0');
+            };
+            EL.receiptThumbnail.onerror = () => {
+                EL.receiptThumbnailContainer.classList.remove('thumbnail-loading');
             };
             EL.receiptThumbnail.src = appState.currentImageUri;
         };
@@ -509,6 +525,29 @@ export const initReceiptFeatures = () => {
     };
 
     // DOM Level 2 Event Listeners
+    EL.receiptThumbnailContainer.addEventListener('click', () => {
+        if (!appState.currentImageUri) return;
+        EL.lightboxImage.src = appState.currentImageUri;
+        EL.lightboxModal.classList.remove('hidden');
+        // Force reflow
+        void EL.lightboxModal.offsetWidth;
+        EL.lightboxModal.classList.remove('opacity-0');
+    });
+
+    EL.lightboxClose.addEventListener('click', () => {
+        EL.lightboxModal.classList.add('opacity-0');
+        setTimeout(() => {
+            EL.lightboxModal.classList.add('hidden');
+            EL.lightboxImage.src = "";
+        }, 300);
+    });
+
+    EL.lightboxModal.addEventListener('click', (e) => {
+        if (e.target !== EL.lightboxImage) {
+            EL.lightboxClose.click();
+        }
+    });
+
     EL.imageUpload.addEventListener('change', async (e) => {
         await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
     });
