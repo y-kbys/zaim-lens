@@ -222,8 +222,8 @@ export async function startBackgroundParsing() {
 
             updateBatchProgressUI();
 
-            // 競合防止: 現在のインデックスであり、かつ待機画面が表示されている時のみ遷移
-            if (i === appState.currentQueueIndex && !EL.loadingOverlay.classList.contains('hidden')) {
+            // 競合防止: 現在のインデックスであれば確実に遷移を実行
+            if (i === appState.currentQueueIndex) {
                 hideLoading();
                 setupEditState(item.result);
             }
@@ -266,6 +266,18 @@ export function advanceQueue() {
 let currentSetupRequestId = 0;
 
 export async function setupEditState(data) {
+    // データが未完了（解析中）の場合は、画面をクリアしてステートをリセット
+    if (!data) {
+        EL.editDate.value = "";
+        EL.editStore.value = "";
+        EL.editReceiptId.textContent = "ID: 解析中...";
+        EL.itemsContainer.innerHTML = '';
+        EL.totalAmount.textContent = "¥0";
+        EL.btnRegisterCount.textContent = "0";
+        appState.parsedData = null;
+        return;
+    }
+
     const requestId = ++currentSetupRequestId;
 
     if (!data.receipt_id) {
