@@ -18,13 +18,11 @@ export function renderHistoryList() {
 
     appState.fetchedHistory.forEach((item, index) => {
         const li = document.createElement('li');
-        li.className = "group relative p-3 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 cursor-pointer shadow-sm hover:shadow-md";
+        li.className = "group relative p-3 bg-gray-50 dark:bg-gray-800/40 hover:bg-white dark:hover:bg-gray-800 rounded-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:scale-[1.01]";
 
         const dateStr = item.date.replace(/-/g, '/');
-        const lastItem = item.items[item.items.length - 1];
-        let lastItemName = lastItem.name || "未設定";
-        let subText = lastItemName + (item.items.length > 1 ? " 等" : "");
-        let catText = item.category_name || "未分類";
+        const subText = item.items.map(i => i.name || "未設定").join(' / ');
+        const catText = item.category_name || "未分類";
 
         li.innerHTML = `
             <label for="hist-${index}" class="flex items-start space-x-4 w-full cursor-pointer select-none">
@@ -34,16 +32,15 @@ export function renderHistoryList() {
                 <div class="flex-grow flex justify-between items-center min-w-0">
                     <div class="flex-grow min-w-0 mr-3">
                         <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
-                            <span class="truncate">${catText}</span>
-                            ${item.place ? `<span class="text-[10px] sm:text-xs font-normal px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded truncate max-w-[80px] sm:max-w-none">${item.place}</span>` : ''}
+                            <span class="truncate text-sm sm:text-base">${catText}</span>
+                            ${item.place ? `<span class="text-[10px] sm:text-xs font-normal px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded truncate max-w-[120px] sm:max-w-none">${item.place}</span>` : ''}
                         </div>
-                        <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center flex-wrap">
-                            <span class="mr-2">${dateStr}</span>
-                            <span class="mr-2 truncate max-w-[150px] sm:max-w-none">${subText}</span>
-                            ${item.receipt_id ? `<span class="py-0.5 px-1.5 bg-gray-100 dark:bg-gray-700/50 rounded inline-block text-[9px] font-mono shrink-0">ID:${item.receipt_id}</span>` : ''}
+                        <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                            <span class="font-semibold text-gray-400 dark:text-gray-500 mr-2">${dateStr}</span>
+                            <span>${subText}</span>
                         </div>
                     </div>
-                    <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg shrink-0">
+                    <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg sm:text-xl shrink-0">
                         ¥${item.amount.toLocaleString()}
                     </div>
                 </div>
@@ -315,8 +312,11 @@ export const initHistoryFeatures = () => {
 
             li.innerHTML = `
                 <div class="bg-blue-50 dark:bg-blue-900/20 -m-3 mb-1 p-2 px-3 border-b border-blue-100 dark:border-blue-900/40 rounded-t flex justify-between items-center">
-                    <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">${group.place || group.category_name || "未分類"}</span>
-                    <span class="text-[10px] text-gray-400">${group.date}</span>
+                    <div class="flex items-center space-x-2 min-w-0">
+                        <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider truncate">${group.place || group.category_name || "未分類"}</span>
+                        ${group.receipt_id ? `<span class="text-[9px] font-mono text-blue-400 dark:text-blue-600 bg-white dark:bg-gray-800 px-1 rounded border border-blue-100 dark:border-blue-900/30">ID:${group.receipt_id}</span>` : ''}
+                    </div>
+                    <span class="text-[10px] text-gray-400 shrink-0 ml-2">${group.date}</span>
                 </div>
                 <div class="space-y-2">
                     ${itemsHtml}
