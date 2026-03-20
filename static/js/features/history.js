@@ -18,7 +18,7 @@ export function renderHistoryList() {
 
     appState.fetchedHistory.forEach((item, index) => {
         const li = document.createElement('li');
-        li.className = "flex items-start space-x-3 p-2 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors border-b border-transparent hover:border-gray-200 dark:hover:border-gray-600 cursor-pointer";
+        li.className = "group relative p-3 hover:bg-white dark:hover:bg-gray-700 rounded-xl transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 cursor-pointer shadow-sm hover:shadow-md";
 
         const dateStr = item.date.replace(/-/g, '/');
         const lastItem = item.items[item.items.length - 1];
@@ -27,36 +27,29 @@ export function renderHistoryList() {
         let catText = item.category_name || "未分類";
 
         li.innerHTML = `
-            <div class="pt-1">
-                <input type="checkbox" id="hist-${index}" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" onchange="toggleHistorySelection(${index}, this.checked)">
-            </div>
-            <label for="hist-${index}" class="flex-grow flex justify-between items-center cursor-pointer select-none">
-                <div>
-                    <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
-                        <span>${catText}</span>
-                        ${item.place ? `<span class="text-xs font-normal px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">${item.place}</span>` : ''}
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        ${dateStr}　${subText}
-                        ${item.receipt_id ? `<span class="ml-2 py-0.5 px-1.5 bg-gray-100 dark:bg-gray-700/50 rounded inline-block text-[9px] font-mono">ID:${item.receipt_id}</span>` : ''}
-                    </div>
+            <label for="hist-${index}" class="flex items-start space-x-4 w-full cursor-pointer select-none">
+                <div class="pt-1.5 shrink-0">
+                    <input type="checkbox" id="hist-${index}" class="w-5 h-5 text-blue-600 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 cursor-pointer transition-transform group-hover:scale-110" onchange="toggleHistorySelection(${index}, this.checked)">
                 </div>
-                <div class="font-mono font-bold text-gray-800 dark:text-gray-100">
-                    ¥${item.amount.toLocaleString()}
+                <div class="flex-grow flex justify-between items-center min-w-0">
+                    <div class="flex-grow min-w-0 mr-3">
+                        <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
+                            <span class="truncate">${catText}</span>
+                            ${item.place ? `<span class="text-[10px] sm:text-xs font-normal px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded truncate max-w-[80px] sm:max-w-none">${item.place}</span>` : ''}
+                        </div>
+                        <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center flex-wrap">
+                            <span class="mr-2">${dateStr}</span>
+                            <span class="mr-2 truncate max-w-[150px] sm:max-w-none">${subText}</span>
+                            ${item.receipt_id ? `<span class="py-0.5 px-1.5 bg-gray-100 dark:bg-gray-700/50 rounded inline-block text-[9px] font-mono shrink-0">ID:${item.receipt_id}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg shrink-0">
+                        ¥${item.amount.toLocaleString()}
+                    </div>
                 </div>
             </label>
         `;
         EL.historyListContainer.appendChild(li);
-
-        li.addEventListener('click', (e) => {
-            if (e.target instanceof HTMLElement && e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
-                const cb = EL.historyListContainer.querySelector(`#hist-${index}`);
-                if (cb instanceof HTMLInputElement) {
-                    cb.checked = !cb.checked;
-                    window.toggleHistorySelection(index, cb.checked);
-                }
-            }
-        });
     });
 }
 
