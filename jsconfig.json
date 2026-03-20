@@ -10,5 +10,5 @@
       "/*": ["./*"]
     }
   },
-  "exclude": ["node_modules", "static/app.js", "static/app-old.js"]
+  "exclude": ["node_modules", "static/app.js"]
 }

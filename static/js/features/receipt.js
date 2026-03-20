@@ -266,6 +266,8 @@ export function advanceQueue() {
 let currentSetupRequestId = 0;
 
 export async function setupEditState(data) {
+    const requestId = ++currentSetupRequestId;
+
     // データが未完了（解析中）の場合は、画面をクリアしてステートをリセット
     if (!data) {
         showLoading("解析中...");
@@ -278,8 +280,6 @@ export async function setupEditState(data) {
         appState.parsedData = null;
         return;
     }
-
-    const requestId = ++currentSetupRequestId;
 
     if (!data.receipt_id) {
         const now = Math.floor(Date.now() / 1000);
