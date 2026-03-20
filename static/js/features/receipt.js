@@ -521,10 +521,7 @@ export const initReceiptFeatures = () => {
     // --- Inline Handlers Helper ---
     // Note: Items update is now handled via addEventListener in renderItemsList for better isolation.
     
-    window.undoDeletion = undoDeletion;
-    window.finalizeDeletion = finalizeDeletion;
-
-    window.showBulkMenuGenres = (catId) => {
+    window['showBulkMenuGenres'] = (catId) => {
         if (!appState.parsedData) return;
         const categoryButtons = EL.bulkMenuCategories.querySelectorAll('.bulk-menu-item');
         const cat = appState.parsedData.master_categories.find(c => c.id == catId);
@@ -546,7 +543,7 @@ export const initReceiptFeatures = () => {
         `).join('');
     };
 
-    window.applyBulkCategoryGenre = async (catId, genId, genName) => {
+    window['applyBulkCategoryGenre'] = async (catId, genId, genName) => {
         if (!appState.parsedData) return;
         const data = appState.parsedData;
         const cat = data.master_categories.find(c => c.id == catId);
