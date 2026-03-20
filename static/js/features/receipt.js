@@ -161,75 +161,77 @@ export async function startBackgroundParsing() {
             const item = appState.queue[i];
             if (item.status !== 'idle') continue;
 
-        item.status = 'parsing';
-        updateBatchProgressUI();
+            item.status = 'parsing';
+            updateBatchProgressUI();
 
-        try {
-            if (!item.compressedBase64) {
-                item.compressedBase64 = await compressImage(item.file);
-            }
+            try {
+                if (!item.compressedBase64) {
+                    item.compressedBase64 = await compressImage(item.file);
+                }
 
-            const targetAccountId = EL.uploadTargetAccount.value;
-            const response = await apiFetch('/api/parse', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    image_base64: item.compressedBase64,
-                    account_id: targetAccountId
-                })
-            });
+                const targetAccountId = EL.uploadTargetAccount.value;
+                const response = await apiFetch('/api/parse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_base64: item.compressedBase64,
+                        account_id: targetAccountId
+                    })
+                });
 
-            if (!response.ok) {
-                const errorDetail = await response.text();
-                if (response.status === 429) {
-                    showToast(errorDetail || "Geminiのレートリミットに達しました。時間を置いてから再度お試しください。", 'warning');
+                if (!response.ok) {
+                    const errorDetail = await response.text();
+                    if (response.status === 429) {
+                        showToast(errorDetail || "Geminiのレートリミットに達しました。時間を置いてから再度お試しください。", 'warning');
+                        resetApp();
+                        return;
+                    } else if (response.status === 400 && errorDetail.includes("API Key is not configured")) {
+                        showToast("Gemini APIキーが設定されていません。設定画面を開きます。", 'warning');
+                        resetApp();
+                        openGeminiSettings();
+                        return;
+                    }
+                    throw new Error(errorDetail);
+                }
+                item.result = await response.json();
+
+                if (item.result && item.result.point_usage > 0) {
+                    if (!item.result.items) item.result.items = [];
+                    item.result.items.push({
+                        name: "ポイント利用",
+                        price: -item.result.point_usage,
+                        category_id: item.result.items.length > 0 ? item.result.items[0].category_id : 101,
+                        genre_id: item.result.items.length > 0 ? item.result.items[0].genre_id : 10101
+                    });
+                    item.result.point_usage = 0;
+                }
+
+                item.status = 'complete';
+            } catch (err) {
+                console.error(`Failed to parse item ${i}:`, err);
+                item.status = 'error';
+                item.result = { error: err.message, items: [] };
+
+                if (i === appState.currentQueueIndex && !EL.loadingOverlay.classList.contains('hidden')) {
+                    hideLoading();
+                    showToast("解析に失敗しました。時間をおいてから再度お試しください。\n詳細: " + (err.message || "不明なエラー"), 'error');
                     resetApp();
-                    return;
-                } else if (response.status === 400 && errorDetail.includes("API Key is not configured")) {
-                    showToast("Gemini APIキーが設定されていません。設定画面を開きます。", 'warning');
-                    resetApp();
-                    openGeminiSettings();
                     return;
                 }
-                throw new Error(errorDetail);
-            }
-            item.result = await response.json();
-
-            if (item.result.point_usage > 0) {
-                item.result.items.push({
-                    name: "ポイント利用",
-                    price: -item.result.point_usage,
-                    category_id: item.result.items.length > 0 ? item.result.items[0].category_id : 101,
-                    genre_id: item.result.items.length > 0 ? item.result.items[0].genre_id : 10101
-                });
-                item.result.point_usage = 0;
             }
 
-            item.status = 'complete';
-        } catch (err) {
-            console.error(`Failed to parse item ${i}:`, err);
-            item.status = 'error';
-            item.result = { error: err.message };
+            updateBatchProgressUI();
 
-            if (i === appState.currentQueueIndex && !EL.loadingOverlay.classList.contains('hidden')) {
+            // 競合防止: 現在のインデックスであれば確実に遷移を実行
+            if (i === appState.currentQueueIndex) {
                 hideLoading();
-                showToast("解析に失敗しました。時間をおいてから再度お試しください。\n詳細: " + (err.message || "不明なエラー"), 'error');
-                resetApp();
-                return;
+                setupEditState(item.result);
+            }
+
+            if (i < appState.queue.length - 1) {
+                await sleep(1000);
             }
         }
-
-        updateBatchProgressUI();
-
-        if (i === appState.currentQueueIndex && !EL.loadingOverlay.classList.contains('hidden')) {
-            hideLoading();
-            setupEditState(item.result);
-        }
-
-        if (i < appState.queue.length - 1) {
-            await sleep(1000);
-        }
-    }
     } finally {
         appState.isParsingLoopRunning = false;
     }
@@ -261,7 +263,24 @@ export function advanceQueue() {
     }
 }
 
+let currentSetupRequestId = 0;
+
 export async function setupEditState(data) {
+    const requestId = ++currentSetupRequestId;
+
+    // データが未完了（解析中）の場合は、画面をクリアしてステートをリセット
+    if (!data) {
+        showLoading("解析中...");
+        EL.editDate.value = "";
+        EL.editStore.value = "";
+        EL.editReceiptId.textContent = "ID: 解析中...";
+        EL.itemsContainer.innerHTML = '';
+        EL.totalAmount.textContent = "¥0";
+        EL.btnRegisterCount.textContent = "0";
+        appState.parsedData = null;
+        return;
+    }
+
     if (!data.receipt_id) {
         const now = Math.floor(Date.now() / 1000);
         data.receipt_id = Math.max(now, appState.lastReceiptId + 1);
@@ -269,27 +288,39 @@ export async function setupEditState(data) {
     }
     appState.parsedData = JSON.parse(JSON.stringify(data));
     EL.editReceiptId.textContent = `ID: ${data.receipt_id}`;
+    EL.editDate.value = data.date || "";
+    EL.editStore.value = data.store || "";
+
+    // 1枚目の情報が残像として見えないように、リストと画像を一旦非表示にする
+    EL.itemsContainer.innerHTML = '';
+    EL.totalAmount.textContent = "¥0";
+    EL.btnRegisterCount.textContent = "0";
+    EL.receiptThumbnailContainer.classList.add('hidden');
 
     EL.btnSkip.disabled = true;
     EL.btnRegister.disabled = true;
     try {
-        await loadZaimAccounts();
+        await loadZaimAccounts(appState.parsedData);
     } finally {
         EL.btnSkip.disabled = false;
         EL.btnRegister.disabled = false;
     }
 
-    if (!appState.parsedData || appState.parsedData.receipt_id !== data.receipt_id) return;
+    if (requestId !== currentSetupRequestId || !appState.parsedData || appState.parsedData.receipt_id !== data.receipt_id) {
+        return;
+    }
 
-    EL.editDate.value = data.date || "";
-    EL.editStore.value = data.store || "";
+    // ガード通過後の安全な場所で最終的なリスト描画を確定
+    renderItemsList();
 
     if (appState.currentImageUri) {
         EL.receiptThumbnailContainer.classList.remove('hidden');
         EL.receiptThumbnailContainer.classList.add('thumbnail-loading');
         EL.receiptThumbnail.classList.add('opacity-0');
 
+        const thumbnailUri = appState.currentImageUri;
         const setImage = () => {
+            if (appState.currentImageUri !== thumbnailUri) return;
             EL.receiptThumbnail.onload = () => {
                 EL.receiptThumbnailContainer.classList.remove('thumbnail-loading');
                 EL.receiptThumbnail.classList.remove('opacity-0');
@@ -297,7 +328,7 @@ export async function setupEditState(data) {
             EL.receiptThumbnail.onerror = () => {
                 EL.receiptThumbnailContainer.classList.remove('thumbnail-loading');
             };
-            EL.receiptThumbnail.src = appState.currentImageUri;
+            EL.receiptThumbnail.src = thumbnailUri;
         };
 
         requestAnimationFrame(() => {
@@ -310,7 +341,7 @@ export async function setupEditState(data) {
     switchState('state-edit');
 }
 
-export async function loadZaimAccounts() {
+export async function loadZaimAccounts(targetData = null) {
     try {
         const targetAccountId = EL.editTargetAccount.value || "1";
         const { accounts, masterData } = await getZaimMasterData(targetAccountId);
@@ -321,11 +352,12 @@ export async function loadZaimAccounts() {
         });
         EL.editFromAccount.innerHTML = optionsHtml;
 
-        if (appState.parsedData) {
-            appState.parsedData.master_categories = masterData.master_categories;
-            appState.parsedData.master_genres = masterData.master_genres;
+        const data = targetData || appState.parsedData;
+        if (data) {
+            data.master_categories = masterData.master_categories;
+            data.master_genres = masterData.master_genres;
 
-            appState.parsedData.items.forEach(item => {
+            data.items.forEach(item => {
                 if (item.deleted) return;
 
                 const catExists = masterData.master_categories.some(c => c.id == item.category_id);
@@ -352,8 +384,10 @@ export async function loadZaimAccounts() {
                 }
             });
 
-            renderItemsList();
-            renderBulkMenuCategories(masterData.master_categories);
+            if (data === appState.parsedData) {
+                renderItemsList();
+                renderBulkMenuCategories(masterData.master_categories);
+            }
         }
 
         const storageKey = `lastUsedAccountId_${targetAccountId}`;
@@ -377,11 +411,14 @@ export async function loadZaimAccounts() {
 
 
 export function renderItemsList() {
+    const data = appState.parsedData;
+    if (!data) return;
+
     EL.itemsContainer.innerHTML = '';
     let total = 0;
     let visibleCount = 0;
 
-    appState.parsedData.items.forEach((item, index) => {
+    data.items.forEach((item, index) => {
         if (item.deleted) return;
         total += Number(item.price);
         visibleCount++;
@@ -390,24 +427,70 @@ export function renderItemsList() {
         itemRow.className = "flex flex-col space-y-2 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 shadow-sm transition-colors";
         itemRow.innerHTML = `
             <div class="flex items-center space-x-2">
-                <button class="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" onclick="removeItem(${index})">
+                <button class="delete-btn text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-                <input type="text" class="flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}" onfocus="this.select()" onchange="updateItemName(${index}, this.value)">
+                <input type="text" class="name-input flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}">
                 <div class="relative flex-shrink-0 transition-all duration-200" style="width: calc(${Math.max(3, String(item.price).length)}ch + 2.5rem);">
                     <span class="absolute left-2 top-2 ${Number(item.price) < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} text-sm">¥</span>
-                    <input type="number" class="w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${Number(item.price) < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}" onfocus="this.select()" oninput="this.parentElement.style.width = 'calc(' + Math.max(3, this.value.length) + 'ch + 2.5rem)';" onchange="updateItemPrice(${index}, this.value)">
+                    <input type="number" class="price-input w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${Number(item.price) < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}">
                 </div>
             </div>
             <div class="flex items-center space-x-2 pl-10">
-                <select class="flex-grow text-sm p-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors" onchange="updateItemCategory(${index}, this.value)" id="cat-sel-${index}">
-                    ${generateCategoryOptions(appState.parsedData.master_categories, item.category_id)}
+                <select class="cat-select flex-grow text-sm p-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+                    ${generateCategoryOptions(data.master_categories, item.category_id)}
                 </select>
-                <select class="flex-grow text-sm p-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors" onchange="updateItemGenre(${index}, this.value)" id="gen-sel-${index}">
-                    ${generateGenreOptions(appState.parsedData.master_genres, item.category_id, item.genre_id)}
+                <select class="gen-select flex-grow text-sm p-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+                    ${generateGenreOptions(data.master_genres, item.category_id, item.genre_id)}
                 </select>
             </div>
         `;
+
+        const deleteBtn = itemRow.querySelector('.delete-btn');
+        const nameInput = itemRow.querySelector('.name-input');
+        const priceInput = itemRow.querySelector('.price-input');
+        const catSelect = itemRow.querySelector('.cat-select');
+        const genSelect = itemRow.querySelector('.gen-select');
+
+        deleteBtn.addEventListener('click', () => {
+            if (appState.deletionTimer) clearTimeout(appState.deletionTimer);
+            appState.lastDeleted = { item, index };
+            item.deleted = true;
+            if (data === appState.parsedData) {
+                renderItemsList();
+                EL.snackbar.classList.remove('hidden');
+                EL.snackbar.classList.add('show');
+                EL.snackbar.classList.remove('snackbar-fade-out');
+                appState.deletionTimer = setTimeout(finalizeDeletion, 5000);
+            }
+        });
+
+        nameInput.addEventListener('focus', (e) => e.target.select());
+        nameInput.addEventListener('change', (e) => {
+            item.name = e.target.value;
+        });
+
+        priceInput.addEventListener('focus', (e) => e.target.select());
+        priceInput.addEventListener('input', (e) => {
+            e.target.parentElement.style.width = `calc(${Math.max(3, e.target.value.length)}ch + 2.5rem)`;
+        });
+        priceInput.addEventListener('change', (e) => {
+            item.price = parseInt(e.target.value) || 0;
+            if (data === appState.parsedData) renderItemsList();
+        });
+
+        catSelect.addEventListener('change', (e) => {
+            const catId = parseInt(e.target.value);
+            item.category_id = catId;
+            const genres = data.master_genres ? data.master_genres.filter(g => g.category_id == catId) : [];
+            item.genre_id = genres.length > 0 ? genres[0].id : 0;
+            if (data === appState.parsedData) renderItemsList();
+        });
+
+        genSelect.addEventListener('change', (e) => {
+            item.genre_id = parseInt(e.target.value);
+        });
+
         EL.itemsContainer.appendChild(itemRow);
     });
 
@@ -450,48 +533,23 @@ export function renderBulkMenuCategories(categories) {
 
 // --- Initialize Event Listeners ---
 
+let receiptFeaturesInitialized = false;
+
 export const initReceiptFeatures = () => {
-    // Attach globals for inline HTML event handlers
-    window.removeItem = (index) => {
-        if (appState.deletionTimer) clearTimeout(appState.deletionTimer);
-        appState.lastDeleted = {
-            item: appState.parsedData.items[index],
-            index: index
-        };
-        appState.parsedData.items[index].deleted = true;
-        renderItemsList();
-        EL.snackbar.classList.remove('hidden');
-        EL.snackbar.classList.add('show');
-        EL.snackbar.classList.remove('snackbar-fade-out');
-        appState.deletionTimer = setTimeout(finalizeDeletion, 5000);
-    };
+    if (receiptFeaturesInitialized) return;
+    receiptFeaturesInitialized = true;
 
-    window.updateItemName = (index, name) => {
-        appState.parsedData.items[index].name = name;
-    };
+    // --- Inline Handlers Helper ---
+    // Note: Items update is now handled via addEventListener in renderItemsList for better isolation.
 
-    window.updateItemPrice = (index, price) => {
-        appState.parsedData.items[index].price = parseInt(String(price)) || 0;
-        renderItemsList();
-    };
-
-    window.updateItemCategory = (index, catIdStr) => {
-        const catId = parseInt(catIdStr);
-        appState.parsedData.items[index].category_id = catId;
-        const genres = appState.parsedData.master_genres ? appState.parsedData.master_genres.filter(g => g.category_id == catId) : [];
-        const genId = genres.length > 0 ? genres[0].id : 0;
-        appState.parsedData.items[index].genre_id = genId;
-        renderItemsList();
-    };
-
-    window.updateItemGenre = (index, genreId) => {
-        appState.parsedData.items[index].genre_id = parseInt(String(genreId));
-    };
-
-    window.showBulkMenuGenres = (catId) => {
+    window['showBulkMenuGenres'] = (catId) => {
+        if (!appState.parsedData) return;
         const categoryButtons = EL.bulkMenuCategories.querySelectorAll('.bulk-menu-item');
+        const cat = appState.parsedData.master_categories.find(c => c.id == catId);
+        if (!cat) return;
+
         categoryButtons.forEach(btn => {
-            if (btn.textContent.trim().includes(appState.parsedData.master_categories.find(c => c.id == catId).name)) {
+            if (btn.textContent.trim().includes(cat.name)) {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');
@@ -506,21 +564,27 @@ export const initReceiptFeatures = () => {
         `).join('');
     };
 
-    window.applyBulkCategoryGenre = async (catId, genId, genName) => {
-        const catName = appState.parsedData.master_categories.find(c => c.id == catId).name;
-        const confirmMsg = `全品目のカテゴリを「${catName} / ${genName}」に変更しますか？`;
+    window['applyBulkCategoryGenre'] = async (catId, genId, genName) => {
+        if (!appState.parsedData) return;
+        const data = appState.parsedData;
+        const cat = data.master_categories.find(c => c.id == catId);
+        if (!cat) return;
+
+        const confirmMsg = `全品目のカテゴリを「${cat.name} / ${genName}」に変更しますか？`;
         EL.bulkMenuDropdown.classList.remove('show');
         const confirmed = await showConfirm("一括変更の確認", confirmMsg);
-        if (!confirmed) return;
+        if (!confirmed || data !== appState.parsedData) return;
 
-        appState.parsedData.items.forEach(item => {
+        data.items.forEach(item => {
             if (!item.deleted) {
                 item.category_id = catId;
                 item.genre_id = genId;
             }
         });
-        renderItemsList();
-        showToast("すべてのカテゴリ・ジャンルを更新しました。", "success");
+        if (data === appState.parsedData) {
+            renderItemsList();
+            showToast("すべてのカテゴリ・ジャンルを更新しました。", "success");
+        }
         EL.bulkMenuDropdown.classList.remove('show');
     };
 
@@ -549,7 +613,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.imageUpload.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
+        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */(e.target).files));
     });
 
     EL.btnCamera.addEventListener('click', (e) => {
@@ -559,7 +623,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.cameraCapture.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
+        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */(e.target).files));
     });
 
     EL.btnParse.addEventListener('click', async () => {
@@ -603,7 +667,7 @@ export const initReceiptFeatures = () => {
     });
 
     document.addEventListener('click', (e) => {
-        if (!EL.bulkMenuDropdown.contains(/** @type {Node} */ (e.target)) && e.target !== EL.btnBulkMenu) {
+        if (!EL.bulkMenuDropdown.contains(/** @type {Node} */(e.target)) && e.target !== EL.btnBulkMenu) {
             EL.bulkMenuDropdown.classList.remove('show');
         }
     });
