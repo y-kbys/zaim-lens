@@ -18,45 +18,35 @@ export function renderHistoryList() {
 
     appState.fetchedHistory.forEach((item, index) => {
         const li = document.createElement('li');
-        li.className = "flex items-start space-x-3 p-2 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors border-b border-transparent hover:border-gray-200 dark:hover:border-gray-600 cursor-pointer";
+        li.className = "group relative p-3 bg-gray-50 dark:bg-gray-800/40 hover:bg-white dark:hover:bg-gray-800 rounded-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:scale-[1.01]";
 
         const dateStr = item.date.replace(/-/g, '/');
-        const lastItem = item.items[item.items.length - 1];
-        let lastItemName = lastItem.name || "未設定";
-        let subText = lastItemName + (item.items.length > 1 ? " 等" : "");
-        let catText = item.category_name || "未分類";
+        const subText = [...item.items].reverse().map(i => i.name || "未設定").join(' / ');
+        const catText = item.category_name || "未分類";
 
         li.innerHTML = `
-            <div class="pt-1">
-                <input type="checkbox" id="hist-${index}" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" onchange="toggleHistorySelection(${index}, this.checked)">
-            </div>
-            <label for="hist-${index}" class="flex-grow flex justify-between items-center cursor-pointer select-none">
-                <div>
-                    <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
-                        <span>${catText}</span>
-                        ${item.place ? `<span class="text-xs font-normal px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">${item.place}</span>` : ''}
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        ${dateStr}　${subText}
-                        ${item.receipt_id ? `<span class="ml-2 py-0.5 px-1.5 bg-gray-100 dark:bg-gray-700/50 rounded inline-block text-[9px] font-mono">ID:${item.receipt_id}</span>` : ''}
-                    </div>
+            <label for="hist-${index}" class="flex items-start space-x-4 w-full cursor-pointer select-none">
+                <div class="pt-1.5 shrink-0">
+                    <input type="checkbox" id="hist-${index}" class="w-5 h-5 text-blue-600 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 cursor-pointer transition-transform group-hover:scale-110" onchange="toggleHistorySelection(${index}, this.checked)">
                 </div>
-                <div class="font-mono font-bold text-gray-800 dark:text-gray-100">
-                    ¥${item.amount.toLocaleString()}
+                <div class="flex-grow flex justify-between items-center min-w-0">
+                    <div class="flex-grow min-w-0 mr-3">
+                        <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
+                            <span class="truncate text-sm sm:text-base">${catText}</span>
+                            ${item.place ? `<span class="text-[10px] sm:text-xs font-normal px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded truncate max-w-[120px] sm:max-w-none">${item.place}</span>` : ''}
+                        </div>
+                        <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                            <span class="font-semibold text-gray-400 dark:text-gray-500 mr-2">${dateStr}</span>
+                            <span>${subText}</span>
+                        </div>
+                    </div>
+                    <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg sm:text-xl shrink-0">
+                        ¥${item.amount.toLocaleString()}
+                    </div>
                 </div>
             </label>
         `;
         EL.historyListContainer.appendChild(li);
-
-        li.addEventListener('click', (e) => {
-            if (e.target instanceof HTMLElement && e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
-                const cb = EL.historyListContainer.querySelector(`#hist-${index}`);
-                if (cb instanceof HTMLInputElement) {
-                    cb.checked = !cb.checked;
-                    window.toggleHistorySelection(index, cb.checked);
-                }
-            }
-        });
     });
 }
 
@@ -322,8 +312,11 @@ export const initHistoryFeatures = () => {
 
             li.innerHTML = `
                 <div class="bg-blue-50 dark:bg-blue-900/20 -m-3 mb-1 p-2 px-3 border-b border-blue-100 dark:border-blue-900/40 rounded-t flex justify-between items-center">
-                    <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">${group.place || group.category_name || "未分類"}</span>
-                    <span class="text-[10px] text-gray-400">${group.date}</span>
+                    <div class="flex items-center space-x-2 min-w-0">
+                        <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider truncate">${group.place || group.category_name || "未分類"}</span>
+                        ${group.receipt_id ? `<span class="text-[9px] font-mono text-blue-400 dark:text-blue-600 bg-white dark:bg-gray-800 px-1 rounded border border-blue-100 dark:border-blue-900/30">ID:${group.receipt_id}</span>` : ''}
+                    </div>
+                    <span class="text-[10px] text-gray-400 shrink-0 ml-2">${group.date}</span>
                 </div>
                 <div class="space-y-2">
                     ${itemsHtml}
@@ -415,6 +408,7 @@ export const initHistoryFeatures = () => {
                     }
                 }
 
+                const selectedCount = appState.selectedHistoryIds.size;
                 localStorage.setItem(getPrefixedKey('lastUsedCopyAccountId'), EL.destInternalAccountSelect.value);
                 sendGAEvent('copy_zaim_history');
 
@@ -426,9 +420,9 @@ export const initHistoryFeatures = () => {
                 EL.copyStepSuccess.classList.add('flex');
 
                 if (result.status === "partial_success") {
-                    document.getElementById('copy-success-message').textContent = `${result.success_count}件成功しました。（失敗: ${result.failed_count}件）`;
+                    document.getElementById('copy-success-message').textContent = `${result.success_count}品目のコピーに成功しました。（失敗: ${result.failed_count}品目）`;
                 } else {
-                    document.getElementById('copy-success-message').textContent = `${result.success_count}件の履歴をコピーしました。`;
+                    document.getElementById('copy-success-message').textContent = `${selectedCount}件の履歴（レシート）をコピーしました。`;
                 }
             } catch (err) {
                 console.error(err);
