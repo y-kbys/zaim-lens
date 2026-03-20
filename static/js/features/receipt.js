@@ -288,6 +288,14 @@ export async function setupEditState(data) {
     }
     appState.parsedData = JSON.parse(JSON.stringify(data));
     EL.editReceiptId.textContent = `ID: ${data.receipt_id}`;
+    EL.editDate.value = data.date || "";
+    EL.editStore.value = data.store || "";
+
+    // 1枚目の情報が残像として見えないように、リストと画像を一旦非表示にする
+    EL.itemsContainer.innerHTML = '';
+    EL.totalAmount.textContent = "¥0";
+    EL.btnRegisterCount.textContent = "0";
+    EL.receiptThumbnailContainer.classList.add('hidden');
 
     EL.btnSkip.disabled = true;
     EL.btnRegister.disabled = true;
@@ -302,8 +310,8 @@ export async function setupEditState(data) {
         return;
     }
 
-    EL.editDate.value = data.date || "";
-    EL.editStore.value = data.store || "";
+    // ガード通過後の安全な場所で最終的なリスト描画を確定
+    renderItemsList();
 
     if (appState.currentImageUri) {
         EL.receiptThumbnailContainer.classList.remove('hidden');
@@ -533,7 +541,7 @@ export const initReceiptFeatures = () => {
 
     // --- Inline Handlers Helper ---
     // Note: Items update is now handled via addEventListener in renderItemsList for better isolation.
-    
+
     window['showBulkMenuGenres'] = (catId) => {
         if (!appState.parsedData) return;
         const categoryButtons = EL.bulkMenuCategories.querySelectorAll('.bulk-menu-item');
@@ -605,7 +613,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.imageUpload.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
+        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */(e.target).files));
     });
 
     EL.btnCamera.addEventListener('click', (e) => {
@@ -615,7 +623,7 @@ export const initReceiptFeatures = () => {
     });
 
     EL.cameraCapture.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */ (e.target).files));
+        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */(e.target).files));
     });
 
     EL.btnParse.addEventListener('click', async () => {
@@ -659,7 +667,7 @@ export const initReceiptFeatures = () => {
     });
 
     document.addEventListener('click', (e) => {
-        if (!EL.bulkMenuDropdown.contains(/** @type {Node} */ (e.target)) && e.target !== EL.btnBulkMenu) {
+        if (!EL.bulkMenuDropdown.contains(/** @type {Node} */(e.target)) && e.target !== EL.btnBulkMenu) {
             EL.bulkMenuDropdown.classList.remove('show');
         }
     });
