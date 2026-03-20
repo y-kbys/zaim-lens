@@ -21,7 +21,7 @@ export function renderHistoryList() {
         li.className = "group relative p-3 bg-gray-50 dark:bg-gray-800/40 hover:bg-white dark:hover:bg-gray-800 rounded-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:scale-[1.01]";
 
         const dateStr = item.date.replace(/-/g, '/');
-        const subText = item.items.map(i => i.name || "未設定").join(' / ');
+        const subText = [...item.items].reverse().map(i => i.name || "未設定").join(' / ');
         const catText = item.category_name || "未分類";
 
         li.innerHTML = `
