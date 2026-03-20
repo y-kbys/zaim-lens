@@ -268,6 +268,7 @@ let currentSetupRequestId = 0;
 export async function setupEditState(data) {
     // データが未完了（解析中）の場合は、画面をクリアしてステートをリセット
     if (!data) {
+        showLoading("解析中...");
         EL.editDate.value = "";
         EL.editStore.value = "";
         EL.editReceiptId.textContent = "ID: 解析中...";
