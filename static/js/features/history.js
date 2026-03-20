@@ -408,6 +408,7 @@ export const initHistoryFeatures = () => {
                     }
                 }
 
+                const selectedCount = appState.selectedHistoryIds.size;
                 localStorage.setItem(getPrefixedKey('lastUsedCopyAccountId'), EL.destInternalAccountSelect.value);
                 sendGAEvent('copy_zaim_history');
 
@@ -419,9 +420,9 @@ export const initHistoryFeatures = () => {
                 EL.copyStepSuccess.classList.add('flex');
 
                 if (result.status === "partial_success") {
-                    document.getElementById('copy-success-message').textContent = `${result.success_count}件成功しました。（失敗: ${result.failed_count}件）`;
+                    document.getElementById('copy-success-message').textContent = `${result.success_count}品目のコピーに成功しました。（失敗: ${result.failed_count}品目）`;
                 } else {
-                    document.getElementById('copy-success-message').textContent = `${result.success_count}件の履歴をコピーしました。`;
+                    document.getElementById('copy-success-message').textContent = `${selectedCount}件の履歴（レシート）をコピーしました。`;
                 }
             } catch (err) {
                 console.error(err);
