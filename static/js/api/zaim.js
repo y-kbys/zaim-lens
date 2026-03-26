@@ -131,8 +131,12 @@ export async function loadAccounts() {
 /**
  * Fetch Zaim internal accounts and categories (generic) with cache logic
  */
+/** @type {Promise<void>|null} */
 let backgroundFetchPromise = null;
 
+/**
+ * @param {string|number} targetAccountId
+ */
 export async function prefetchZaimDataInBackground(targetAccountId = "1") {
     // Check if we need to fetch
     const now = Date.now();
@@ -196,10 +200,16 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
     return backgroundFetchPromise;
 }
 
+/**
+ * @param {string|number} targetAccountId 
+ */
 export async function ensureZaimDataAvailable(targetAccountId = "1") {
     await prefetchZaimDataInBackground(targetAccountId);
 }
 
+/**
+ * @param {string|number} targetAccountId 
+ */
 export async function getZaimMasterData(targetAccountId) {
     // Ensure any background fetch has completed
     if (backgroundFetchPromise) {
