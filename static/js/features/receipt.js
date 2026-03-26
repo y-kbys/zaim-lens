@@ -3,7 +3,7 @@ import { EL, showToast, showLoading, hideLoading, switchState, showConfirm, gene
 import { apiFetch } from '../api/backend.js';
 import { getPrefixedKey, sleep } from '../utils/common.js';
 import { sendGAEvent } from '../utils/analytics.js';
-import { getZaimMasterData } from '../api/zaim.js';
+import { getZaimMasterData, ensureZaimDataAvailable } from '../api/zaim.js';
 import { openGeminiSettings, closeSettingsDropdown } from './settings.js';
 
 // --- Image Compression & Resizing ---
@@ -170,6 +170,14 @@ export async function startBackgroundParsing() {
                 }
 
                 const targetAccountId = EL.uploadTargetAccount.value;
+                
+                // Ensure Zaim categories are fetched before calling Gemini, as Gemini needs them for context
+                try {
+                    await ensureZaimDataAvailable(targetAccountId);
+                } catch (e) {
+                    console.error("Failed to waiting for Zaim data before parsing", e);
+                }
+
                 const response = await apiFetch('/api/parse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

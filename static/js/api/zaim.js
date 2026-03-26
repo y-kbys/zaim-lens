@@ -129,9 +129,108 @@ export async function loadAccounts() {
 }
 
 /**
- * Fetch Zaim internal accounts and categories (generic)
+ * Fetch Zaim internal accounts and categories (generic) with cache logic
+ */
+/** @type {Promise<void>|null} */
+let backgroundFetchPromise = null;
+
+/**
+ * @param {string|number} targetAccountId
+ */
+export async function prefetchZaimDataInBackground(targetAccountId = "1") {
+    // Check if we need to fetch
+    const now = Date.now();
+    const expiry = 86400000; // 24 hours
+    
+    const accountsCacheStr = localStorage.getItem('zaim_lens_accounts_cache');
+    const categoriesCacheStr = localStorage.getItem('zaim_lens_categories_cache');
+    
+    let needsFetch = false;
+    if (!accountsCacheStr || !categoriesCacheStr) {
+        needsFetch = true;
+    } else {
+        try {
+            const accountsCache = JSON.parse(accountsCacheStr);
+            const categoriesCache = JSON.parse(categoriesCacheStr);
+            if (now - accountsCache.timestamp > expiry || now - categoriesCache.timestamp > expiry) {
+                needsFetch = true;
+            }
+        } catch (e) {
+            needsFetch = true;
+        }
+    }
+
+    if (!needsFetch) {
+        return Promise.resolve(); // Cache is valid
+    }
+
+    // If already fetching, just return the existing promise
+    if (backgroundFetchPromise) {
+        return backgroundFetchPromise;
+    }
+
+    backgroundFetchPromise = (async () => {
+        try {
+            const [accRes, catRes] = await Promise.all([
+                apiFetch(`/api/zaim/accounts?account_id=${targetAccountId}`),
+                apiFetch(`/api/zaim/categories?account_id=${targetAccountId}`)
+            ]);
+
+            if (accRes.ok && catRes.ok) {
+                const accounts = await accRes.json();
+                const masterData = await catRes.json();
+                
+                const cacheTimestamp = Date.now();
+                localStorage.setItem('zaim_lens_accounts_cache', JSON.stringify({
+                    timestamp: cacheTimestamp,
+                    data: accounts
+                }));
+                localStorage.setItem('zaim_lens_categories_cache', JSON.stringify({
+                    timestamp: cacheTimestamp,
+                    data: masterData
+                }));
+            }
+        } catch (err) {
+            console.error("Background pre-fetch failed:", err);
+        } finally {
+            backgroundFetchPromise = null;
+        }
+    })();
+
+    return backgroundFetchPromise;
+}
+
+/**
+ * @param {string|number} targetAccountId 
+ */
+export async function ensureZaimDataAvailable(targetAccountId = "1") {
+    await prefetchZaimDataInBackground(targetAccountId);
+}
+
+/**
+ * @param {string|number} targetAccountId 
  */
 export async function getZaimMasterData(targetAccountId) {
+    // Ensure any background fetch has completed
+    if (backgroundFetchPromise) {
+        await backgroundFetchPromise;
+    }
+
+    // Read from cache synchronously
+    const accountsCacheStr = localStorage.getItem('zaim_lens_accounts_cache');
+    const categoriesCacheStr = localStorage.getItem('zaim_lens_categories_cache');
+
+    if (accountsCacheStr && categoriesCacheStr) {
+        try {
+            const accounts = JSON.parse(accountsCacheStr).data;
+            const masterData = JSON.parse(categoriesCacheStr).data;
+            return { accounts, masterData };
+        } catch (e) {
+            console.warn("Failed to parse cache, fetching directly.", e);
+        }
+    }
+
+    // Fallback if no cache (highly unlikely if ensureZaimDataAvailable is used correctly, but good for safety)
     const [accRes, catRes] = await Promise.all([
         apiFetch(`/api/zaim/accounts?account_id=${targetAccountId}`),
         apiFetch(`/api/zaim/categories?account_id=${targetAccountId}`)
@@ -140,10 +239,14 @@ export async function getZaimMasterData(targetAccountId) {
     if (!accRes.ok) throw new Error(await accRes.text());
     if (!catRes.ok) throw new Error(await catRes.text());
 
-    return {
-        accounts: await accRes.json(),
-        masterData: await catRes.json()
-    };
+    const accounts = await accRes.json();
+    const masterData = await catRes.json();
+
+    const cacheTimestamp = Date.now();
+    localStorage.setItem('zaim_lens_accounts_cache', JSON.stringify({ timestamp: cacheTimestamp, data: accounts }));
+    localStorage.setItem('zaim_lens_categories_cache', JSON.stringify({ timestamp: cacheTimestamp, data: masterData }));
+
+    return { accounts, masterData };
 }
 
 /**
