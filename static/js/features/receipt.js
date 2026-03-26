@@ -321,6 +321,9 @@ export async function setupEditState(data) {
     // ガード通過後の安全な場所で最終的なリスト描画を確定
     renderItemsList();
 
+    // ▼▼▼ ここに1行追加して、URIの中身を覗き見します ▼▼▼
+    console.log(`[画像チェック] レシートID: ${data.receipt_id}, URI:`, appState.currentImageUri);
+
     if (appState.currentImageUri) {
         EL.receiptThumbnailContainer.classList.remove('hidden');
         EL.receiptThumbnailContainer.classList.add('thumbnail-loading');
