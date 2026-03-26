@@ -9,7 +9,10 @@
     "paths": {
       "/*": ["./*"]
     },
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "useUnknownInCatchVariables": false
   },
   "exclude": ["node_modules", "static/app.js"]
 }
