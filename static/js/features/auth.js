@@ -174,7 +174,11 @@ export const initFirebaseAuth = async (callbacks = {}) => {
 
                         if (hasTarget !== false) {
                             try {
-                                if (loadZaimAccounts) await loadZaimAccounts();
+                                // Start background pre-fetch silently
+                                import('../api/zaim.js').then(module => {
+                                    const targetAccountId = EL.uploadTargetAccount ? EL.uploadTargetAccount.value : "1";
+                                    module.prefetchZaimDataInBackground(targetAccountId).catch(e => console.error("Prefetch failed:", e));
+                                });
                             } catch (loadErr) {
                                 console.error("Zaim access failed:", loadErr);
                                 showToast("Zaim連携に失敗しました。設定を確認してください。", "error");
