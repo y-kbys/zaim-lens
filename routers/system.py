@@ -11,9 +11,9 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     return templates.TemplateResponse(
-        "index.html", 
-        {
-            "request": request, 
+        request=request,
+        name="index.html",
+        context={
             "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
             "developer_emails": os.environ.get("DEVELOPER_EMAILS", ""),
             "app_version": os.environ.get("APP_VERSION", "v1.0.0")
@@ -23,9 +23,9 @@ async def read_index(request: Request):
 @router.get("/privacy.html", response_class=HTMLResponse)
 async def read_privacy(request: Request):
     return templates.TemplateResponse(
-        "privacy.html", 
-        {
-            "request": request, 
+        request=request,
+        name="privacy.html",
+        context={
             "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
             "developer_emails": os.environ.get("DEVELOPER_EMAILS", "")
         }
@@ -34,9 +34,9 @@ async def read_privacy(request: Request):
 @router.get("/terms.html", response_class=HTMLResponse)
 async def read_terms(request: Request):
     return templates.TemplateResponse(
-        "terms.html", 
-        {
-            "request": request, 
+        request=request,
+        name="terms.html",
+        context={
             "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
             "developer_emails": os.environ.get("DEVELOPER_EMAILS", "")
         }
