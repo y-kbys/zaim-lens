@@ -44,7 +44,6 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
     last_error = None
     for model_name in GEMINI_MODEL_CHAIN:
         try:
-            print(f"DEBUG: Attempting Gemini analysis with model: {model_name}")
             response = await client.aio.models.generate_content(
                 model=model_name,
                 contents=[prompt, image_part],
@@ -56,7 +55,6 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             
         except Exception as e:
             last_error = e
-            print(f"DEBUG: Model {model_name} failed: {str(e)}")
             # Handle rate limiting specifically: if 429, we might want to try other models 
             # as different models/tiers might have different limits, so we continue the loop.
             continue
