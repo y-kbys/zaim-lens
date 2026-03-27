@@ -55,30 +55,32 @@ export const handleImageFiles = async (files) => {
         file,
         status: 'idle',
         result: null,
-        blobUri: URL.createObjectURL(file),
         compressedBase64: null
     }));
     appState.currentQueueIndex = 0;
 
-    appState.currentImageUri = appState.queue[0].blobUri;
-    EL.imagePreview.src = appState.currentImageUri;
-    EL.imagePreviewContainer.classList.remove('hidden');
-    EL.btnParse.classList.remove('hidden');
-    EL.btnParse.disabled = true;
-
-    updateBatchProgressUI();
-
+    // 1枚目のみ即座に圧縮して表示
     try {
         showLoading('画像を最適化中...');
-        appState.queue[0].compressedBase64 = await compressImage(appState.queue[0].file);
-        appState.compressedImageBase64 = appState.queue[0].compressedBase64;
+        const firstItem = appState.queue[0];
+        firstItem.compressedBase64 = await compressImage(firstItem.file);
+        firstItem.file = null; // メモリ解放
+
+        appState.currentImageUri = firstItem.compressedBase64;
+        EL.imagePreview.src = appState.currentImageUri;
+        EL.imagePreviewContainer.classList.remove('hidden');
+        EL.btnParse.classList.remove('hidden');
         EL.btnParse.disabled = false;
+        
         hideLoading();
 
+        // 2枚目以降をバックグラウンドで逐次圧縮
         (async () => {
             for (let i = 1; i < appState.queue.length; i++) {
-                if (!appState.queue[i].compressedBase64) {
-                    appState.queue[i].compressedBase64 = await compressImage(appState.queue[i].file);
+                const item = appState.queue[i];
+                if (!item.compressedBase64 && item.file) {
+                    item.compressedBase64 = await compressImage(item.file);
+                    item.file = null; // 完了次第解放
                 }
             }
         })();
@@ -87,6 +89,8 @@ export const handleImageFiles = async (files) => {
         showToast("画像の処理に失敗しました。", 'error');
         console.error(err);
     }
+
+    updateBatchProgressUI();
 };
 
 export function updateBatchProgressUI() {
@@ -135,11 +139,6 @@ export async function resetApp() {
     appState.parsedData = null;
     appState.isParsingLoopRunning = false;
 
-    appState.queue.forEach(item => {
-        if (item.blobUri) {
-            URL.revokeObjectURL(item.blobUri);
-        }
-    });
     appState.queue = [];
     appState.currentQueueIndex = -1;
     updateBatchProgressUI();
@@ -165,8 +164,9 @@ export async function startBackgroundParsing() {
             updateBatchProgressUI();
 
             try {
-                if (!item.compressedBase64) {
+                if (!item.compressedBase64 && item.file) {
                     item.compressedBase64 = await compressImage(item.file);
+                    item.file = null; // メモリ解放
                 }
 
                 const targetAccountId = EL.uploadTargetAccount.value;
@@ -245,7 +245,7 @@ export async function startBackgroundParsing() {
     }
 }
 
-export function advanceQueue() {
+export async function advanceQueue() {
     appState.currentQueueIndex++;
 
     if (appState.currentQueueIndex >= appState.queue.length) {
@@ -258,8 +258,22 @@ export function advanceQueue() {
 
     const nextItem = appState.queue[appState.currentQueueIndex];
     updateBatchProgressUI();
-    appState.currentImageUri = nextItem.blobUri;
-    EL.imagePreview.src = appState.currentImageUri;
+
+    // 背景圧縮が間に合っていない場合のフォールバック
+    if (!nextItem.compressedBase64 && nextItem.file) {
+        showLoading("画像を最適化中...");
+        try {
+            nextItem.compressedBase64 = await compressImage(nextItem.file);
+            nextItem.file = null;
+        } catch (e) {
+            console.error("Manual compression failed", e);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    appState.currentImageUri = nextItem.compressedBase64;
+    EL.imagePreview.src = appState.currentImageUri || "";
 
     if (nextItem.status === 'complete') {
         setupEditState(nextItem.result);
@@ -774,11 +788,6 @@ export const initReceiptFeatures = () => {
 
                 if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
                     hideLoading();
-                    const currentItem = appState.queue[appState.currentQueueIndex];
-                    if (currentItem && currentItem.blobUri) {
-                        URL.revokeObjectURL(currentItem.blobUri);
-                        currentItem.blobUri = null;
-                    }
                     advanceQueue();
                 } else {
                     EL.successReceiptIdContainer.classList.remove('hidden');
@@ -798,11 +807,6 @@ export const initReceiptFeatures = () => {
     EL.btnReset.addEventListener('click', resetApp);
     EL.btnSkip.addEventListener('click', () => {
         if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
-            const currentItem = appState.queue[appState.currentQueueIndex];
-            if (currentItem && currentItem.blobUri) {
-                URL.revokeObjectURL(currentItem.blobUri);
-                currentItem.blobUri = null;
-            }
             advanceQueue();
         } else {
             resetApp();
