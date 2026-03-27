@@ -5,9 +5,18 @@ from google import genai
 from google.genai import types, errors
 from fastapi import HTTPException
 
+# 先頭から順にフォールバック
+GEMINI_MODEL_CHAIN = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-flash-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-lite-latest",
+]
+
+
 async def analyze_receipt(image_base64: str, user_gemini_key: str, master_data_context: str) -> Dict[str, Any]:
     """
-    Parses a receipt image using Gemini API and returns the result as a dictionary.
+    Parses a receipt image using a chain of Gemini models and returns the result as a dictionary.
     """
     if ";" in image_base64 and "base64," in image_base64:
         image_base64 = image_base64.split("base64,")[1]
@@ -25,36 +34,45 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
 
 {master_data_context}"""
 
-    try:
-        image_part = types.Part.from_bytes(data=decoded_image_data, mime_type="image/jpeg")
+    image_part = types.Part.from_bytes(data=decoded_image_data, mime_type="image/jpeg")
+    client = genai.Client(api_key=user_gemini_key)
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=ReceiptParserResult,
+    )
 
-        async def run_gemini(model_name: str) -> ReceiptParserResult:
-            client = genai.Client(api_key=user_gemini_key)
+    last_error = None
+    for model_name in GEMINI_MODEL_CHAIN:
+        try:
             response = await client.aio.models.generate_content(
                 model=model_name,
                 contents=[prompt, image_part],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=ReceiptParserResult,
-                )
+                config=config
             )
-            return ReceiptParserResult.model_validate_json(response.text)
-
-        try:
-            # Default to the highly accurate model
-            gemini_result = await run_gemini("gemini-flash-latest")
+            # Validate and return on first success
+            result = ReceiptParserResult.model_validate_json(response.text)
+            return result.model_dump()
+            
         except Exception as e:
-            print(f"Fallback initiated due to error with gemini-flash-latest: {e}")
-            # Fallback to the lite model
-            gemini_result = await run_gemini("gemini-2.5-flash-lite")
-        
-        return gemini_result.model_dump()
-        
-    except errors.APIError as e:
-        print(f"Gemini APIError: {e}")
-        if e.code == 429:
-            raise HTTPException(status_code=429, detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。")
-        raise HTTPException(status_code=500, detail=f"レシートの解析に失敗しました。詳細: {e.message}")
-    except Exception as e:
-        print(f"Error calling Gemini: {e}")
-        raise HTTPException(status_code=500, detail=f"レシートの解析に失敗しました。Geminiからの応答が正しくないか、サーバーエラーが発生しました。詳細: {str(e)}")
+            last_error = e
+            # Handle rate limiting specifically: if 429, we might want to try other models 
+            # as different models/tiers might have different limits, so we continue the loop.
+            continue
+
+    # If all models in the chain fail, handle the error
+    if isinstance(last_error, errors.APIError):
+        if last_error.code == 429:
+            raise HTTPException(
+                status_code=429, 
+                detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。"
+            )
+        raise HTTPException(
+            status_code=500, 
+            detail=f"レシートの解析に失敗しました。詳細: {last_error.message}"
+        )
+    
+    raise HTTPException(
+        status_code=500, 
+        detail=f"レシートの解析に失敗しました。Geminiからの応答が正しくないか、サーバーエラーが発生しました。詳細: {str(last_error)}"
+    )
+
