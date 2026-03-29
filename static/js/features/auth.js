@@ -4,6 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { appState } from '../state.js';
 import { EL, showToast, showConfirm } from '../utils/dom.js';
+import { apiFetch } from '../api/backend.js';
 
 let auth;
 
@@ -110,11 +111,8 @@ export const initFirebaseAuth = async (callbacks = {}) => {
             if (await showConfirm("アカウント削除の警告", confirmMsg)) {
                 try {
                     showToast("アカウントを削除しています...", "info");
-                    const res = await fetch('/api/user', {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${appState.idToken}`
-                        }
+                    const res = await apiFetch('/api/user', {
+                        method: 'DELETE'
                     });
                     if (!res.ok) throw new Error(`Failed to delete backend data: ${res.statusText}`);
                     const user = auth.currentUser;
@@ -236,5 +234,21 @@ export const initFirebaseAuth = async (callbacks = {}) => {
     } catch (e) {
         console.error("Error initializing Firebase Auth:", e);
         showToast("システムの設定エラーによりログイン機能が起動できませんでした。", 'error');
+    }
+};
+
+/**
+ * Manually refresh the Firebase ID token
+ * @returns {Promise<string|null>} New token or null if failed
+ */
+export const getFreshToken = async () => {
+    if (!auth || !auth.currentUser) return null;
+    try {
+        const token = await auth.currentUser.getIdToken(true);
+        appState.idToken = token;
+        return token;
+    } catch (error) {
+        console.error("Failed to refresh token", error);
+        return null;
     }
 };
