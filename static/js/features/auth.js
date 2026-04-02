@@ -46,6 +46,9 @@ export const initFirebaseAuth = async (callbacks = {}) => {
         const fireApp = initializeApp(config);
         auth = getAuth(fireApp);
         const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({
+            prompt: 'select_account'
+        });
 
         EL.btnGoogleLogin.addEventListener('click', async () => {
             try {
