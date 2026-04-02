@@ -16,7 +16,16 @@ async def read_index(request: Request):
         context={
             "ga_measurement_id": os.environ.get("GA_MEASUREMENT_ID"),
             "developer_emails": os.environ.get("DEVELOPER_EMAILS", ""),
-            "app_version": os.environ.get("APP_VERSION", "v1.0.0")
+            "app_version": os.environ.get("APP_VERSION", "v1.0.0"),
+            "firebase_config": {
+                "apiKey": os.environ.get("FIREBASE_API_KEY"),
+                "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN"),
+                "projectId": os.environ.get("FIREBASE_PROJECT_ID"),
+                "storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET"),
+                "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID"),
+                "appId": os.environ.get("FIREBASE_APP_ID"),
+                "measurementId": os.environ.get("FIREBASE_MEASUREMENT_ID")
+            }
         }
     )
 

@@ -56,6 +56,11 @@
     </script>
     {% endif %}
 
+    <script>
+        // Injected by server
+        window.FIREBASE_CONFIG = {{ firebase_config | tojson | safe }};
+    </script>
+
 
 </head>
 

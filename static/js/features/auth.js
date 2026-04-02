@@ -231,12 +231,19 @@ export const initFirebaseAuth = async (callbacks = {}) => {
         });
     };
 
-    // Try to get config from cache first for instant initialization
+    // Priority 1: Injected by server via index.html (Approach 1)
+    if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
+        console.log("Initializing Firebase with injected config");
+        setupFirebase(window.FIREBASE_CONFIG);
+        return;
+    }
+
+    // Priority 2: Try to get config from cache (Fallback)
     const cachedConfig = localStorage.getItem('firebaseConfig');
     if (cachedConfig) {
         try {
             setupFirebase(JSON.parse(cachedConfig));
-            // Still fetch fresh config in background to ensure it's up to date
+            // Still fetch fresh config in background to update cache for next time
             fetch('/api/config').then(res => res.json()).then(data => {
                 localStorage.setItem('firebaseConfig', JSON.stringify(data.firebaseConfig));
             }).catch(() => {});
@@ -246,7 +253,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
         }
     }
 
-    // No cache or failed cache: fetch from API
+    // Priority 3: Fetch from API (Last resort)
     try {
         const res = await fetch('/api/config');
         if (!res.ok) throw new Error("Failed to fetch Firebase config");
