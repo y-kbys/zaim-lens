@@ -52,6 +52,13 @@ except Exception as e:
 
 # --- App Initialization ---
 app = FastAPI(title="Zaim Lens")
+
+@app.middleware("http")
+async def add_coop_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    return response
+
 os.makedirs("static", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
