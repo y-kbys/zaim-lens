@@ -22,4 +22,15 @@ interface Window {
     // Feature: History Copy
     toggleHistorySelection?: (index: number, isChecked: boolean) => void;
     updateCopyItemCategory?: (groupIdx: number, itemIdx: number, catIdStr: string) => void;
+
+    // Firebase Config injected by server
+    FIREBASE_CONFIG?: {
+        apiKey: string;
+        authDomain: string;
+        projectId: string;
+        storageBucket: string;
+        messagingSenderId: string;
+        appId: string;
+        measurementId?: string;
+    };
 }
