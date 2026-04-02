@@ -183,9 +183,6 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
                 const accounts = await accRes.json();
                 const masterData = await catRes.json();
                 
-                const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
-                const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
-                
                 const cacheTimestamp = Date.now();
                 localStorage.setItem(accountsKey, JSON.stringify({
                     timestamp: cacheTimestamp,
@@ -252,8 +249,6 @@ export async function getZaimMasterData(targetAccountId) {
     const masterData = await catRes.json();
 
     const cacheTimestamp = Date.now();
-    const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
-    const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
     
     localStorage.setItem(accountsKey, JSON.stringify({ timestamp: cacheTimestamp, data: accounts }));
     localStorage.setItem(categoriesKey, JSON.stringify({ timestamp: cacheTimestamp, data: masterData }));
