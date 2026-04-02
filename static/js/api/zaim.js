@@ -142,8 +142,11 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
     const now = Date.now();
     const expiry = 86400000; // 24 hours
     
-    const accountsCacheStr = localStorage.getItem('zaim_lens_accounts_cache');
-    const categoriesCacheStr = localStorage.getItem('zaim_lens_categories_cache');
+    const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
+    const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
+    
+    const accountsCacheStr = localStorage.getItem(accountsKey);
+    const categoriesCacheStr = localStorage.getItem(categoriesKey);
     
     let needsFetch = false;
     if (!accountsCacheStr || !categoriesCacheStr) {
@@ -180,12 +183,15 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
                 const accounts = await accRes.json();
                 const masterData = await catRes.json();
                 
+                const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
+                const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
+                
                 const cacheTimestamp = Date.now();
-                localStorage.setItem('zaim_lens_accounts_cache', JSON.stringify({
+                localStorage.setItem(accountsKey, JSON.stringify({
                     timestamp: cacheTimestamp,
                     data: accounts
                 }));
-                localStorage.setItem('zaim_lens_categories_cache', JSON.stringify({
+                localStorage.setItem(categoriesKey, JSON.stringify({
                     timestamp: cacheTimestamp,
                     data: masterData
                 }));
@@ -217,8 +223,11 @@ export async function getZaimMasterData(targetAccountId) {
     }
 
     // Read from cache synchronously
-    const accountsCacheStr = localStorage.getItem('zaim_lens_accounts_cache');
-    const categoriesCacheStr = localStorage.getItem('zaim_lens_categories_cache');
+    const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
+    const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
+
+    const accountsCacheStr = localStorage.getItem(accountsKey);
+    const categoriesCacheStr = localStorage.getItem(categoriesKey);
 
     if (accountsCacheStr && categoriesCacheStr) {
         try {
@@ -243,8 +252,11 @@ export async function getZaimMasterData(targetAccountId) {
     const masterData = await catRes.json();
 
     const cacheTimestamp = Date.now();
-    localStorage.setItem('zaim_lens_accounts_cache', JSON.stringify({ timestamp: cacheTimestamp, data: accounts }));
-    localStorage.setItem('zaim_lens_categories_cache', JSON.stringify({ timestamp: cacheTimestamp, data: masterData }));
+    const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
+    const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
+    
+    localStorage.setItem(accountsKey, JSON.stringify({ timestamp: cacheTimestamp, data: accounts }));
+    localStorage.setItem(categoriesKey, JSON.stringify({ timestamp: cacheTimestamp, data: masterData }));
 
     return { accounts, masterData };
 }
