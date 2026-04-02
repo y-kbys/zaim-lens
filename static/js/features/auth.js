@@ -1,7 +1,7 @@
 // @ts-ignore
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 // @ts-ignore
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { appState } from '../state.js';
 import { EL, showToast, showConfirm } from '../utils/dom.js';
 import { apiFetch } from '../api/backend.js';
@@ -47,6 +47,28 @@ export const initFirebaseAuth = async (callbacks = {}) => {
         auth = getAuth(fireApp);
         const provider = new GoogleAuthProvider();
 
+        // Handle redirect result (for cases where we return from a login redirect)
+        getRedirectResult(auth).then((result) => {
+            if (result) {
+                console.log("Redirect login successful");
+                // Note: onAuthStateChanged will trigger and handle state updates
+            }
+        }).catch((error) => {
+            console.error("Redirect login failed", error);
+            // Don't show toast for user-initiated cancellations
+            if (error.code !== 'auth/redirect-cancelled-by-user') {
+                showToast("ログインに失敗しました: " + error.message, 'error');
+            }
+            // Ensure login button is reset if an error occurred
+            if (EL.btnGoogleLogin) {
+                /** @type {HTMLButtonElement} */ (EL.btnGoogleLogin).disabled = false;
+                EL.btnGoogleLogin.innerHTML = `
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
+                    <span>Googleでログイン</span>
+                `;
+            }
+        });
+
         EL.btnGoogleLogin.addEventListener('click', async () => {
             try {
                 /** @type {HTMLButtonElement} */ (EL.btnGoogleLogin).disabled = true;
@@ -54,10 +76,10 @@ export const initFirebaseAuth = async (callbacks = {}) => {
                     <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-600 mr-3"></div>
                     <span>ログイン処理中...</span>
                 `;
-                await signInWithPopup(auth, provider);
+                await signInWithRedirect(auth, provider);
             } catch (error) {
-                console.error("Login failed", error);
-                showToast("ログインに失敗しました: " + error.message, 'error');
+                console.error("Login initiation failed", error);
+                showToast("ログインの起動に失敗しました: " + error.message, 'error');
                 /** @type {HTMLButtonElement} */ (EL.btnGoogleLogin).disabled = false;
                 EL.btnGoogleLogin.innerHTML = `
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
