@@ -412,7 +412,7 @@ export async function loadZaimAccounts(targetData = null) {
             }
         }
 
-        const storageKey = `lastUsedAccountId_${targetAccountId}`;
+        const storageKey = `last_used_payment_source_id_${targetAccountId}`;
         const lastUsedId = localStorage.getItem(getPrefixedKey(storageKey));
         if (lastUsedId !== null) {
             const exists = Array.from(EL.editFromAccount.options).some(opt => opt.value === lastUsedId);
@@ -782,8 +782,8 @@ export const initReceiptFeatures = () => {
                     return;
                 }
 
-                localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), targetAccountId);
-                localStorage.setItem(getPrefixedKey(`lastUsedAccountId_${targetAccountId}`), EL.editFromAccount.value);
+                localStorage.setItem(getPrefixedKey('last_used_zaim_profile_parser'), targetAccountId);
+                localStorage.setItem(getPrefixedKey(`last_used_payment_source_id_${targetAccountId}`), EL.editFromAccount.value);
                 sendGAEvent('save_receipt_result');
 
                 if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
