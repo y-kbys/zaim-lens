@@ -60,8 +60,8 @@ export async function loadDestInternalAccounts() {
         });
         EL.destInternalAccountSelect.innerHTML = optionsHtml;
 
-        // Restore last used account for this destination
-        const storageKey = `lastUsedCopyAccountId_${destId}`;
+        // Restore last used internal account (payment source) for this destination
+        const storageKey = `last_used_payment_source_id_${destId}`;
         const lastUsedId = localStorage.getItem(getPrefixedKey(storageKey));
         if (lastUsedId !== null && Array.from((/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).options).some(o => o.value === lastUsedId)) {
             (/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).value = lastUsedId;
@@ -100,10 +100,18 @@ export async function refreshAllAccountDropdowns() {
         if (EL.btnFetchHistorySkeleton) EL.btnFetchHistorySkeleton.classList.add('hidden');
         if (EL.btnFetchHistory) EL.btnFetchHistory.classList.remove('hidden');
 
-        // --- Restore Source Account Preference ---
-        const lastSourceId = localStorage.getItem(getPrefixedKey('lastUsedSourceAccountId'));
+        // --- Restore Copy Source Account (Profile) ---
+        const lastSourceId = localStorage.getItem(getPrefixedKey('last_used_zaim_profile_copy_source'));
         if (lastSourceId && Array.from((/** @type {HTMLSelectElement} */ (EL.sourceAccountSelect)).options).some(o => o.value === lastSourceId)) {
             (/** @type {HTMLSelectElement} */ (EL.sourceAccountSelect)).value = lastSourceId;
+        }
+
+        // --- Restore Copy Destination Account (Profile) ---
+        const lastDestId = localStorage.getItem(getPrefixedKey('last_used_zaim_profile_copy_dest'));
+        if (lastDestId && Array.from((/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).options).some(o => o.value === lastDestId)) {
+            (/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value = lastDestId;
+            // Also need to initialize internal accounts for this selection
+            loadDestInternalAccounts();
         }
 
         // --- Handle Initial Destination Selection ---
@@ -142,8 +150,11 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
     const now = Date.now();
     const expiry = 86400000; // 24 hours
     
-    const accountsCacheStr = localStorage.getItem('zaim_lens_accounts_cache');
-    const categoriesCacheStr = localStorage.getItem('zaim_lens_categories_cache');
+    const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
+    const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
+    
+    const accountsCacheStr = localStorage.getItem(accountsKey);
+    const categoriesCacheStr = localStorage.getItem(categoriesKey);
     
     let needsFetch = false;
     if (!accountsCacheStr || !categoriesCacheStr) {
@@ -181,11 +192,11 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
                 const masterData = await catRes.json();
                 
                 const cacheTimestamp = Date.now();
-                localStorage.setItem('zaim_lens_accounts_cache', JSON.stringify({
+                localStorage.setItem(accountsKey, JSON.stringify({
                     timestamp: cacheTimestamp,
                     data: accounts
                 }));
-                localStorage.setItem('zaim_lens_categories_cache', JSON.stringify({
+                localStorage.setItem(categoriesKey, JSON.stringify({
                     timestamp: cacheTimestamp,
                     data: masterData
                 }));
@@ -217,8 +228,11 @@ export async function getZaimMasterData(targetAccountId) {
     }
 
     // Read from cache synchronously
-    const accountsCacheStr = localStorage.getItem('zaim_lens_accounts_cache');
-    const categoriesCacheStr = localStorage.getItem('zaim_lens_categories_cache');
+    const accountsKey = getPrefixedKey(`zaim_lens_accounts_cache_${targetAccountId}`);
+    const categoriesKey = getPrefixedKey(`zaim_lens_categories_cache_${targetAccountId}`);
+
+    const accountsCacheStr = localStorage.getItem(accountsKey);
+    const categoriesCacheStr = localStorage.getItem(categoriesKey);
 
     if (accountsCacheStr && categoriesCacheStr) {
         try {
@@ -243,8 +257,9 @@ export async function getZaimMasterData(targetAccountId) {
     const masterData = await catRes.json();
 
     const cacheTimestamp = Date.now();
-    localStorage.setItem('zaim_lens_accounts_cache', JSON.stringify({ timestamp: cacheTimestamp, data: accounts }));
-    localStorage.setItem('zaim_lens_categories_cache', JSON.stringify({ timestamp: cacheTimestamp, data: masterData }));
+    
+    localStorage.setItem(accountsKey, JSON.stringify({ timestamp: cacheTimestamp, data: accounts }));
+    localStorage.setItem(categoriesKey, JSON.stringify({ timestamp: cacheTimestamp, data: masterData }));
 
     return { accounts, masterData };
 }

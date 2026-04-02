@@ -409,7 +409,7 @@ export const initHistoryFeatures = () => {
                 }
 
                 const selectedCount = appState.selectedHistoryIds.size;
-                localStorage.setItem(getPrefixedKey('lastUsedCopyAccountId'), EL.destInternalAccountSelect.value);
+                // Note: Payment source is already saved on selection change
                 sendGAEvent('copy_zaim_history');
 
                 EL.copyStepConfig.classList.add('hidden');
@@ -438,9 +438,9 @@ export const initHistoryFeatures = () => {
 
     // Missing event listeners from app.js refactor
     EL.sourceAccountSelect.addEventListener('change', () => {
-        // Save preference
+        // Save profile preference
         if (EL.sourceAccountSelect.value) {
-            localStorage.setItem(getPrefixedKey('lastUsedSourceAccountId'), EL.sourceAccountSelect.value);
+            localStorage.setItem(getPrefixedKey('last_used_zaim_profile_copy_source'), EL.sourceAccountSelect.value);
         }
         updateDestAccountOptions();
 
@@ -460,13 +460,15 @@ export const initHistoryFeatures = () => {
             EL.destInternalAccountSelect.innerHTML = '<option value="">出金元を選択...</option>';
             return;
         }
+        // Save profile preference
+        localStorage.setItem(getPrefixedKey('last_used_zaim_profile_copy_dest'), destAccountId);
         await loadDestInternalAccounts();
     });
 
     EL.destInternalAccountSelect.addEventListener('change', () => {
         const destId = (/** @type {HTMLSelectElement} */ (EL.destAccountSelect)).value;
         if (destId) {
-            localStorage.setItem(getPrefixedKey(`lastUsedCopyAccountId_${destId}`), (/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).value);
+            localStorage.setItem(getPrefixedKey(`last_used_payment_source_id_${destId}`), (/** @type {HTMLSelectElement} */ (EL.destInternalAccountSelect)).value);
         }
     });
 };
