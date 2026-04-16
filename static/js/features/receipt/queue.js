@@ -109,9 +109,9 @@ export async function advanceQueue() {
             // Re-check index in case user skipped again while waiting
             if (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
                 hideLoading();
-                if (nextItem.status === 'complete') {
+                if (/** @type {any} */ (nextItem).status === 'complete') {
                     setupEditState(nextItem.result);
-                } else if (nextItem.status === 'error') {
+                } else if (/** @type {any} */ (nextItem).status === 'error') {
                     showToast("解析に失敗しました。", 'warning');
                     setupEditState({ date: "", store: "", items: [] });
                 }
@@ -179,10 +179,10 @@ export async function startBackgroundParsing() {
             try {
                 await promise;
             } catch (err) {
-                if (err.status === 429) {
+                if (/** @type {any} */ (err).status === 429) {
                     showToast("Geminiのレートリミットに達しました。時間を置いてから再度お試しください。", 'warning');
                     break;
-                } else if (err.status === 400 && err.message.includes("API Key is not configured")) {
+                } else if (/** @type {any} */ (err).status === 400 && err.message.includes("API Key is not configured")) {
                     showToast("Gemini APIキーが設定されていません。設定画面を開きます。", 'warning');
                     openGeminiSettings();
                     break;
@@ -194,8 +194,8 @@ export async function startBackgroundParsing() {
             // Sync UI if still active on this item and we reached here naturally
             if (i === appState.currentQueueIndex) {
                  hideLoading();
-                 if (item.status === 'complete') setupEditState(item.result);
-                 else if (item.status === 'error') setupEditState({ date: "", store: "", items: [] });
+                 if (/** @type {any} */ (item).status === 'complete') setupEditState(item.result);
+                 else if (/** @type {any} */ (item).status === 'error') setupEditState({ date: "", store: "", items: [] });
             }
 
             if (i < appState.queue.length - 1) {

@@ -19,7 +19,7 @@ export async function parseReceiptImage(imageBase64, accountId) {
     if (!response.ok) {
         const errorDetail = await response.text();
         const error = new Error(errorDetail);
-        error.status = response.status;
+        /** @type {any} */ (error).status = response.status;
         throw error;
     }
     return await response.json();
@@ -40,7 +40,7 @@ export async function registerReceiptData(payload) {
     if (!response.ok) {
         const errorDetail = await response.text();
         const error = new Error(errorDetail);
-        error.status = response.status;
+        /** @type {any} */ (error).status = response.status;
         throw error;
     }
     return await response.json();
