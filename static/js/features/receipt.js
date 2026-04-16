@@ -276,11 +276,14 @@ export async function advanceQueue() {
     EL.imagePreview.src = appState.currentImageUri || "";
 
     if (nextItem.status === 'complete') {
+        hideLoading();
         setupEditState(nextItem.result);
     } else if (nextItem.status === 'error') {
+        hideLoading();
         showToast("この画像の解析に失敗していました。スキップするか、撮り直してください。", 'warning');
         setupEditState({ date: "", store: "", items: [] });
     } else {
+        setupEditState(null); // Clear fields and show placeholder
         showLoading("解析結果を待機中...");
     }
 }
@@ -753,6 +756,7 @@ export const initReceiptFeatures = () => {
 
         const performRegistration = async (force = false) => {
             showLoading(force ? '強制的に登録中...' : 'Zaimに登録中...');
+            let shouldHideLoading = true;
             try {
                 const targetAccountId = EL.editTargetAccount.value;
                 const registerData = { ...appState.parsedData, items: itemsToRegister };
@@ -779,6 +783,7 @@ export const initReceiptFeatures = () => {
                     if (await showConfirm("二重登録の確認", confirmMessage)) {
                         await performRegistration(true);
                     }
+                    shouldHideLoading = false;
                     return;
                 }
 
@@ -787,8 +792,8 @@ export const initReceiptFeatures = () => {
                 sendGAEvent('save_receipt_result');
 
                 if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
-                    hideLoading();
                     advanceQueue();
+                    shouldHideLoading = false; // advanceQueue側で制御
                 } else {
                     EL.successReceiptIdContainer.classList.remove('hidden');
                     EL.successReceiptId.textContent = String(appState.parsedData.receipt_id);
@@ -798,7 +803,7 @@ export const initReceiptFeatures = () => {
                 console.error(err);
                 showToast(err.message || '登録中にエラーが発生しました', 'error');
             } finally {
-                hideLoading();
+                if (shouldHideLoading) hideLoading();
             }
         };
         await performRegistration(false);
