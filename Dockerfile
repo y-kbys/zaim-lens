@@ -1,17 +1,27 @@
 FROM python:3.11-slim
 
+# Install uv binary from the official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/
+
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Enable bytecode compilation and optimization
+ENV UV_COMPILE_BYTECODE=1
 
-# Copy the rest of the application
+# Copy dependency definition files first to leverage Docker layer caching
+COPY pyproject.toml uv.lock ./
+
+# Synchronize dependencies (equivalent to pip install -r requirements.txt)
+# --frozen: ensures versions match uv.lock
+# --no-install-project: avoids installing the current project (just dependencies)
+# --no-dev: excludes development dependencies
+RUN /uv/bin/uv sync --frozen --no-install-project --no-dev
+
+# Copy the application source code
 COPY . .
 
-# Cloud Run sets the PORT environment variable
+# Cloud Run injects the PORT environment variable (default 8080)
 ENV PORT=8080
 
-# Command to run the application using uvicorn
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+# Execute the application using 'uv run' to ensure the synchronized venv is used
+CMD ["/uv/bin/uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
