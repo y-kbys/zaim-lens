@@ -5,7 +5,7 @@ import { sendGAEvent } from '../../utils/analytics.js';
 import { updateDestAccountOptions, loadDestInternalAccounts } from '../../api/zaim.js';
 
 import { fetchHistory, executeCopy } from './api.js';
-import { renderHistoryList, updateCopyCountUI, closeCopyModal, resetCopyApp, renderConfirmList } from './ui.js';
+import { renderHistoryList, updateCopyCountUI, closeCopyModal, resetCopyApp, renderConfirmList, updateReceiptUIState, updateSelectAllButtonUI } from './ui.js';
 
 // Re-export for external use (e.g. main.js imports resetCopyApp via this module)
 export { resetCopyApp };
@@ -176,6 +176,7 @@ export const initHistoryFeatures = () => {
 
     window['toggleHistorySelection'] = (receiptIdx, isChecked) => {
         const receipt = appState.fetchedHistory[receiptIdx];
+        if (!receipt) return;
         receipt.items.forEach((_, iIdx) => {
             const key = `${receiptIdx}-${iIdx}`;
             if (isChecked) {
@@ -184,19 +185,21 @@ export const initHistoryFeatures = () => {
                 appState.selectedHistoryIds.delete(key);
             }
         });
-        renderHistoryList();
+        updateReceiptUIState(receiptIdx);
         updateCopyCountUI();
+        updateSelectAllButtonUI();
     };
 
-    window['toggleItemSelection'] = (receiptIdx, itemIdx, isChecked) => {
+    window['toggleItemSelection'] = (receiptIdx, itemIdx) => {
         const key = `${receiptIdx}-${itemIdx}`;
-        if (isChecked) {
-            appState.selectedHistoryIds.add(key);
-        } else {
+        if (appState.selectedHistoryIds.has(key)) {
             appState.selectedHistoryIds.delete(key);
+        } else {
+            appState.selectedHistoryIds.add(key);
         }
-        renderHistoryList();
+        updateReceiptUIState(receiptIdx);
         updateCopyCountUI();
+        updateSelectAllButtonUI();
     };
 
     window['updateCopyItemCategory'] = (groupIdx, itemIdx, catIdStr) => {
@@ -289,9 +292,9 @@ export const initHistoryFeatures = () => {
             });
         }
 
-        renderHistoryList();
+        appState.fetchedHistory.forEach((_, rIdx) => updateReceiptUIState(rIdx));
         updateCopyCountUI();
-        EL.btnSelectAll.textContent = isAllSelected ? "全選択" : "全解除";
+        updateSelectAllButtonUI();
     });
 
     // === コピー準備（確認モーダルを開く） ===

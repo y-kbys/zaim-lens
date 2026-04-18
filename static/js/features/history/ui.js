@@ -19,6 +19,44 @@ export function getSelectedCounts() {
 }
 
 /**
+ * 全選択ボタンの表示状態を更新する
+ */
+export function updateSelectAllButtonUI() {
+    const totalItems = (appState.fetchedHistory || []).reduce((acc, r) => acc + (r.items ? r.items.length : 0), 0);
+    const isAllSelected = appState.selectedHistoryIds.size === totalItems && totalItems > 0;
+    if (EL.btnSelectAll) {
+        EL.btnSelectAll.textContent = isAllSelected ? "全解除" : "全選択";
+    }
+}
+
+/**
+ * 特定のレシート行のチェックボックス表示状態（子アイテム・自分・不確定状態）を更新する
+ * @param {number} rIdx
+ */
+export function updateReceiptUIState(rIdx) {
+    const receipt = appState.fetchedHistory[rIdx];
+    if (!receipt) return;
+
+    const totalItems = receipt.items.length;
+    let selectedCount = 0;
+
+    receipt.items.forEach((_, iIdx) => {
+        const itemKey = `${rIdx}-${iIdx}`;
+        const isChecked = appState.selectedHistoryIds.has(itemKey);
+        if (isChecked) selectedCount++;
+
+        const itemCheck = /** @type {HTMLInputElement} */ (document.getElementById(`item-check-${itemKey}`));
+        if (itemCheck) itemCheck.checked = isChecked;
+    });
+
+    const parentCheck = /** @type {HTMLInputElement} */ (document.getElementById(`parent-check-${rIdx}`));
+    if (parentCheck) {
+        parentCheck.checked = (selectedCount === totalItems);
+        parentCheck.indeterminate = (selectedCount > 0 && selectedCount < totalItems);
+    }
+}
+
+/**
  * 取得した履歴をアコーディオン形式でレンダリングする
  */
 export function renderHistoryList() {
@@ -54,12 +92,11 @@ export function renderHistoryList() {
             const isChecked = appState.selectedHistoryIds.has(itemKey);
             itemsHtml += `
                 <div class="item-row flex items-start space-x-3 p-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0 hover:bg-white/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                     onclick="toggleItemSelection(${rIdx}, ${iIdx}, !${isChecked}); event.stopPropagation();">
+                     onclick="toggleItemSelection(${rIdx}, ${iIdx}); event.stopPropagation();">
                     <div class="pt-0.5 pointer-events-none">
                         <input type="checkbox" id="item-check-${itemKey}" 
-                            class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500"
-                            ${isChecked ? 'checked' : ''}
-                            readonly>
+                            class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 pointer-events-none"
+                            ${isChecked ? 'checked' : ''}>
                     </div>
                     <div class="flex-grow min-w-0">
                         <div class="flex justify-between items-baseline mb-0.5">
