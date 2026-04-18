@@ -134,7 +134,7 @@ export function renderHistoryList() {
 
 export function updateCopyCountUI() {
     const { receiptCount, itemCount } = getSelectedCounts();
-    EL.selectedCopyCount.innerHTML = `${receiptCount}件 <span class="text-[10px] font-normal opacity-70">(${itemCount}品目)</span>`;
+    EL.selectedCopyCount.innerHTML = `（${receiptCount}件 / ${itemCount}品目）`;
     EL.btnPrepareCopy.disabled = itemCount === 0;
 }
 
@@ -204,7 +204,7 @@ export const initHistoryFeatures = () => {
 
     window['updateCopyItemCategory'] = (groupIdx, itemIdx, catIdStr) => {
         const catId = parseInt(catIdStr);
-        const genSel = /** @type {HTMLSelectElement} */ (document.getElementById(`copy-gen-${groupIdx}-${itemIdx}`));
+        const genSel = /** @type {HTMLSelectElement} */ (document.getElementById('copy-gen-' + groupIdx + '-' + itemIdx));
         if (genSel && appState.copyMasterData) {
             genSel.innerHTML = generateGenreOptions(appState.copyMasterData.master_genres, catId, 0);
         }
