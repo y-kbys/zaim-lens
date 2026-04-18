@@ -41,7 +41,8 @@ export function renderHistoryList() {
         const catText = receipt.category_name || "未分類";
 
         // Summary text for items and comments (to show in header when collapsed)
-        const subText = [...receipt.items].reverse().map(i => i.name || "未設定").join(' / ');
+        // Filter out empty names to avoid empty slots in the " / " list
+        const subText = [...receipt.items].reverse().map(i => i.name).filter(n => n && n.trim() !== '').join(' / ');
         const comments = [...receipt.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== '');
         const commentText = comments.length > 0 ? comments.join(' / ') : '';
 
@@ -70,7 +71,7 @@ export function renderHistoryList() {
                     </div>
                     <div class="flex-grow min-w-0">
                         <div class="flex justify-between items-baseline mb-0.5">
-                            <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 truncate mr-2">${item.name || "未設定"}</span>
+                            <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 truncate mr-2">${item.name || ""}</span>
                             <span class="text-xs font-mono text-gray-500 shrink-0">¥${item.amount.toLocaleString()}</span>
                         </div>
                         ${item.comment ? `
@@ -425,7 +426,7 @@ export const initHistoryFeatures = () => {
                     <div class="item-copy-config bg-gray-50 dark:bg-gray-900/50 p-2 rounded border border-gray-100 dark:border-gray-800 space-y-2" 
                          data-group-idx="${rIdx}" data-item-idx="${iIdx}">
                         <div class="flex justify-between items-center text-xs">
-                            <span class="font-medium dark:text-gray-300 truncate mr-2">${item.name || "名称なし"}</span>
+                            <span class="font-medium dark:text-gray-300 truncate mr-2">${item.name || ""}</span>
                             <span class="font-mono font-bold dark:text-white shrink-0">¥${parseInt(item.amount).toLocaleString()}</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
