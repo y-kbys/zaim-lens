@@ -24,6 +24,10 @@ export function renderHistoryList() {
         const subText = [...item.items].reverse().map(i => i.name || "未設定").join(' / ');
         const catText = item.category_name || "未分類";
 
+        // Collect existing comments from items
+        const comments = [...item.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== '');
+        const commentText = comments.length > 0 ? comments.join(' / ') : '';
+
         li.innerHTML = `
             <label for="hist-${index}" class="flex items-start space-x-4 w-full cursor-pointer select-none">
                 <div class="pt-1.5 shrink-0">
@@ -39,6 +43,12 @@ export function renderHistoryList() {
                             <span class="font-semibold text-gray-400 dark:text-gray-500 mr-2">${dateStr}</span>
                             <span>${subText}</span>
                         </div>
+                        ${commentText ? `
+                        <div class="mt-1.5 text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 flex items-center space-x-1.5 opacity-90 font-medium">
+                            <i class="fa-solid fa-note-sticky shrink-0 opacity-70"></i>
+                            <span class="truncate italic">${commentText}</span>
+                        </div>
+                        ` : ''}
                     </div>
                     <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg sm:text-xl shrink-0">
                         ¥${item.amount.toLocaleString()}
