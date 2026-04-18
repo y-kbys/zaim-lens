@@ -40,6 +40,11 @@ export function renderHistoryList() {
         const dateStr = receipt.date.replace(/-/g, '/');
         const catText = receipt.category_name || "未分類";
 
+        // Summary text for items and comments (to show in header when collapsed)
+        const subText = [...receipt.items].reverse().map(i => i.name || "").join(' / ');
+        const comments = [...receipt.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== '');
+        const commentText = comments.length > 0 ? comments.join(' / ') : '';
+
         // Selection logic for parent checkbox
         const totalItemsInReceipt = receipt.items.length;
         const selectedCountInReceipt = receipt.items.filter((_, iIdx) => appState.selectedHistoryIds.has(`${rIdx}-${iIdx}`)).length;
@@ -93,11 +98,16 @@ export function renderHistoryList() {
                             <span class="truncate text-sm sm:text-base">${catText}</span>
                             ${receipt.place ? `<span class="text-[9px] sm:text-[10px] font-normal px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded truncate">${receipt.place}</span>` : ''}
                         </div>
-                        <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center space-x-2">
+                        <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 space-x-2 line-clamp-2 leading-relaxed">
                             <span class="font-semibold">${dateStr}</span>
-                            <span>&bull;</span>
-                            <span>${totalItemsInReceipt}品目</span>
+                            <span>${subText}</span>
                         </div>
+                        ${commentText ? `
+                        <div class="mt-1 text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 opacity-80 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-note-sticky shrink-0 opacity-70"></i>
+                            <span class="truncate italic">${commentText}</span>
+                        </div>
+                        ` : ''}
                     </div>
                     <div class="flex items-center space-x-3 shrink-0">
                         <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg">
