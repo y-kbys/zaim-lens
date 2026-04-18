@@ -312,4 +312,29 @@ input[type="number"] {
     animation: none;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
+
+/* Accordion for history list */
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+    opacity: 0;
+}
+
+.accordion-item.expanded .accordion-content {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+.accordion-item.expanded .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.chevron-icon {
+    transition: transform 0.3s ease-in-out;
+}
+
+.item-row:last-child {
+    border-bottom: none;
+}
 

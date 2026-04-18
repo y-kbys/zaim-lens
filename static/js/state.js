@@ -60,7 +60,7 @@ export const appState = {
     accounts: [],
     /** @type {HistoryItem[]} */
     fetchedHistory: [],
-    /** @type {Set<number>} */
+    /** @type {Set<string>} */
     selectedHistoryIds: new Set(),
     /** @type {string|null} */
     currentImageUri: null,

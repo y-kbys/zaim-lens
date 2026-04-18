@@ -2,7 +2,7 @@ import { EL, switchState } from './utils/dom.js';
 import { initFirebaseAuth } from './features/auth.js';
 import { initSettingsFeatures } from './features/settings.js';
 import { initReceiptFeatures } from './features/receipt/index.js';
-import { initHistoryFeatures } from './features/history.js';
+import { initHistoryFeatures } from './features/history/index.js';
 import { loadAccounts, loadTargetAccounts } from './api/zaim.js';
 import { loadZaimAccounts } from './features/receipt/ui.js';
 import { openZaimSettings, closeSettingsDropdown } from './features/settings.js';
