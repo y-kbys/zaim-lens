@@ -41,7 +41,7 @@ export function renderHistoryList() {
         const catText = receipt.category_name || "未分類";
 
         // Summary text for items and comments (to show in header when collapsed)
-        const subText = [...receipt.items].reverse().map(i => i.name || "").join(' / ');
+        const subText = [...receipt.items].reverse().map(i => i.name || "未設定").join(' / ');
         const comments = [...receipt.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== '');
         const commentText = comments.length > 0 ? comments.join(' / ') : '';
 
@@ -60,14 +60,15 @@ export function renderHistoryList() {
             const itemKey = `${rIdx}-${iIdx}`;
             const isChecked = appState.selectedHistoryIds.has(itemKey);
             itemsHtml += `
-                <div class="item-row flex items-start space-x-3 p-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
-                    <div class="pt-0.5">
+                <div class="item-row flex items-start space-x-3 p-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0 hover:bg-white/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                     onclick="toggleItemSelection(${rIdx}, ${iIdx}, !${isChecked}); event.stopPropagation();">
+                    <div class="pt-0.5 pointer-events-none">
                         <input type="checkbox" id="item-check-${itemKey}" 
-                            class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 cursor-pointer"
+                            class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500"
                             ${isChecked ? 'checked' : ''}
-                            onchange="toggleItemSelection(${rIdx}, ${iIdx}, this.checked)">
+                            readonly>
                     </div>
-                    <label for="item-check-${itemKey}" class="flex-grow min-w-0 cursor-pointer">
+                    <div class="flex-grow min-w-0">
                         <div class="flex justify-between items-baseline mb-0.5">
                             <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 truncate mr-2">${item.name || "未設定"}</span>
                             <span class="text-xs font-mono text-gray-500 shrink-0">¥${item.amount.toLocaleString()}</span>
@@ -78,7 +79,7 @@ export function renderHistoryList() {
                             <span class="truncate">${item.comment}</span>
                         </div>
                         ` : ''}
-                    </label>
+                    </div>
                 </div>
             `;
         });
@@ -118,7 +119,7 @@ export function renderHistoryList() {
                 </div>
             </div>
             <!-- Body (Accordion Content) -->
-            <div class="accordion-content bg-white/30 dark:bg-black/10 border-t border-gray-100 dark:border-gray-700/50">
+            <div class="accordion-content bg-white/30 dark:bg-black/10 border-t border-gray-100 dark:border-gray-700/50" onclick="event.stopPropagation()">
                 ${itemsHtml}
             </div>
         `;
