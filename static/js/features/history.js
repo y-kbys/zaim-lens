@@ -6,7 +6,23 @@ import { sendGAEvent } from '../utils/analytics.js';
 import { updateDestAccountOptions, loadDestInternalAccounts } from '../api/zaim.js';
 
 /**
- * Render list of fetched history items
+ * Utility to calculate current selection counts
+ */
+function getSelectedCounts() {
+    const itemKeys = Array.from(appState.selectedHistoryIds);
+    const receiptIndices = new Set();
+    itemKeys.forEach(key => {
+        const [rIdx] = key.split('-');
+        receiptIndices.add(rIdx);
+    });
+    return {
+        receiptCount: receiptIndices.size,
+        itemCount: itemKeys.length
+    };
+}
+
+/**
+ * Render list of fetched history items (Accordion style)
  */
 export function renderHistoryList() {
     EL.historyListContainer.innerHTML = '';
@@ -16,54 +32,98 @@ export function renderHistoryList() {
         return;
     }
 
-    appState.fetchedHistory.forEach((item, index) => {
+    appState.fetchedHistory.forEach((receipt, rIdx) => {
         const li = document.createElement('li');
-        li.className = "group relative p-3 bg-gray-50 dark:bg-gray-800/40 hover:bg-white dark:hover:bg-gray-800 rounded-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:scale-[1.01]";
+        li.id = `receipt-item-${rIdx}`;
+        li.className = "accordion-item group relative bg-gray-50 dark:bg-gray-800/40 rounded-xl transition-all duration-200 border border-gray-100 dark:border-gray-700 shadow-sm mb-2";
 
-        const dateStr = item.date.replace(/-/g, '/');
-        const subText = [...item.items].reverse().map(i => i.name || "未設定").join(' / ');
-        const catText = item.category_name || "未分類";
+        const dateStr = receipt.date.replace(/-/g, '/');
+        const catText = receipt.category_name || "未分類";
 
-        // Collect existing comments from items
-        const comments = [...item.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== '');
-        const commentText = comments.length > 0 ? comments.join(' / ') : '';
+        // Selection logic for parent checkbox
+        const totalItemsInReceipt = receipt.items.length;
+        const selectedCountInReceipt = receipt.items.filter((_, iIdx) => appState.selectedHistoryIds.has(`${rIdx}-${iIdx}`)).length;
+        const isAllSelected = selectedCountInReceipt === totalItemsInReceipt;
+        const isIndeterminate = selectedCountInReceipt > 0 && selectedCountInReceipt < totalItemsInReceipt;
 
-        li.innerHTML = `
-            <label for="hist-${index}" class="flex items-start space-x-4 w-full cursor-pointer select-none">
-                <div class="pt-1.5 shrink-0">
-                    <input type="checkbox" id="hist-${index}" class="w-5 h-5 text-blue-600 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 cursor-pointer transition-transform group-hover:scale-110" onchange="toggleHistorySelection(${index}, this.checked)">
-                </div>
-                <div class="flex-grow flex justify-between items-center min-w-0">
-                    <div class="flex-grow min-w-0 mr-3">
-                        <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
-                            <span class="truncate text-sm sm:text-base">${catText}</span>
-                            ${item.place ? `<span class="text-[10px] sm:text-xs font-normal px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded truncate max-w-[120px] sm:max-w-none">${item.place}</span>` : ''}
+        // Parent Checkbox ID
+        const parentCheckId = `parent-check-${rIdx}`;
+
+        // Items HTML
+        let itemsHtml = '';
+        receipt.items.forEach((item, iIdx) => {
+            const itemKey = `${rIdx}-${iIdx}`;
+            const isChecked = appState.selectedHistoryIds.has(itemKey);
+            itemsHtml += `
+                <div class="item-row flex items-start space-x-3 p-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
+                    <div class="pt-0.5">
+                        <input type="checkbox" id="item-check-${itemKey}" 
+                            class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 cursor-pointer"
+                            ${isChecked ? 'checked' : ''}
+                            onchange="toggleItemSelection(${rIdx}, ${iIdx}, this.checked)">
+                    </div>
+                    <label for="item-check-${itemKey}" class="flex-grow min-w-0 cursor-pointer">
+                        <div class="flex justify-between items-baseline mb-0.5">
+                            <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 truncate mr-2">${item.name || "未設定"}</span>
+                            <span class="text-xs font-mono text-gray-500 shrink-0">¥${item.amount.toLocaleString()}</span>
                         </div>
-                        <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-                            <span class="font-semibold text-gray-400 dark:text-gray-500 mr-2">${dateStr}</span>
-                            <span>${subText}</span>
-                        </div>
-                        ${commentText ? `
-                        <div class="mt-1.5 text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 flex items-center space-x-1.5 opacity-90 font-medium">
-                            <i class="fa-solid fa-note-sticky shrink-0 opacity-70"></i>
-                            <span class="truncate italic">${commentText}</span>
+                        ${item.comment ? `
+                        <div class="text-[9px] sm:text-[10px] text-blue-600/80 dark:text-blue-400/80 italic flex items-center">
+                            <i class="fa-solid fa-note-sticky mr-1.5 opacity-60"></i>
+                            <span class="truncate">${item.comment}</span>
                         </div>
                         ` : ''}
+                    </label>
+                </div>
+            `;
+        });
+
+        li.innerHTML = `
+            <!-- Header -->
+            <div class="flex items-stretch min-h-[64px]">
+                <div class="flex items-center px-3 border-r border-gray-100 dark:border-gray-700/50">
+                    <input type="checkbox" id="${parentCheckId}" 
+                        class="w-5 h-5 text-blue-600 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-blue-500 cursor-pointer transition-transform active:scale-95"
+                        ${isAllSelected ? 'checked' : ''}
+                        onchange="toggleHistorySelection(${rIdx}, this.checked)">
+                </div>
+                <div class="flex-grow flex items-center justify-between p-3 cursor-pointer min-w-0" onclick="toggleAccordion(${rIdx})">
+                    <div class="min-w-0 flex-grow mr-2">
+                        <div class="font-bold text-gray-800 dark:text-gray-100 flex items-center space-x-2">
+                            <span class="truncate text-sm sm:text-base">${catText}</span>
+                            ${receipt.place ? `<span class="text-[9px] sm:text-[10px] font-normal px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded truncate">${receipt.place}</span>` : ''}
+                        </div>
+                        <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center space-x-2">
+                            <span class="font-semibold">${dateStr}</span>
+                            <span>&bull;</span>
+                            <span>${totalItemsInReceipt}品目</span>
+                        </div>
                     </div>
-                    <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg sm:text-xl shrink-0">
-                        ¥${item.amount.toLocaleString()}
+                    <div class="flex items-center space-x-3 shrink-0">
+                        <div class="font-mono font-black text-gray-800 dark:text-gray-100 text-lg">
+                            ¥${receipt.amount.toLocaleString()}
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs chevron-icon"></i>
                     </div>
                 </div>
-            </label>
+            </div>
+            <!-- Body (Accordion Content) -->
+            <div class="accordion-content bg-white/30 dark:bg-black/10 border-t border-gray-100 dark:border-gray-700/50">
+                ${itemsHtml}
+            </div>
         `;
+
+        const checkEl = /** @type {HTMLInputElement} */ (li.querySelector(`#${parentCheckId}`));
+        if (checkEl) checkEl.indeterminate = isIndeterminate;
+
         EL.historyListContainer.appendChild(li);
     });
 }
 
 export function updateCopyCountUI() {
-    const count = appState.selectedHistoryIds.size;
-    EL.selectedCopyCount.textContent = String(count);
-    EL.btnPrepareCopy.disabled = count === 0;
+    const { receiptCount, itemCount } = getSelectedCounts();
+    EL.selectedCopyCount.innerHTML = `${receiptCount}件 <span class="text-[10px] font-normal opacity-70">(${itemCount}品目)</span>`;
+    EL.btnPrepareCopy.disabled = itemCount === 0;
 }
 
 export const closeCopyModal = () => {
@@ -94,16 +154,43 @@ export const resetCopyApp = () => {
  */
 export const initHistoryFeatures = () => {
     // Window globals for inline events
-    window.toggleHistorySelection = (index, isChecked) => {
-        if (isChecked) {
-            appState.selectedHistoryIds.add(index);
-        } else {
-            appState.selectedHistoryIds.delete(index);
+    window['toggleAccordion'] = (index) => {
+        const li = document.getElementById(`receipt-item-${index}`);
+        if (li) {
+            li.classList.toggle('expanded');
         }
+    };
+
+    window['toggleHistorySelection'] = (receiptIdx, isChecked) => {
+        const receipt = appState.fetchedHistory[receiptIdx];
+        receipt.items.forEach((_, iIdx) => {
+            const key = `${receiptIdx}-${iIdx}`;
+            if (isChecked) {
+                appState.selectedHistoryIds.add(key);
+            } else {
+                appState.selectedHistoryIds.delete(key);
+            }
+        });
+        
+        // Re-render only this receipt item to update state + children
+        renderHistoryList();
         updateCopyCountUI();
     };
 
-    window.updateCopyItemCategory = (groupIdx, itemIdx, catIdStr) => {
+    window['toggleItemSelection'] = (receiptIdx, itemIdx, isChecked) => {
+        const key = `${receiptIdx}-${itemIdx}`;
+        if (isChecked) {
+            appState.selectedHistoryIds.add(key);
+        } else {
+            appState.selectedHistoryIds.delete(key);
+        }
+        
+        // Re-render to update parent status
+        renderHistoryList();
+        updateCopyCountUI();
+    };
+
+    window['updateCopyItemCategory'] = (groupIdx, itemIdx, catIdStr) => {
         const catId = parseInt(catIdStr);
         const genSel = /** @type {HTMLSelectElement} */ (document.getElementById(`copy-gen-${groupIdx}-${itemIdx}`));
         if (genSel && appState.copyMasterData) {
@@ -250,13 +337,21 @@ export const initHistoryFeatures = () => {
     });
 
     EL.btnSelectAll.addEventListener('click', () => {
-        const isAllSelected = appState.selectedHistoryIds.size === appState.fetchedHistory.length;
-        const checkboxes = EL.historyListContainer.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach((cb, index) => {
-            const input = /** @type {HTMLInputElement} */ (cb);
-            input.checked = !isAllSelected;
-            window.toggleHistorySelection(index, !isAllSelected);
-        });
+        const totalItemsInApp = appState.fetchedHistory.reduce((acc, r) => acc + r.items.length, 0);
+        const isAllSelected = appState.selectedHistoryIds.size === totalItemsInApp;
+        
+        if (isAllSelected) {
+            appState.selectedHistoryIds.clear();
+        } else {
+            appState.fetchedHistory.forEach((receipt, rIdx) => {
+                receipt.items.forEach((_, iIdx) => {
+                    appState.selectedHistoryIds.add(`${rIdx}-${iIdx}`);
+                });
+            });
+        }
+        
+        renderHistoryList();
+        updateCopyCountUI();
         EL.btnSelectAll.textContent = isAllSelected ? "全選択" : "全解除";
     });
 
@@ -271,17 +366,34 @@ export const initHistoryFeatures = () => {
         const destName = destSelect.options[destSelect.selectedIndex].text;
         EL.confirmDestName.textContent = destName;
         EL.confirmListContainer.innerHTML = '';
-        const selectedIndices = Array.from(appState.selectedHistoryIds).sort((a, b) => a - b);
 
-        selectedIndices.forEach(idx => {
-            const group = appState.fetchedHistory[idx];
+        // Group selected items by their original receipt container in the confirmation modal
+        const selectedByReceipt = {}; // key: rIdx, value: { items: [], group: fetchedHistoryItem }
+        Array.from(appState.selectedHistoryIds).forEach(itemKey => {
+            const [rIdx, iIdx] = itemKey.split('-').map(Number);
+            if (!selectedByReceipt[rIdx]) {
+                selectedByReceipt[rIdx] = { 
+                    items: [], 
+                    group: appState.fetchedHistory[rIdx] 
+                };
+            }
+            selectedByReceipt[rIdx].items.push({
+                idx: iIdx,
+                data: appState.fetchedHistory[rIdx].items[iIdx]
+            });
+        });
+
+        const sortedReceiptIndices = Object.keys(selectedByReceipt).map(Number).sort((a, b) => a - b);
+
+        sortedReceiptIndices.forEach(rIdx => {
+            const { items, group } = selectedByReceipt[rIdx];
             const li = document.createElement('li');
             li.className = "flex flex-col bg-white dark:bg-gray-800 p-3 rounded shadow-sm border border-gray-100 dark:border-gray-700 space-y-3";
 
             const batchVal = EL.destInternalAccountSelect.value;
             let defaultAccId = "";
             if (batchVal === 'keep') {
-                defaultAccId = group.items[0].from_account_id || "";
+                defaultAccId = items[0].data.from_account_id || "";
             } else {
                 defaultAccId = batchVal;
             }
@@ -294,25 +406,24 @@ export const initHistoryFeatures = () => {
             }
 
             let itemsHtml = '';
-            [...group.items].reverse().forEach((item, rIdx) => {
-                const itemIdx = group.items.length - 1 - rIdx;
+            items.sort((a, b) => b.idx - a.idx).forEach(({ idx: iIdx, data: item }) => {
                 const catOptions = generateCategoryOptions(appState.copyMasterData.master_categories, item.category_id);
                 const genOptions = generateGenreOptions(appState.copyMasterData.master_genres, item.category_id, item.genre_id);
 
                 itemsHtml += `
                     <div class="item-copy-config bg-gray-50 dark:bg-gray-900/50 p-2 rounded border border-gray-100 dark:border-gray-800 space-y-2" 
-                         data-group-idx="${idx}" data-item-idx="${itemIdx}">
+                         data-group-idx="${rIdx}" data-item-idx="${iIdx}">
                         <div class="flex justify-between items-center text-xs">
                             <span class="font-medium dark:text-gray-300 truncate mr-2">${item.name || "名称なし"}</span>
                             <span class="font-mono font-bold dark:text-white shrink-0">¥${parseInt(item.amount).toLocaleString()}</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <select class="item-category-select text-[10px] p-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-200 rounded focus:outline-none transition-colors" 
-                                    onchange="updateCopyItemCategory(${idx}, ${itemIdx}, this.value)">
+                                    onchange="updateCopyItemCategory(${rIdx}, ${iIdx}, this.value)">
                                 ${catOptions}
                             </select>
                             <select class="item-genre-select text-[10px] p-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-200 rounded focus:outline-none transition-colors" 
-                                    id="copy-gen-${idx}-${itemIdx}">
+                                    id="copy-gen-${rIdx}-${iIdx}">
                                 ${genOptions}
                             </select>
                         </div>
@@ -333,7 +444,7 @@ export const initHistoryFeatures = () => {
                 </div>
                 <div class="relative pt-1 border-t border-gray-100 dark:border-gray-700 mt-1">
                     <span class="text-[10px] text-gray-400 block mb-1">記録先の出金元:</span>
-                    <select class="group-account-select w-full p-1.5 pl-7 border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors text-[11px] appearance-none" data-group-idx="${idx}">
+                    <select class="group-account-select w-full p-1.5 pl-7 border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors text-[11px] appearance-none" data-group-idx="${rIdx}">
                         ${accOptions}
                     </select>
                     <div class="absolute bottom-2 left-2 flex items-center pointer-events-none">
@@ -361,9 +472,12 @@ export const initHistoryFeatures = () => {
         const destAccountId = EL.destAccountSelect.value;
         
         const itemsToCopy = [];
+        const uniqueReceiptsSelected = new Set();
         const groupContainers = EL.confirmListContainer.querySelectorAll('li');
+        
         groupContainers.forEach(container => {
             const accSelect = /** @type {HTMLSelectElement} */ (container.querySelector('.group-account-select'));
+            if (!accSelect) return;
             const gIdx = parseInt(String(accSelect.dataset.groupIdx));
             const accountId = accSelect.value;
             const group = appState.fetchedHistory[gIdx];
@@ -386,6 +500,7 @@ export const initHistoryFeatures = () => {
                     group_id: gIdx,
                     from_account_id: accountId ? parseInt(accountId) : null
                 });
+                uniqueReceiptsSelected.add(gIdx);
             });
         });
 
@@ -418,8 +533,6 @@ export const initHistoryFeatures = () => {
                     }
                 }
 
-                const selectedCount = appState.selectedHistoryIds.size;
-                // Note: Payment source is already saved on selection change
                 sendGAEvent('copy_zaim_history');
 
                 EL.copyStepConfig.classList.add('hidden');
@@ -429,10 +542,13 @@ export const initHistoryFeatures = () => {
                 EL.copyStepSuccess.classList.remove('hidden');
                 EL.copyStepSuccess.classList.add('flex');
 
+                const successReceiptCount = uniqueReceiptsSelected.size;
+                const successItemCount = result.success_count;
+
                 if (result.status === "partial_success") {
-                    document.getElementById('copy-success-message').textContent = `${result.success_count}品目のコピーに成功しました。（失敗: ${result.failed_count}品目）`;
+                    document.getElementById('copy-success-message').textContent = `${successReceiptCount}件のレシート（計${successItemCount}品目）のコピーに成功しました。（失敗あり）`;
                 } else {
-                    document.getElementById('copy-success-message').textContent = `${selectedCount}件の履歴（レシート）をコピーしました。`;
+                    document.getElementById('copy-success-message').textContent = `${successReceiptCount}件のレシート（計${successItemCount}品目）をコピーしました。`;
                 }
             } catch (err) {
                 console.error(err);
@@ -446,15 +562,12 @@ export const initHistoryFeatures = () => {
 
     EL.btnResetCopy.addEventListener('click', resetCopyApp);
 
-    // Missing event listeners from app.js refactor
     EL.sourceAccountSelect.addEventListener('change', () => {
-        // Save profile preference
         if (EL.sourceAccountSelect.value) {
             localStorage.setItem(getPrefixedKey('last_used_zaim_profile_copy_source'), EL.sourceAccountSelect.value);
         }
         updateDestAccountOptions();
 
-        // Clear history list and hide selection steps to prevent confusion
         appState.fetchedHistory = [];
         appState.selectedHistoryIds.clear();
         EL.historyListContainer.innerHTML = '';
@@ -470,7 +583,6 @@ export const initHistoryFeatures = () => {
             EL.destInternalAccountSelect.innerHTML = '<option value="">出金元を選択...</option>';
             return;
         }
-        // Save profile preference
         localStorage.setItem(getPrefixedKey('last_used_zaim_profile_copy_dest'), destAccountId);
         await loadDestInternalAccounts();
     });
