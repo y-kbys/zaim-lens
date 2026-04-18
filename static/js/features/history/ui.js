@@ -75,8 +75,9 @@ export function renderHistoryList() {
         const dateStr = receipt.date.replace(/-/g, '/');
         const catText = receipt.category_name || "未分類";
 
-        const subText = [...receipt.items].reverse().map(i => i.name).filter(n => n && n.trim() !== '').join(' / ');
-        const comments = [...receipt.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== '');
+        const names = [...receipt.items].reverse().map(i => i.name).filter(n => n && n.trim() !== '');
+        const subText = [...new Set(names)].join(' / ');
+        const comments = [...new Set([...receipt.items].reverse().map(i => i.comment).filter(c => c && c.trim() !== ''))];
         const commentText = comments.length > 0 ? comments.join(' / ') : '';
 
         const totalItemsInReceipt = receipt.items.length;
