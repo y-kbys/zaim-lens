@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from services.auth import verify_token
 from db import delete_user_config, clear_zaim_master_data_db
@@ -52,6 +52,15 @@ async def read_terms(request: Request):
     )
 
 
+
+
+@router.get("/robots.txt", response_class=FileResponse)
+async def read_robots():
+    return FileResponse("static/robots.txt")
+
+@router.get("/sitemap.xml", response_class=FileResponse)
+async def read_sitemap():
+    return FileResponse("static/sitemap.xml")
 
 @router.get("/api/health")
 async def health_check():

@@ -7,6 +7,7 @@
     <meta name="google-site-verification" content="1piJcQa-aBXGgTAu5_K1x12Gu8NqeoQJGPs1axYi_go" />
     <title>Zaim Lens</title>
     <meta name="description" content="AIによる高度なレシート解析と、複数アカウント間の履歴コピーを統合したZaimユーザーのための次世代入力ハブです。">
+    <link rel="canonical" href="https://zaim-lens-472419292018.asia-northeast1.run.app">
 
     <!-- Open Graph Protocol (OGP) -->
     <meta property="og:title" content="Zaim Lens">
@@ -59,6 +60,23 @@
     <script>
         // Injected by server
         window.FIREBASE_CONFIG = {{ firebase_config | tojson | safe }};
+    </script>
+
+    <!-- Structured Data (JSON-LD) for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Zaim Lens",
+      "operatingSystem": "Web",
+      "applicationCategory": "FinanceApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "JPY"
+      },
+      "description": "AIによる高度なレシート解析と、複数アカウント間の履歴コピーを統合したZaimユーザーのための次世代入力ハブです。"
+    }
     </script>
 
 
