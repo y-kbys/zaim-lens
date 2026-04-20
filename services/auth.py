@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from db import firebase_app
+from db import firebase_app, update_last_login
 
 # --- Firebase Auth Constants & Cache ---
 FIREBASE_KEYS_CACHE = {"keys": {}, "expiry": 0}
@@ -91,7 +91,10 @@ def verify_token_logic(id_token: str) -> str:
     """Core logic to verify Firebase JWT token."""
     try:
         decoded_token = auth.verify_id_token(id_token, app=firebase_app)
-        return decoded_token['uid']
+        uid = decoded_token['uid']
+        # Background update of last login time (throttled in db.py)
+        update_last_login(uid)
+        return uid
     except Exception as e:
         error_msg = str(e)
         if "Your default credentials were not found" in error_msg:
