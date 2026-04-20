@@ -1,43 +1,8 @@
-<!DOCTYPE html>
-<html lang="ja">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>利用規約 - Zaim Lens</title>
-    <meta name="description" content="Zaim Lens の利用規約です。">
-    <link rel="canonical" href="https://zaim-lens-472419292018.asia-northeast1.run.app/terms.html">
+{% block title %}利用規約 - Zaim Lens{% endblock %}
 
-    <!-- Open Graph Protocol (OGP) -->
-    <meta property="og:title" content="利用規約 - Zaim Lens">
-    <meta property="og:description" content="Zaim Lens の利用規約です。">
-    <meta property="og:type" content="article">
-    <meta property="og:url" content="https://zaim-lens-472419292018.asia-northeast1.run.app/terms.html">
-    <meta property="og:image" content="https://zaim-lens-472419292018.asia-northeast1.run.app/static/ogp.jpg">
-    <meta property="og:site_name" content="Zaim Lens">
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="利用規約 - Zaim Lens">
-    <meta name="twitter:description" content="Zaim Lens の利用規約です。">
-    <meta name="twitter:image" content="https://zaim-lens-472419292018.asia-northeast1.run.app/static/ogp.jpg">
-
-    <link rel="stylesheet" href="/static/tailwind.css">
-    <!-- Google tag (gtag.js) -->
-    {% if ga_measurement_id %}
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-
-        gtag('config', '{{ ga_measurement_id }}');
-    </script>
-    {% endif %}
-
-</head>
-
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans leading-relaxed">
+{% block content %}
     <div class="max-w-3xl mx-auto p-6 md:p-12 my-8 bg-white dark:bg-gray-800 shadow-md rounded-xl">
         <h1 class="text-3xl font-bold mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">Zaim Lens 利用規約</h1>
 
@@ -98,6 +63,4 @@
             <a href="/" class="text-blue-500 hover:underline mt-4 inline-block">アプリへ戻る</a>
         </div>
     </div>
-</body>
-
-</html>
+{% endblock %}

@@ -1,0 +1,65 @@
+<!-- Global Full-screen Overlay Loading Spinner -->
+<div id="loading-overlay"
+    class="hidden absolute inset-0 bg-white/90 dark:bg-gray-900/90 z-[2000] flex flex-col items-center justify-center">
+    <div
+        class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 dark:border-blue-400 mb-4">
+    </div>
+    <p id="loading-text" class="text-lg font-bold text-blue-800 dark:text-blue-300 animate-pulse">解析中...</p>
+</div>
+
+<!-- Toast Notifications Container -->
+<div id="toast-container"
+    class="fixed top-6 left-1/2 -translate-x-1/2 z-[500] w-[90%] max-w-sm flex flex-col items-center space-y-3 pointer-events-none">
+</div>
+
+<!-- Snackbar for Undo Notification -->
+<div id="snackbar-container"
+    class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[400] w-[90%] max-w-sm pointer-events-none">
+    <div id="snackbar"
+        class="hidden opacity-0 translate-y-4 bg-gray-900/95 text-white p-4 rounded-xl shadow-2xl flex items-center justify-between pointer-events-auto transition-all duration-300 backdrop-blur-sm">
+        <span id="snackbar-message" class="text-sm font-medium">品目を削除しました</span>
+        <button id="btn-undo"
+            class="ml-4 text-blue-400 hover:text-blue-300 font-bold text-sm px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors uppercase tracking-wider">
+            元に戻す
+        </button>
+    </div>
+</div>
+
+<!-- Login Screen Overlay -->
+<div id="login-overlay"
+    class="hidden fixed inset-0 z-[300] bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center transition-opacity duration-300">
+    <div class="text-center space-y-6 p-8">
+        <div
+            class="w-24 h-24 bg-blue-100 dark:bg-blue-900/40 rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-12 shadow-lg overflow-hidden p-2">
+            <img src="/static/app-icon.png" class="w-16 h-16 -rotate-12 object-contain" alt="Logo">
+        </div>
+        <h1 class="text-3xl font-black text-gray-800 dark:text-white tracking-tight">Zaim Lens</h1>
+        <p class="text-gray-500 dark:text-gray-400 font-medium">レシート解析をもっとスムーズに</p>
+        <div class="pt-8">
+            <button id="btn-google-login"
+                class="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow-md text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg transition-all flex items-center justify-center space-x-3 w-full max-w-sm mx-auto mb-4">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
+                <span>Googleでログイン</span>
+            </button>
+            <div
+                class="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed max-w-sm mx-auto text-left bg-gray-100 dark:bg-gray-800/50 p-3 rounded-xl">
+                <strong>免責事項:</strong> 本ウェブサービスおよびプログラムは個人が開発した非公式のものであり、株式会社くふうカンパニーおよび「くふう Zaim」とは一切関係ありません。
+                ログインすることにより、<a href="/terms.html" target="_blank"
+                    class="underline text-blue-500">利用規約</a>および<a href="/privacy.html" target="_blank"
+                    class="underline text-blue-500">プライバシーポリシー</a>に同意したものとみなされます。
+            </div>
+        </div>
+
+        <div
+            class="absolute bottom-6 left-0 w-full text-center space-x-4 text-xs font-medium text-gray-400 dark:text-gray-600">
+            <a href="/terms.html" target="_blank"
+                class="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Terms of Use</a>
+            <span class="opacity-50">|</span>
+            <a href="/privacy.html" target="_blank"
+                class="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Privacy Policy</a>
+            <span class="opacity-50">|</span>
+            <a href="/static/OSS_LICENSES.txt" target="_blank"
+                class="hover:text-gray-600 dark:hover:text-gray-400 transition-colors">Open Source Licenses</a>
+        </div>
+    </div>
+</div>

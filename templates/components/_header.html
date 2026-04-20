@@ -1,0 +1,98 @@
+<!-- Header -->
+<header class="bg-blue-600 dark:bg-blue-800 text-white p-4 shadow-md sticky top-0 z-10 transition-colors duration-200">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <img src="/static/app-icon.png" class="w-10 h-10 object-contain" alt="Icon">
+            <div class="flex flex-col">
+                <h1 class="text-xl font-bold leading-tight">Zaim Lens</h1>
+                <span class="text-[10px] font-medium text-blue-200 tracking-wider">UNOFFICIAL APP</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <div class="relative">
+                <button id="btn-zaim-settings"
+                    class="hidden text-xl p-2 rounded-full hover:bg-white/20 transition-colors focus:outline-none"
+                    title="メニュー">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <!-- Settings Dropdown -->
+                <div id="settings-dropdown"
+                    class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-200">
+                        <li>
+                            <button id="menu-item-zaim-creds"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                <i class="fa-solid fa-link w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                Zaim連携設定
+                            </button>
+                        </li>
+                        <li>
+                            <button id="menu-item-gemini-creds"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                <i class="fa-solid fa-robot w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                Gemini API設定
+                            </button>
+                        </li>
+                        <li class="border-t border-gray-100 dark:border-gray-700 my-1"></li>
+                        <li>
+                            <a href="/terms.html" target="_blank"
+                                class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                <i class="fa-solid fa-file-contract w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                利用規約
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/privacy.html" target="_blank"
+                                class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                <i class="fa-solid fa-shield-halved w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                プライバシーポリシー
+                            </a>
+                        </li>
+                        <li class="border-t border-gray-100 dark:border-gray-700 my-1"></li>
+                        <li>
+                            <a href="/static/OSS_LICENSES.txt" target="_blank"
+                                class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                <i class="fa-solid fa-code w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                オープンソース ライセンス
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <button id="theme-toggle" class="text-xl p-2 rounded-full hover:bg-white/20 transition-colors">
+                <i class="fa-solid fa-moon hidden! dark:block!"></i>
+                <i class="fa-solid fa-sun block! dark:hidden!"></i>
+            </button>
+            <!-- User Profile -->
+            <div id="user-profile" class="hidden relative flex items-center space-x-2">
+                <button id="btn-user-avatar" class="focus:outline-none rounded-full" title="アカウントメニュー">
+                    <img id="user-avatar" src=""
+                        class="w-8 h-8 rounded-full border border-white cursor-pointer hover:scale-110 transition-transform"
+                        alt="User"
+                        onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'white\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+                </button>
+                <!-- Avatar Dropdown -->
+                <div id="avatar-dropdown"
+                    class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-200">
+                        <li>
+                            <button id="menu-item-logout"
+                                class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                                <i class="fa-solid fa-arrow-right-from-bracket w-5 text-center mr-2 text-gray-500 dark:text-gray-400"></i>
+                                ログアウト
+                            </button>
+                        </li>
+                        <li class="border-t border-gray-100 dark:border-gray-700 my-1"></li>
+                        <li>
+                            <button id="menu-item-delete-account"
+                                class="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center">
+                                <i class="fa-solid fa-user-xmark w-5 text-center mr-2 text-red-500 dark:text-red-400"></i>
+                                アカウント削除
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>

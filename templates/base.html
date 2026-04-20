@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    {% include 'components/_head.html' %}
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

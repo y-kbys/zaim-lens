@@ -1,0 +1,121 @@
+<div id="panel-copy" class="hidden p-4 pb-24 h-full flex flex-col">
+    <!-- Step 1: Source & Fetch -->
+    <section id="copy-step-config" class="space-y-4 mb-6">
+        <div>
+            <label
+                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">コピー元アカウント</label>
+            <div id="source-account-skeleton" class="w-full h-12 skeleton-shimmer rounded mb-1"></div>
+            <select id="source-account-select"
+                class="hidden w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                <option value="">読込中...</option>
+            </select>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">取得期間</label>
+                <select id="history-period-select"
+                    class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                    <optgroup label="クイック選択">
+                        <option value="this_month">今月</option>
+                        <option value="last_month">先月</option>
+                        <option value="past_month" selected>過去1ヶ月</option>
+                        <option value="90">過去3ヶ月</option>
+                    </optgroup>
+                    <optgroup label="詳細指定">
+                        <option value="month">月指定...</option>
+                        <option value="custom">カスタム範囲...</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 月指定用インプット -->
+            <div id="period-month-input-container" class="hidden">
+                <input type="month" id="period-month-input"
+                    class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+            </div>
+
+            <!-- カスタム範囲用インプット -->
+            <div id="period-custom-input-container" class="hidden grid grid-cols-2 gap-2 mt-2">
+                <div>
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1 ml-1">開始日</label>
+                    <input type="date" id="period-start-input"
+                        class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                </div>
+                <div>
+                    <label
+                        class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1 ml-1">終了日</label>
+                    <input type="date" id="period-end-input"
+                        class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                </div>
+            </div>
+
+            <div id="btn-fetch-history-skeleton" class="w-full h-12 skeleton-shimmer rounded-xl"></div>
+            <button id="btn-fetch-history"
+                class="hidden w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition transform active:scale-95">
+                <i class="fa-solid fa-download mr-2"></i>履歴を取得
+            </button>
+        </div>
+    </section>
+
+    <!-- Step 3: Destination & Confirm (Moved UP) -->
+    <section id="copy-step-dest" class="hidden mb-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="space-y-4 mb-4">
+            <div>
+                <label
+                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">コピー先アカウント</label>
+                <select id="dest-account-select"
+                    class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                    <option value="">読込中...</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">出金元
+                    (コピー先での記録用)</label>
+                <select id="dest-internal-account-select"
+                    class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                    <option value="">読込中...</option>
+                </select>
+            </div>
+        </div>
+        <button id="btn-prepare-copy"
+            class="w-full py-4 bg-green-600 text-white font-bold rounded-full shadow-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition transform active:scale-95 text-lg">
+            確認画面へ進む <span id="selected-copy-count"></span>
+        </button>
+    </section>
+
+    <!-- Step 2: History List & Selection (Pushed DOWN) -->
+    <section id="copy-step-list"
+        class="hidden flex-col flex-grow min-h-0 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-md font-bold text-gray-800 dark:text-gray-100">履歴の選択</h3>
+            <div class="text-sm space-x-4">
+                <button id="btn-select-all"
+                    class="text-blue-600 dark:text-blue-400 font-medium">全選択</button>
+            </div>
+        </div>
+
+        <div
+            class="flex-grow overflow-y-auto mb-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 shadow-inner p-2 hide-scrollbar">
+            <ul id="history-list-container" class="space-y-2">
+                <!-- Injected rows -->
+            </ul>
+        </div>
+    </section>
+
+    <!-- Step 4: Success Message -->
+    <section id="copy-step-success" class="hidden flex-col items-center justify-center h-full">
+        <div
+            class="w-24 h-24 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mb-6 text-green-500 dark:text-green-400">
+            <i class="fa-solid fa-check text-5xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">コピー完了！</h2>
+        <p class="text-gray-600 dark:text-gray-300 mb-8 text-center" id="copy-success-message">
+            Zaimへ履歴をコピーしました。</p>
+        <button id="btn-reset-copy"
+            class="w-full py-4 bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-bold rounded-full shadow-md hover:bg-blue-50 dark:hover:bg-gray-700 transition transform active:scale-95 text-lg">
+            トップに戻る
+        </button>
+    </section>
+</div>

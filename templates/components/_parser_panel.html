@@ -1,0 +1,211 @@
+<div id="panel-parse" class="p-4 pb-24 h-full relative">
+    <!-- Batch Progress Indicator -->
+    <div id="batch-progress-container"
+        class="hidden absolute top-0 left-0 w-full bg-blue-600 text-white text-[10px] font-bold py-1 px-4 z-30 flex justify-between items-center shadow-md">
+        <span id="batch-progress-text">1 / 1 枚目を処理中...</span>
+        <div class="flex space-x-2">
+            <span id="batch-status-parsing" class="animate-pulse"><i
+                    class="fa-solid fa-spinner fa-spin mr-1"></i>解析中</span>
+            <span id="batch-status-complete" class="hidden"><i
+                    class="fa-solid fa-circle-check mr-1"></i>完了</span>
+        </div>
+    </div>
+
+    <!-- ====== State 1: Upload ====== -->
+    <section id="state-upload" class="flex flex-col items-center justify-center h-full space-y-6 pt-10">
+        <div class="text-center">
+            <p class="text-gray-600 dark:text-gray-300 mb-2">購入履歴の画像を選択</p>
+        </div>
+
+        <!-- Container for upload area with relative positioning -->
+        <div class="relative w-full">
+            <!-- Main Upload Area (Cloud + Text) - Central content stays untouched -->
+            <label for="image-upload"
+                class="w-full h-64 border-2 border-dashed border-blue-400 dark:border-blue-500 rounded-xl flex flex-col items-center justify-center cursor-pointer bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors">
+                <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 dark:text-blue-400 mb-4"></i>
+                <span class="text-blue-600 dark:text-blue-300 font-medium">画像をタップして選択（複数可）</span>
+                <input type="file" id="image-upload" name="image-upload" accept="image/*" class="hidden" multiple>
+
+                <div id="image-preview-container"
+                    class="hidden absolute inset-0 w-full h-full overflow-hidden rounded-xl bg-white dark:bg-gray-800">
+                    <img id="image-preview" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 dark:bg-black/60 flex items-center justify-center">
+                        <span class="text-white font-bold"><i class="fa-solid fa-pen"></i> 変更</span>
+                    </div>
+                </div>
+            </label>
+
+            <!-- Direct Camera Access - FAB style with preferred colors -->
+            <label for="camera-capture" id="btn-camera"
+                class="absolute bottom-4 right-4 w-12 h-12 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-20 cursor-pointer border border-blue-100 dark:border-gray-700">
+                <i class="fa-solid fa-camera text-xl"></i>
+            </label>
+            <input type="file" id="camera-capture" name="camera-capture" accept="image/*" capture="environment" class="hidden">
+        </div>
+
+        <div id="upload-account-selector-container" class="w-full">
+            <label
+                class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 ml-1 text-center">登録先のZaimアカウントを選択</label>
+            <div id="upload-target-account-skeleton" class="w-full h-12 skeleton-shimmer rounded-xl mb-1"></div>
+            <select id="upload-target-account" name="upload-target-account"
+                class="hidden w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors">
+                <option value="">アカウントを読み込み中...</option>
+            </select>
+        </div>
+
+        <div id="btn-parse-skeleton" class="w-full h-14 skeleton-shimmer rounded-full mt-4"></div>
+        <button id="btn-parse" disabled
+            class="hidden w-full py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition transform active:scale-95 text-lg mt-4">
+            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> 解析を実行
+        </button>
+
+        <div class="mt-4 flex justify-center">
+            <button id="btn-manual-entry"
+                class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex items-center">
+                <i class="fa-solid fa-keyboard mr-1.5"></i> 手入力で登録（画像なし）
+            </button>
+        </div>
+    </section>
+
+    <!-- ====== State 2: Edit & Review ====== -->
+    <section id="state-edit" class="hidden space-y-3">
+        <div
+            class="bg-blue-50 dark:bg-blue-900/40 p-2 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div class="flex items-center text-blue-800 dark:text-blue-300 text-xs font-medium">
+                <i class="fa-solid fa-circle-info mr-1"></i> 内容を確認・修正してください
+            </div>
+        </div>
+
+        <div class="flex items-start space-x-3">
+            <div id="receipt-thumbnail-container"
+                class="w-20 h-20 flex-shrink-0 cursor-pointer group relative overflow-hidden rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-sm thumbnail-loading">
+                <img id="receipt-thumbnail"
+                    class="w-full h-full object-cover transition duration-300 group-hover:scale-110">
+                <div
+                    class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition duration-300">
+                    <i class="fa-solid fa-magnifying-glass-plus text-white shadow-sm"></i>
+                </div>
+            </div>
+            <div class="flex-grow grid grid-cols-1 gap-2">
+                <div class="relative">
+                    <i
+                        class="fa-solid fa-calendar-days absolute left-3 top-3 text-blue-500 dark:text-blue-400"></i>
+                    <input type="date" id="edit-date" name="edit-date"
+                        class="w-full p-2 pl-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm">
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-shop absolute left-3 top-3 text-blue-500 dark:text-blue-400"></i>
+                    <input type="text" id="edit-store"
+                        class="w-full p-2 pl-9 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm"
+                        placeholder="店舗名" name="edit-store" autocomplete="off">
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Account & Payment Source Selection -->
+        <div
+            class="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg space-y-4 shadow-sm border border-blue-100 dark:border-blue-800">
+            <div>
+                <label
+                    class="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
+                    <i class="fa-solid fa-user-circle mr-1"></i>登録先アカウント
+                </label>
+                <select id="edit-target-account" name="edit-target-account"
+                    class="w-full p-2 border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-medium">
+                    <option value="1">読込中...</option>
+                </select>
+            </div>
+            <div>
+                <label
+                    class="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
+                    <i class="fa-solid fa-credit-card mr-1"></i>出金元
+                </label>
+                <select id="edit-from-account" name="edit-from-account"
+                    class="w-full p-2 border border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors text-sm font-medium">
+                    <option value="">未指定（出金元なし）</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <div class="flex justify-between items-center mb-1">
+                <div class="flex items-baseline space-x-2">
+                    <h3
+                        class="text-sm font-bold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-0.5 inline-block">
+                        品目リスト
+                    </h3>
+                    <span id="edit-receipt-id"
+                        class="text-[10px] text-gray-400 dark:text-gray-500 font-mono"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="bulk-menu-container">
+                        <button id="btn-bulk-menu"
+                            class="text-[10px] py-1 px-3 border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors flex items-center">
+                            一括変更 <i class="fa-solid fa-chevron-down ml-1.5 opacity-60"></i>
+                        </button>
+                        <div id="bulk-menu-dropdown" class="">
+                            <div id="bulk-menu-genres" class="bulk-menu-column hide-scrollbar">
+                                <!-- Genres injected here -->
+                                <div class="text-[10px] text-gray-400 dark:text-gray-500 text-center py-10 px-4">
+                                    カテゴリを選択して<br>ジャンルを選択
+                                </div>
+                            </div>
+                            <div id="bulk-menu-categories" class="bulk-menu-column hide-scrollbar">
+                                <!-- Categories injected here -->
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-add-item"
+                        class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-3 py-1 rounded-full hover:bg-green-200 dark:hover:bg-green-800/60 transition-colors">
+                        <i class="fa-solid fa-plus"></i> 追加
+                    </button>
+                </div>
+            </div>
+
+            <div id="items-container" class="space-y-2">
+                <!-- Items injected here by JS -->
+            </div>
+
+            <div
+                class="flex justify-between items-center mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg font-bold transition-colors">
+                <span class="dark:text-gray-200">合計 (参考)</span>
+                <span id="total-amount" class="dark:text-white">¥0</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== State 3: Success ====== -->
+    <section id="state-success" class="hidden flex-col items-center justify-center h-full pt-20">
+        <div
+            class="w-24 h-24 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mb-6 text-green-500 dark:text-green-400">
+            <i class="fa-solid fa-check text-5xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">登録完了！</h2>
+        <p class="text-gray-600 dark:text-gray-300 mb-2 text-center" id="success-message">Zaimへ正しく記録されました。
+        </p>
+        <div id="success-receipt-id-container" class="mb-8 text-center hidden">
+            <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">Receipt ID: <span
+                    id="success-receipt-id"></span></span>
+        </div>
+
+        <button id="btn-reset"
+            class="w-full py-4 bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-bold rounded-full shadow-md hover:bg-blue-50 dark:hover:bg-gray-700 transition transform active:scale-95 text-lg">
+            トップに戻る
+        </button>
+    </section>
+</div>
+
+<!-- Sticky Bottom Bar for Action (Edit State for Parser) -->
+<div id="bottom-action-bar"
+    class="hidden absolute bottom-0 left-0 w-full bg-white dark:bg-gray-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)] z-20 transition-colors">
+    <div class="flex space-x-3">
+        <button id="btn-skip"
+            class="w-1/3 py-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition transform active:scale-95 text-md flex items-center justify-center">
+            スキップ
+        </button>
+        <button id="btn-register"
+            class="w-2/3 py-4 bg-blue-600 text-white font-bold rounded-full shadow-lg hover:bg-blue-700 transition transform active:scale-95 text-lg flex items-center justify-center">
+            <i class="fa-solid fa-paper-plane mr-2"></i> Zaimへ登録 (<span id="btn-register-count">0</span>件)
+        </button>
+    </div>
+</div>
