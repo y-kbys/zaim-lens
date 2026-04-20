@@ -5,6 +5,7 @@ import firebase_admin
 from firebase_admin import firestore
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
+import datetime
 from typing import Dict, Any
 
 load_dotenv()
@@ -185,7 +186,6 @@ def save_zaim_master_data_to_db(user_id: str, account_id: str, data: Dict[str, A
         print("ERROR: Cannot save master data. Firestore client (db) is not initialized.")
         return
         
-    import datetime
     data_to_save = copy.deepcopy(data)
     data_to_save["last_updated_at"] = datetime.datetime.utcnow().isoformat()
     
@@ -214,3 +214,39 @@ def clear_zaim_master_data_db(user_id: str, account_id: str = None) -> bool:
     except Exception as e:
         print(f"Failed to delete master data cache for user {user_id}: {e}")
         return False
+
+def update_last_login(user_id: str):
+    """
+    Updates the last_login_at field in Firestore for the given user,
+    throttled to once every 24 hours.
+    """
+    if db is None:
+        return
+
+    try:
+        doc_ref = db.collection("users").document(user_id)
+        doc = doc_ref.get()
+        
+        now = datetime.datetime.utcnow()
+        now_str = now.isoformat()
+        
+        if doc.exists:
+            data = doc.to_dict()
+            last_login = data.get("last_login_at")
+            if last_login:
+                try:
+                    last_login_dt = datetime.datetime.fromisoformat(last_login)
+                    # Skip update if last login was less than 24 hours ago
+                    if now - last_login_dt < datetime.timedelta(hours=24):
+                        return
+                except Exception:
+                    pass # If format is invalid, proceed to update
+            
+            doc_ref.update({"last_login_at": now_str})
+        else:
+            # If the user document doesn't exist yet, create it with this field
+            doc_ref.set({"last_login_at": now_str}, merge=True)
+            
+        print(f"Updated last_login_at for user: {user_id}")
+    except Exception as e:
+        print(f"Failed to update last_login_at for user {user_id}: {e}")
