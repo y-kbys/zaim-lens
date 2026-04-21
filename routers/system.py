@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -6,9 +7,13 @@ from services.auth import verify_token
 from db import delete_user_config, clear_zaim_master_data_db
 
 # Create absolute paths for static files to avoid issues in different execution environments
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ROBOTS_PATH = os.path.join(BASE_DIR, "static", "robots.txt")
-SITEMAP_PATH = os.path.join(BASE_DIR, "static", "sitemap.xml")
+BASE_DIR = Path(__file__).resolve().parent.parent
+ROBOTS_PATH = BASE_DIR / "static" / "robots.txt"
+SITEMAP_PATH = BASE_DIR / "static" / "sitemap.xml"
+
+# Log paths for debugging (visible in Cloud Run logs)
+print(f"DEBUG: BASE_DIR calculated as: {BASE_DIR}")
+print(f"DEBUG: ROBOTS_PATH: {ROBOTS_PATH} (exists: {ROBOTS_PATH.exists()})")
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -61,15 +66,17 @@ async def read_terms(request: Request):
 
 @router.get("/robots.txt", response_class=FileResponse)
 async def read_robots():
-    if not os.path.exists(ROBOTS_PATH):
+    if not ROBOTS_PATH.exists():
+        print(f"ERROR: robots.txt not found at {ROBOTS_PATH}")
         raise HTTPException(status_code=404, detail="robots.txt not found")
-    return FileResponse(ROBOTS_PATH, media_type="text/plain")
+    return FileResponse(str(ROBOTS_PATH), media_type="text/plain")
 
 @router.get("/sitemap.xml", response_class=FileResponse)
 async def read_sitemap():
-    if not os.path.exists(SITEMAP_PATH):
+    if not SITEMAP_PATH.exists():
+        print(f"ERROR: sitemap.xml not found at {SITEMAP_PATH}")
         raise HTTPException(status_code=404, detail="sitemap.xml not found")
-    return FileResponse(SITEMAP_PATH, media_type="application/xml")
+    return FileResponse(str(SITEMAP_PATH), media_type="application/xml")
 
 @router.get("/api/health")
 async def health_check():
