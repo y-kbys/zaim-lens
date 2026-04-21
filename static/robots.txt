@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zaim-lens-472419292018.asia-northeast1.run.app/sitemap.xml

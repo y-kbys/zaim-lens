@@ -69,6 +69,6 @@ templates = Jinja2Templates(directory="templates")
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 
 # --- Include Routers ---
+app.include_router(system.router)
 app.include_router(zaim.router)
 app.include_router(gemini.router)
-app.include_router(system.router)
