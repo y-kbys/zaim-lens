@@ -21,12 +21,16 @@ scripts/
 user_data/
 *.txt
 !requirements.txt
+!static/robots.txt
+!static/OSS_LICENSES.txt
 *zaim-lens.code-workspace
 tmp_pip_test/
 
 # Node / Frontend
 node_modules/
-/static/tailwind.css
+# /static/tailwind.css - Removed from ignore to allow deployment
+!/static/tailwind.css
+!static/sitemap.xml
 
 # Agent
 .agents/
