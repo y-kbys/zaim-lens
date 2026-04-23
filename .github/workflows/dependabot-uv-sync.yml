@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Update uv.lock
-        run: uv lock --update
+        run: uv lock --upgrade
 
       - name: Commit and push changes
         run: |
