@@ -17,8 +17,9 @@ cd zaim-lens
 ```
 
 ### 2. バックエンドの依存パッケージをインストール
+uv を使用して、仮想環境の作成と依存関係のインストールを一度に行います。
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 ### 3. フロントエンドの依存パッケージをインストール
@@ -48,10 +49,11 @@ cp .env.example .env
 > 開発時はターミナルを **2つ** 開き、以下の「バックエンドの起動」と「CSSの監視ビルド」をそれぞれ同時に実行してください。
 
 ### バックエンドの起動
+uv を使用して実行します。
 ```bash
-python main.py
+uv run python main.py
 # または
-uvicorn main:app --reload --port 8080
+uv run uvicorn main:app --reload --port 8080
 ```
 
 ### CSSのビルド (Tailwind CSS v4)
