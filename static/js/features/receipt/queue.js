@@ -69,6 +69,7 @@ export async function advanceQueue() {
         appState.queue = [];
         parsePromises.clear();
         updateBatchProgressUI();
+        hideLoading();
         switchState('state-success');
         return;
     }
@@ -84,7 +85,9 @@ export async function advanceQueue() {
         } catch (e) {
             console.error("Manual compression failed", e);
         } finally {
-            hideLoading();
+            if (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
+                hideLoading();
+            }
         }
     }
 
@@ -126,9 +129,11 @@ export async function advanceQueue() {
 export async function startBackgroundParsing() {
     if (appState.isParsingLoopRunning) return;
     appState.isParsingLoopRunning = true;
+    const currentQueue = appState.queue;
 
     try {
         for (let i = 0; i < appState.queue.length; i++) {
+            if (appState.queue !== currentQueue) break;
             const item = appState.queue[i];
             if (item.status !== 'idle') continue;
 
@@ -191,11 +196,16 @@ export async function startBackgroundParsing() {
                 updateBatchProgressUI();
             }
 
+            if (appState.queue !== currentQueue) break;
+
             // Sync UI if still active on this item and we reached here naturally
             if (i === appState.currentQueueIndex) {
                  hideLoading();
                  if (/** @type {any} */ (item).status === 'complete') setupEditState(item.result);
-                 else if (/** @type {any} */ (item).status === 'error') setupEditState({ date: "", store: "", items: [] });
+                 else if (/** @type {any} */ (item).status === 'error') {
+                     showToast("解析に失敗しました。", 'warning');
+                     setupEditState({ date: "", store: "", items: [] });
+                 }
             }
 
             if (i < appState.queue.length - 1) {
