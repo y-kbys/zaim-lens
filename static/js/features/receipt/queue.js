@@ -103,21 +103,37 @@ export async function advanceQueue() {
         setupEditState({ date: "", store: "", items: [] });
     } else {
         setupEditState(null); // Show waiting UI
+        showLoading("解析結果を待機中...");
         
-        // Wait for specific item if it's currently parsing
-        if (parsePromises.has(appState.currentQueueIndex)) {
-            showLoading("解析結果を待機中...");
-            await parsePromises.get(appState.currentQueueIndex);
-            
-            // Re-check index in case user skipped again while waiting
-            if (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
-                hideLoading();
-                if (/** @type {any} */ (nextItem).status === 'complete') {
-                    setupEditState(nextItem.result);
-                } else if (/** @type {any} */ (nextItem).status === 'error') {
-                    showToast("解析に失敗しました。", 'warning');
-                    setupEditState({ date: "", store: "", items: [] });
+        if (!appState.isParsingLoopRunning) {
+            startBackgroundParsing();
+        }
+
+        const waitLoop = async () => {
+            while (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
+                const p = parsePromises.get(appState.currentQueueIndex);
+                if (p) {
+                    try { await p; } catch (e) {}
+                    break;
                 }
+                if (!appState.isParsingLoopRunning) {
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 100));
+            }
+        };
+
+        await waitLoop();
+
+        // Re-check index in case user skipped again while waiting
+        if (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
+            hideLoading();
+            if (/** @type {any} */ (nextItem).status === 'complete') setupEditState(nextItem.result);
+            else if (/** @type {any} */ (nextItem).status === 'error') {
+                showToast("解析に失敗しました。", 'warning');
+                setupEditState({ date: "", store: "", items: [] });
+            } else {
+                setupEditState({ date: "", store: "", items: [] });
             }
         }
     }
@@ -214,5 +230,11 @@ export async function startBackgroundParsing() {
         }
     } finally {
         appState.isParsingLoopRunning = false;
+        if (appState.queue === currentQueue && appState.currentQueueIndex !== -1) {
+            const currentItem = appState.queue[appState.currentQueueIndex];
+            if (currentItem && currentItem.status !== 'complete') {
+                hideLoading();
+            }
+        }
     }
 }
