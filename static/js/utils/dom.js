@@ -192,15 +192,30 @@ export const showToast = (message, type = 'info') => {
 /**
  * Global Loading Overlay
  */
+let loadingHideTimeoutId = null;
+let loadingShowTimeoutId = null;
+
 export const showLoading = (text = "読み込み中...") => {
+    if (loadingHideTimeoutId) clearTimeout(loadingHideTimeoutId);
+    if (loadingShowTimeoutId) clearTimeout(loadingShowTimeoutId);
+    
     EL.loadingText.textContent = text;
     EL.loadingOverlay.classList.remove('hidden');
-    setTimeout(() => EL.loadingOverlay.classList.remove('opacity-0'), 10);
+    loadingShowTimeoutId = setTimeout(() => {
+        EL.loadingOverlay.classList.remove('opacity-0');
+        loadingShowTimeoutId = null;
+    }, 10);
 };
 
 export const hideLoading = () => {
+    if (loadingShowTimeoutId) clearTimeout(loadingShowTimeoutId);
+    if (loadingHideTimeoutId) clearTimeout(loadingHideTimeoutId);
+    
     EL.loadingOverlay.classList.add('opacity-0');
-    setTimeout(() => EL.loadingOverlay.classList.add('hidden'), 300);
+    loadingHideTimeoutId = setTimeout(() => {
+        EL.loadingOverlay.classList.add('hidden');
+        loadingHideTimeoutId = null;
+    }, 300);
 };
 
 /**
@@ -222,15 +237,22 @@ export const switchState = (stateId) => {
 /**
  * Modern Custom Promise-based Confirm Dialog
  */
+let confirmHideTimeoutId = null;
+let confirmShowTimeoutId = null;
+
 export const showConfirm = (title, message) => {
     return new Promise((resolve) => {
         EL.confirmTitle.textContent = title;
         EL.confirmMessage.innerHTML = message.replace(/\n/g, '<br>');
 
+        if (confirmHideTimeoutId) clearTimeout(confirmHideTimeoutId);
+        if (confirmShowTimeoutId) clearTimeout(confirmShowTimeoutId);
+
         EL.confirmModal.classList.remove('hidden');
         // Trigger show animation
-        setTimeout(() => {
+        confirmShowTimeoutId = setTimeout(() => {
             EL.confirmModal.classList.add('show');
+            confirmShowTimeoutId = null;
         }, 10);
 
         const onOk = () => {
@@ -252,9 +274,13 @@ export const showConfirm = (title, message) => {
             EL.confirmBtnCancel.removeEventListener('click', onCancel);
             EL.confirmModal.removeEventListener('click', onBgClick);
 
+            if (confirmShowTimeoutId) clearTimeout(confirmShowTimeoutId);
+            if (confirmHideTimeoutId) clearTimeout(confirmHideTimeoutId);
+
             EL.confirmModal.classList.remove('show');
-            setTimeout(() => {
+            confirmHideTimeoutId = setTimeout(() => {
                 EL.confirmModal.classList.add('hidden');
+                confirmHideTimeoutId = null;
             }, 300);
         };
 
