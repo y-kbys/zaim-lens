@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "cryptography>=47.0.0",
-    "fastapi>=0.111.0",
+    "fastapi>=0.136.1",
     "firebase-admin>=6.5.0",
     "google-genai>=1.73.1",
     "itsdangerous>=2.2.0",
