@@ -172,10 +172,13 @@ export async function prefetchZaimDataInBackground(targetAccountId = null) {
             const categoriesCache = JSON.parse(categoriesCacheStr);
             
             // Check for structural validity to prevent NaN or broken cache issues
+            // Also force re-fetch if genres are empty (which should not happen normally)
             if (!accountsCache || !categoriesCache || 
                 typeof accountsCache.timestamp !== 'number' || 
                 typeof categoriesCache.timestamp !== 'number' ||
-                !accountsCache.data || !categoriesCache.data) {
+                !accountsCache.data || !categoriesCache.data ||
+                !categoriesCache.data.master_genres || 
+                categoriesCache.data.master_genres.length === 0) {
                 needsFetch = true;
             } else if (now - accountsCache.timestamp > expiry || (now - accountsCache.timestamp < -60000)) {
                 // If cache is older than expiry OR more than 1 minute in the future, re-fetch
@@ -258,7 +261,8 @@ export async function getZaimMasterData(targetAccountId) {
             const categoriesObj = JSON.parse(categoriesCacheStr);
             
             if (accountsObj && typeof accountsObj.timestamp === 'number' && accountsObj.data &&
-                categoriesObj && typeof categoriesObj.timestamp === 'number' && categoriesObj.data) {
+                categoriesObj && typeof categoriesObj.timestamp === 'number' && categoriesObj.data &&
+                categoriesObj.data.master_genres && categoriesObj.data.master_genres.length > 0) {
                 return { accounts: accountsObj.data, masterData: categoriesObj.data };
             }
         } catch (e) {
