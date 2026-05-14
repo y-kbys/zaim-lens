@@ -177,7 +177,10 @@ export async function prefetchZaimDataInBackground(targetAccountId = null) {
                 typeof categoriesCache.timestamp !== 'number' ||
                 !accountsCache.data || !categoriesCache.data) {
                 needsFetch = true;
-            } else if (now - accountsCache.timestamp > expiry || now - categoriesCache.timestamp > expiry) {
+            } else if (now - accountsCache.timestamp > expiry || (now - accountsCache.timestamp < -60000)) {
+                // If cache is older than expiry OR more than 1 minute in the future, re-fetch
+                needsFetch = true;
+            } else if (now - categoriesCache.timestamp > expiry || (now - categoriesCache.timestamp < -60000)) {
                 needsFetch = true;
             }
         } catch (e) {
