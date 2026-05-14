@@ -65,6 +65,7 @@ export async function resetApp() {
 
 export async function loadZaimAccounts(targetData = null) {
     try {
+        /** @type {string|number|null} */
         let targetAccountId = EL.editTargetAccount.value;
         if (!targetAccountId) {
             if (appState.accounts && appState.accounts.length > 0) {

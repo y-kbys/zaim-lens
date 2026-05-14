@@ -177,6 +177,7 @@ export const initFirebaseAuth = async (callbacks = {}) => {
                             try {
                                 // Start background pre-fetch silently
                                 import('../api/zaim.js').then(module => {
+                                    /** @type {string|number|null} */
                                     let targetAccountId = EL.uploadTargetAccount ? EL.uploadTargetAccount.value : null;
                                     if (!targetAccountId && appState.accounts && appState.accounts.length > 0) {
                                         targetAccountId = appState.accounts[0].id;
