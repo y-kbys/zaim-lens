@@ -5,7 +5,7 @@
     "build:licenses": "npx license-checker --json --out static/OSS_LICENSES.txt"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.2.4",
+    "@tailwindcss/cli": "^4.3.0",
     "license-checker": "^25.0.1",
     "tailwindcss": "^4.3.0"
   }
