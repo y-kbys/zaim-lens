@@ -65,7 +65,14 @@ export async function resetApp() {
 
 export async function loadZaimAccounts(targetData = null) {
     try {
-        const targetAccountId = EL.editTargetAccount.value || "1";
+        let targetAccountId = EL.editTargetAccount.value;
+        if (!targetAccountId) {
+            if (appState.accounts && appState.accounts.length > 0) {
+                targetAccountId = appState.accounts[0].id;
+            } else {
+                targetAccountId = "1"; // Absolute last resort, though unlikely to work if user has no account "1"
+            }
+        }
         const { accounts, masterData } = await getZaimMasterData(targetAccountId);
 
         let optionsHtml = '<option value="">未指定（出金元なし）</option>';
