@@ -303,10 +303,19 @@ export function generateCategoryOptions(masterCategories, selectedId) {
  * 生成ジャンルのHTMLオプション
  */
 export function generateGenreOptions(masterGenres, catId, selectedId) {
-    if (!masterGenres) return '';
-    return masterGenres
-        .filter(g => g.category_id == catId)
-        .map(g =>
-            `<option value="${g.id}" ${g.id == selectedId ? 'selected' : ''}>${g.name}</option>`
-        ).join('');
+    if (!masterGenres) {
+        console.warn("generateGenreOptions: masterGenres is null/undefined");
+        return '';
+    }
+    const filtered = masterGenres.filter(g => g.category_id == catId);
+    if (filtered.length === 0) {
+        console.warn(`generateGenreOptions: No genres found for category_id ${catId}`, {
+            masterGenresCount: masterGenres.length,
+            sampleGenres: masterGenres.slice(0, 5)
+        });
+        return '<option value="">(ジャンルなし)</option>';
+    }
+    return filtered
+        .map(g => `<option value="${g.id}" ${g.id == selectedId ? 'selected' : ''}>${g.name}</option>`)
+        .join('');
 }

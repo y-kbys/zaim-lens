@@ -37,16 +37,17 @@ def get_zaim_master_data(account_id: str, user_id: str, accounts_config: Dict[st
     cat_res = session.get("https://api.zaim.net/v2/home/category")
     gen_res = session.get("https://api.zaim.net/v2/home/genre")
     
-    categories = []
-    genres = []
+    if cat_res.status_code != 200:
+        raise HTTPException(status_code=cat_res.status_code, detail=f"Failed to fetch categories from Zaim: {cat_res.text}")
     
-    if cat_res.status_code == 200:
-        cat_data = cat_res.json().get("categories", [])
-        categories = [c for c in cat_data if c.get("mode") == "payment" and c.get("active") != -1]
+    if gen_res.status_code != 200:
+        raise HTTPException(status_code=gen_res.status_code, detail=f"Failed to fetch genres from Zaim: {gen_res.text}")
+
+    cat_data = cat_res.json().get("categories", [])
+    categories = [c for c in cat_data if c.get("mode") == "payment" and c.get("active") != -1]
     
-    if gen_res.status_code == 200:
-        gen_data = gen_res.json().get("genres", [])
-        genres = [g for g in gen_data if g.get("active") != -1]
+    gen_data = gen_res.json().get("genres", [])
+    genres = [g for g in gen_data if g.get("active") != -1]
         
     return {
         "categories": categories,

@@ -139,13 +139,20 @@ export async function loadAccounts() {
 /**
  * Fetch Zaim internal accounts and categories (generic) with cache logic
  */
-/** @type {Promise<void>|null} */
-let backgroundFetchPromise = null;
+/** @type {Map<string|number, Promise<void>>} */
+const backgroundFetchPromises = new Map();
 
 /**
- * @param {string|number} targetAccountId
+ * @param {string|number|null} targetAccountId
  */
-export async function prefetchZaimDataInBackground(targetAccountId = "1") {
+export async function prefetchZaimDataInBackground(targetAccountId = null) {
+    if (!targetAccountId) {
+        if (appState.accounts && appState.accounts.length > 0) {
+            targetAccountId = appState.accounts[0].id;
+        } else {
+            return Promise.resolve();
+        }
+    }
     // Check if we need to fetch
     const now = Date.now();
     const expiry = 86400000; // 24 hours
@@ -163,7 +170,20 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
         try {
             const accountsCache = JSON.parse(accountsCacheStr);
             const categoriesCache = JSON.parse(categoriesCacheStr);
-            if (now - accountsCache.timestamp > expiry || now - categoriesCache.timestamp > expiry) {
+            
+            // Check for structural validity to prevent NaN or broken cache issues
+            // Also force re-fetch if genres are empty (which should not happen normally)
+            if (!accountsCache || !categoriesCache || 
+                typeof accountsCache.timestamp !== 'number' || 
+                typeof categoriesCache.timestamp !== 'number' ||
+                !accountsCache.data || !categoriesCache.data ||
+                !categoriesCache.data.master_genres || 
+                categoriesCache.data.master_genres.length === 0) {
+                needsFetch = true;
+            } else if (now - accountsCache.timestamp > expiry || (now - accountsCache.timestamp < -60000)) {
+                // If cache is older than expiry OR more than 1 minute in the future, re-fetch
+                needsFetch = true;
+            } else if (now - categoriesCache.timestamp > expiry || (now - categoriesCache.timestamp < -60000)) {
                 needsFetch = true;
             }
         } catch (e) {
@@ -175,12 +195,12 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
         return Promise.resolve(); // Cache is valid
     }
 
-    // If already fetching, just return the existing promise
-    if (backgroundFetchPromise) {
-        return backgroundFetchPromise;
+    // If already fetching for this specific account, just return the existing promise
+    if (backgroundFetchPromises.has(targetAccountId)) {
+        return backgroundFetchPromises.get(targetAccountId);
     }
 
-    backgroundFetchPromise = (async () => {
+    const fetchPromise = (async () => {
         try {
             const [accRes, catRes] = await Promise.all([
                 apiFetch(`/api/zaim/accounts?account_id=${targetAccountId}`),
@@ -204,17 +224,18 @@ export async function prefetchZaimDataInBackground(targetAccountId = "1") {
         } catch (err) {
             console.error("Background pre-fetch failed:", err);
         } finally {
-            backgroundFetchPromise = null;
+            backgroundFetchPromises.delete(targetAccountId);
         }
     })();
 
-    return backgroundFetchPromise;
+    backgroundFetchPromises.set(targetAccountId, fetchPromise);
+    return fetchPromise;
 }
 
 /**
- * @param {string|number} targetAccountId 
+ * @param {string|number|null} targetAccountId 
  */
-export async function ensureZaimDataAvailable(targetAccountId = "1") {
+export async function ensureZaimDataAvailable(targetAccountId = null) {
     await prefetchZaimDataInBackground(targetAccountId);
 }
 
@@ -222,9 +243,9 @@ export async function ensureZaimDataAvailable(targetAccountId = "1") {
  * @param {string|number} targetAccountId 
  */
 export async function getZaimMasterData(targetAccountId) {
-    // Ensure any background fetch has completed
-    if (backgroundFetchPromise) {
-        await backgroundFetchPromise;
+    // Ensure any background fetch for this specific account has completed
+    if (backgroundFetchPromises.has(targetAccountId)) {
+        await backgroundFetchPromises.get(targetAccountId);
     }
 
     // Read from cache synchronously
@@ -236,9 +257,14 @@ export async function getZaimMasterData(targetAccountId) {
 
     if (accountsCacheStr && categoriesCacheStr) {
         try {
-            const accounts = JSON.parse(accountsCacheStr).data;
-            const masterData = JSON.parse(categoriesCacheStr).data;
-            return { accounts, masterData };
+            const accountsObj = JSON.parse(accountsCacheStr);
+            const categoriesObj = JSON.parse(categoriesCacheStr);
+            
+            if (accountsObj && typeof accountsObj.timestamp === 'number' && accountsObj.data &&
+                categoriesObj && typeof categoriesObj.timestamp === 'number' && categoriesObj.data &&
+                categoriesObj.data.master_genres && categoriesObj.data.master_genres.length > 0) {
+                return { accounts: accountsObj.data, masterData: categoriesObj.data };
+            }
         } catch (e) {
             console.warn("Failed to parse cache, fetching directly.", e);
         }

@@ -65,7 +65,15 @@ export async function resetApp() {
 
 export async function loadZaimAccounts(targetData = null) {
     try {
-        const targetAccountId = EL.editTargetAccount.value || "1";
+        /** @type {string|number|null} */
+        let targetAccountId = EL.editTargetAccount.value;
+        if (!targetAccountId) {
+            if (appState.accounts && appState.accounts.length > 0) {
+                targetAccountId = appState.accounts[0].id;
+            } else {
+                targetAccountId = "1"; // Absolute last resort, though unlikely to work if user has no account "1"
+            }
+        }
         const { accounts, masterData } = await getZaimMasterData(targetAccountId);
 
         let optionsHtml = '<option value="">未指定（出金元なし）</option>';
@@ -89,15 +97,13 @@ export async function loadZaimAccounts(targetData = null) {
 
                 const isGenreValid = masterData.master_genres.some(g => g.id == item.genre_id && g.category_id == item.category_id);
                 if (!isGenreValid) {
+                    // Try default fallback (category*100 + 99)
                     const genre99 = item.category_id * 100 + 99;
-                    const hasGenre99 = masterData.master_genres.some(g => g.id == genre99 && g.category_id == item.category_id);
-                    const has19905 = masterData.master_genres.some(g => g.id == 19905 && g.category_id == 199);
-
-                    if (item.category_id == 199 && has19905) {
-                        item.genre_id = 19905;
-                    } else if (hasGenre99) {
+                    const exists99 = masterData.master_genres.find(g => g.id == genre99 && g.category_id == item.category_id);
+                    if (exists99) {
                         item.genre_id = genre99;
                     } else {
+                        // If even fallback doesn't exist, pick the first genre of the category
                         const firstGenre = masterData.master_genres.find(g => g.category_id == item.category_id);
                         if (firstGenre) {
                             item.genre_id = firstGenre.id;

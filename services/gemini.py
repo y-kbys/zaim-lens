@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 # 先頭から順にフォールバック
 GEMINI_MODEL_CHAIN = [
-    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-lite",
     "gemma-4-26b-a4b-it",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
