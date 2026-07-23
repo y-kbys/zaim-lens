@@ -307,7 +307,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.138.0"
+version = "0.139.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -316,14 +316,14 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/58/ff455d9fe47c60abadb34b9e05a304b1f05f5ab8000ac01565156b6f5e43/fastapi-0.138.0.tar.gz", hash = "sha256:d445a4877636ad191e7053e08c9bf98cb921a6756776848400bb773d1740c061", size = 419240, upload-time = "2026-06-20T01:18:05.259Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cd/95/d3f0ae10836324a2eab98a52b61210ac609f08200bf4bb0dc8132d32f78a/fastapi-0.139.2.tar.gz", hash = "sha256:333145a6891e9b5b3cfceb69baf817e8240cde4d4588ae5a10bf56ffacb6255e", size = 423428, upload-time = "2026-07-16T15:06:17.912Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/ff/8496d9847a5fedae775eb49460722d3efaa80487854273e9647ae876218c/fastapi-0.138.0-py3-none-any.whl", hash = "sha256:b6f54fd1bd72c80b0f899f172c61a600f6f7af9b43d4d772a018f35624048cb0", size = 126779, upload-time = "2026-06-20T01:18:03.483Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/c7/cb03251d9dfb177246a9809a76f189d21df32dbd4a845951881d11323b7f/fastapi-0.139.2-py3-none-any.whl", hash = "sha256:b9ad015a835173d59865e2f5d8296fbc2b317bf56a2ba1a5bfbdd03de2fd4b1c", size = 130234, upload-time = "2026-07-16T15:06:19.557Z" },
 ]
 
 [[package]]
 name = "firebase-admin"
-version = "7.4.0"
+version = "7.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachecontrol" },
@@ -333,9 +333,9 @@ dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "pyjwt", extra = ["crypto"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/ab/2c551264041ddaff7dedd53893ab4642b19008bfb986567fb6ded6380831/firebase_admin-7.4.0.tar.gz", hash = "sha256:08d7550efdba32fbd306141ce82150f9ffb91c1550e07aa4ed5757af4895d1ff", size = 201086, upload-time = "2026-04-09T20:53:08.065Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/05/bc/769faa4e14d274a89d26c6e81337a279ce6ec795f885751db6b530e2784c/firebase_admin-7.5.0.tar.gz", hash = "sha256:6e2810cec954c6e69f21fd6dac9db152a0ba3fe11b7f8793830ad1e3a0032e20", size = 202138, upload-time = "2026-07-02T15:06:30.535Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f8/40/87f412ce2df5e57feb456b3b9b3427b2af3a35e1eaa14addfb283f5247fb/firebase_admin-7.4.0-py3-none-any.whl", hash = "sha256:416967d1aacd30cfece2a5b0c606a52ba7614eb3093f054399be3868489cd7a8", size = 140987, upload-time = "2026-04-09T20:53:06.568Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/7e/718dc2599ec9a4e8cce37cd227fd4d4d998b5ac643660432316432b7cd9d/firebase_admin-7.5.0-py3-none-any.whl", hash = "sha256:a37383d9c2e406d82a660776679672bed74407fc50bde7aa1418ed436d0346b7", size = 141490, upload-time = "2026-07-02T15:06:28.967Z" },
 ]
 
 [[package]]
@@ -1199,20 +1199,19 @@ wheels = [
 
 [[package]]
 name = "uvicorn"
-version = "0.49.0"
+version = "0.51.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "h11" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/1f/fa18009dea8469069cca78a4e877a008ab78f08b064bfc9ab891579077ff/uvicorn-0.49.0.tar.gz", hash = "sha256:ebf4271aa580d9de97f93192d4595176df6e91f9aae919ca73e4fc07df1e66a3", size = 91284, upload-time = "2026-06-03T22:01:30.448Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/65/b7c6c443ccc58678c91e1e973bbe2a878591538655d6e1d47f24ba1c51f3/uvicorn-0.51.0.tar.gz", hash = "sha256:f6f4b69b657c312f516dd2d268ab9ae6f254b11e4bac504f37b2ab58b24dd0b0", size = 94412, upload-time = "2026-07-08T10:59:05.962Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/fa/e1388bbcf24ef3274f45c0c1c7b501fd14971037c1b6ee23610553307497/uvicorn-0.49.0-py3-none-any.whl", hash = "sha256:ba3d14c3ee7e41c6c654c46c9eb489d33213cdd30aa1696eab1374337c13f68f", size = 71376, upload-time = "2026-06-03T22:01:29.037Z" },
+    { url = "https://files.pythonhosted.org/packages/45/ec/dbb7e5a6b91f86bfb9eb7d2988a2730907b6a729875b949c7f022e8b88fa/uvicorn-0.51.0-py3-none-any.whl", hash = "sha256:5d38af6cd620f2ae3849fb44fd4879e0890aa1febe8d47eb355fb45d93fe6a5b", size = 73219, upload-time = "2026-07-08T10:59:04.44Z" },
 ]
 
 [package.optional-dependencies]
 standard = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "httptools" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -1427,8 +1426,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cryptography", specifier = ">=49.0.0" },
-    { name = "fastapi", specifier = ">=0.138.0" },
-    { name = "firebase-admin", specifier = ">=6.5.0" },
+    { name = "fastapi", specifier = ">=0.139.2" },
+    { name = "firebase-admin", specifier = ">=7.5.0" },
     { name = "google-genai", specifier = ">=2.14.0" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
@@ -1437,5 +1436,5 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "requests-oauthlib", specifier = ">=2.0.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.49.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0" },
 ]
