@@ -100,7 +100,7 @@ function groupPaymentsByReceipt(rawPayments) {
 
 /**
  * 確認モーダル用に、選択済みアイテムをレシートごとにまとめる
- * @returns {{ sortedReceiptIndices: number[], selectedByReceipt: object }}
+ * @returns {{ sortedReceiptIndices: number[], selectedByReceipt: Record<string, { items: { idx: number, data: any }[], group: any }> }}
  */
 function buildSelectedByReceipt() {
     const selectedByReceipt = {};

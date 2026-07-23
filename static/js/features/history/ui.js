@@ -203,7 +203,7 @@ export const resetCopyApp = () => {
 /**
  * コピー確認リスト（モーダル内）をレンダリングする
  * @param {number[]} sortedReceiptIndices
- * @param {{ [rIdx: number]: { items: { idx: number, data: any }[], group: any } }} selectedByReceipt
+ * @param {Record<string, { items: { idx: number, data: any }[], group: any }>} selectedByReceipt
  */
 export function renderConfirmList(sortedReceiptIndices, selectedByReceipt) {
     EL.confirmListContainer.innerHTML = '';
