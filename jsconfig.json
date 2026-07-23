@@ -2,14 +2,12 @@
   "compilerOptions": {
     "module": "ESNext",
     "target": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "checkJs": true,
     "allowJs": true,
-    "baseUrl": ".",
     "paths": {
       "/*": ["./*"]
     },
-    "ignoreDeprecations": "6.0",
     "noImplicitAny": false,
     "strictNullChecks": false,
     "useUnknownInCatchVariables": false
