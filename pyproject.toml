@@ -16,5 +16,5 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "python-multipart>=0.0.32",
     "requests-oauthlib>=2.0.0",
-    "uvicorn[standard]>=0.51.0",
+    "uvicorn[standard]>=0.52.0",
 ]
