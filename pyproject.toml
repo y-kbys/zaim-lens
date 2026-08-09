@@ -5,10 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "cryptography>=48.0.1",
-    "fastapi>=0.138.0",
-    "firebase-admin>=6.5.0",
-    "google-genai>=2.10.0",
+    "cryptography>=50.0.0",
+    "fastapi>=0.141.1",
+    "firebase-admin>=7.5.0",
+    "google-genai>=2.16.0",
     "itsdangerous>=2.2.0",
     "jinja2>=3.1.6",
     "pydantic>=2.13.4",
@@ -16,5 +16,5 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "python-multipart>=0.0.32",
     "requests-oauthlib>=2.0.0",
-    "uvicorn[standard]>=0.49.0",
+    "uvicorn[standard]>=0.52.1",
 ]
