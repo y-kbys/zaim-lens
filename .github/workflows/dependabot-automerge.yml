@@ -1,11 +1,10 @@
 name: Dependabot Auto-merge
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: ["Static Analysis"]
     types:
-      - opened
-      - reopened
-      - synchronized
+      - completed
 
 permissions:
   contents: write
@@ -14,16 +13,30 @@ permissions:
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
     steps:
-      - name: Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@v2
-        with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-      - name: Enable auto-merge for Dependabot PRs
-        run: gh pr merge --auto --merge "$PR_URL" || gh pr merge --merge "$PR_URL"
+      - name: Auto-merge Dependabot PR
+        run: |
+          PR_URL="${{ github.event.workflow_run.pull_requests[0].html_url }}"
+          if [ -z "$PR_URL" ] || [ "$PR_URL" = "null" ]; then
+            RUN_ID="${{ github.event.workflow_run.id }}"
+            PR_URL=$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}" --jq '.pull_requests[0].html_url // empty')
+          fi
+
+          if [ -n "$PR_URL" ] && [ "$PR_URL" != "null" ]; then
+            PR_AUTHOR=$(gh pr view "$PR_URL" --json author --jq '.author.login')
+            if [ "$PR_AUTHOR" = "app/dependabot" ] || [ "$PR_AUTHOR" = "dependabot[bot]" ] || [ "$PR_AUTHOR" = "dependabot" ]; then
+              echo "Merging Dependabot PR ($PR_URL)..."
+              gh pr merge "$PR_URL" --merge --delete-branch
+            else
+              echo "PR ($PR_URL) is not by Dependabot ($PR_AUTHOR), skipping."
+            fi
+          else
+            echo "No associated PR found for this workflow run."
+          fi
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
