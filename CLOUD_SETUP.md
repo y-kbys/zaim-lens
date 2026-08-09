@@ -55,3 +55,36 @@ GitHub リポジトリの `Settings > Secrets and variables > Actions` に、以
 
 - **Firestore セキュリティルール:** 本アプリはサーバーサイド（firebase-admin SDK）からデータにアクセスするため、Firestore のルールを「読み書き拒否 (`allow read, write: if false;`)」に設定していても正常に動作します。クライアント（ブラウザ）からの直接アクセスを防ぐため、この設定を強く推奨します。
 - **API キーの制限:** `GEMINI_API_KEY` は Google Cloud Console で使用可能なサービスや IP アドレスの制限を設定しておくことを強く推奨します。
+
+## 5. コールドスタート対策 (Keep-Warm 設定)
+
+Cloud Run の無料枠・従量課金運用では、一定時間リクエストがないとインスタンスが停止し、次回アクセス時にコールドスタート遅延が発生します。これを防ぐため、Google Cloud Monitoring の **「稼働時間チェック (Uptime Check)」** を使用して 15 分間隔で `/api/health` エンドポイントを呼び出す設定を推奨します。
+
+### gcloud CLI での設定例
+
+```bash
+# 開発環境 (zaim-lens-dev)
+gcloud monitoring uptime create zaimlens-dev-keep-alive \
+  --project=zaim-lens-dev \
+  --resource-type=uptime-url \
+  --resource-labels=host=<DEV_RUN_HOST> \
+  --path=/api/health \
+  --protocol=https \
+  --period=15
+
+# 本番環境 (zaim-app-488514)
+gcloud monitoring uptime create zaimlens-keep-alive \
+  --project=zaim-app-488514 \
+  --resource-type=uptime-url \
+  --resource-labels=host=<PROD_RUN_HOST> \
+  --path=/api/health \
+  --protocol=https \
+  --period=15
+```
+
+### Google Cloud Console での設定手順
+1. Google Cloud Console で **「Monitoring」 > 「稼働時間チェック」** に移動。
+2. **「稼働時間チェックを作成」** を選択。
+3. ターゲットに `HTTPS` / `URL` を選択し、Cloud Run のホスト名とパス `/api/health` を指定。
+4. チェック頻度を `15分` に設定して保存。
+
