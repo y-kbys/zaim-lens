@@ -57,6 +57,13 @@ class ZaimCredentialsRequest(BaseModel):
     token: str
     token_secret: str
 
+class ZaimCredentialsResponse(BaseModel):
+    id: str
+    name: str
+    is_configured: bool = True
+    consumer_key_last_4: Optional[str] = None
+    token_last_4: Optional[str] = None
+
 # --- Other Models ---
 class ZaimAccount(BaseModel):
     id: int

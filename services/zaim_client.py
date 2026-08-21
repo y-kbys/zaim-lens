@@ -11,6 +11,7 @@ ZAIM_CALLBACK_URL = os.environ.get("ZAIM_CALLBACK_URL")
 def get_zaim_session(account_id: str, user_id: str, accounts_config: Dict[str, Any]) -> OAuth1Session:
     """
     Creates an OAuth1Session for Zaim API based on user configuration.
+    Prioritizes account-specific consumer key/secret over system environment variables.
     """
     str_account_id = str(account_id)
     acct = accounts_config.get(str_account_id)
@@ -19,12 +20,18 @@ def get_zaim_session(account_id: str, user_id: str, accounts_config: Dict[str, A
         print(f"DEBUG: get_zaim_session failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts_config.keys())}")
         raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
         
-    if not ZAIM_CONSUMER_KEY or not ZAIM_CONSUMER_SECRET:
-        raise HTTPException(status_code=500, detail="System Zaim Consumer credentials are not configured.")
+    consumer_key = acct.get("consumer_key") or ZAIM_CONSUMER_KEY
+    consumer_secret = acct.get("consumer_secret") or ZAIM_CONSUMER_SECRET
+
+    if not consumer_key or not consumer_secret:
+        raise HTTPException(status_code=500, detail="Zaim Consumer Key/Secret is missing in configuration and environment variables.")
+
+    if not acct.get("token") or not acct.get("token_secret"):
+        raise HTTPException(status_code=400, detail=f"Zaim OAuth token is missing for account '{account_id}'.")
 
     return OAuth1Session(
-        ZAIM_CONSUMER_KEY,
-        client_secret=ZAIM_CONSUMER_SECRET,
+        consumer_key,
+        client_secret=consumer_secret,
         resource_owner_key=acct["token"],
         resource_owner_secret=acct["token_secret"]
     )

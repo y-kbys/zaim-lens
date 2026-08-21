@@ -12,7 +12,8 @@ from services.zaim_client import (
     register_payment_item, fetch_history_with_categories
 )
 from schemas import (
-    RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest, ZaimAccountUpdateRequest
+    RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest, ZaimAccountUpdateRequest,
+    ZaimCredentialsResponse
 )
 from db import get_user_config, save_user_config, clear_zaim_master_data_db
 from services.master_data_service import get_or_fetch_master_data
@@ -369,21 +370,24 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/api/zaim/credentials/{account_id}")
+@router.get("/api/zaim/credentials/{account_id}", response_model=ZaimCredentialsResponse)
 async def get_zaim_credentials(account_id: str, user_id: str = Depends(verify_token)):
     config = get_user_config(user_id)
     accounts = config.get("accounts", {})
     if account_id not in accounts:
         raise HTTPException(status_code=404, detail="Account not found.")
     acc = accounts[account_id]
-    return {
-        "id": acc["id"],
-        "name": acc.get("name", ""),
-        "consumer_key": acc.get("consumer_key", ""),
-        "consumer_secret": acc.get("consumer_secret", ""),
-        "token": acc.get("token", ""),
-        "token_secret": acc.get("token_secret", "")
-    }
+    
+    token = acc.get("token") or ""
+    ckey = acc.get("consumer_key") or ""
+    
+    return ZaimCredentialsResponse(
+        id=str(acc["id"]),
+        name=acc.get("name", ""),
+        is_configured=bool(token),
+        consumer_key_last_4=ckey[-4:] if len(ckey) >= 4 else (ckey if ckey else None),
+        token_last_4=token[-4:] if len(token) >= 4 else (token if token else None)
+    )
 
 @router.post("/api/zaim/credentials")
 async def save_zaim_credentials(req: ZaimCredentialsRequest, user_id: str = Depends(verify_token)):
