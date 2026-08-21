@@ -4,7 +4,7 @@ import { compressImage } from './image.js';
 import { parseReceiptImage } from './api.js';
 import { ensureZaimDataAvailable } from '../../api/zaim.js';
 import { updateBatchProgressUI, setupEditState } from './ui.js';
-import { openGeminiSettings } from '../settings.js';
+import { openGeminiSettings, openZaimSettings } from '../settings.js';
 
 // Each queue item's parsing Promise is tracked here
 export const parsePromises = new Map();
@@ -13,7 +13,7 @@ export const parsePromises = new Map();
  * Handle new files added to the queue
  */
 export const handleImageFiles = async (files) => {
-    if (files.length === 0) return;
+    if (!files || files.length === 0) return;
 
     appState.queue = files.map(file => ({
         file,
@@ -44,8 +44,12 @@ export const handleImageFiles = async (files) => {
             for (let i = 1; i < appState.queue.length; i++) {
                 const item = appState.queue[i];
                 if (!item.compressedBase64 && item.file) {
-                    item.compressedBase64 = await compressImage(item.file);
-                    item.file = null;
+                    try {
+                        item.compressedBase64 = await compressImage(item.file);
+                        item.file = null;
+                    } catch (e) {
+                        console.error(`Failed to compress image ${i}:`, e);
+                    }
                 }
             }
         })();
@@ -57,6 +61,26 @@ export const handleImageFiles = async (files) => {
 
     updateBatchProgressUI();
 };
+
+/**
+ * Remove an item from the queue
+ * @param {number} index 
+ */
+export function removeQueueItem(index) {
+    if (index < 0 || index >= appState.queue.length) return;
+    appState.queue.splice(index, 1);
+    parsePromises.delete(index);
+
+    if (appState.queue.length === 0) {
+        appState.currentQueueIndex = -1;
+        EL.imagePreviewContainer.classList.add('hidden');
+        EL.btnParse.classList.add('hidden');
+        EL.btnParse.disabled = true;
+    } else if (appState.currentQueueIndex >= appState.queue.length) {
+        appState.currentQueueIndex = appState.queue.length - 1;
+    }
+    updateBatchProgressUI();
+}
 
 /**
  * Advance queue to the next item
@@ -99,7 +123,7 @@ export async function advanceQueue() {
         setupEditState(nextItem.result);
     } else if (nextItem.status === 'error') {
         hideLoading();
-        showToast("この画像の解析に失敗していました。スキップするか、撮り直してください。", 'warning');
+        showToast("この画像の解析に失敗していました。スキップするか、手入力で編集してください。", 'warning');
         setupEditState({ date: "", store: "", items: [] });
     } else {
         setupEditState(null); // Show waiting UI
@@ -164,7 +188,7 @@ export async function startBackgroundParsing() {
                         item.file = null;
                     }
 
-                    const targetAccountId = EL.uploadTargetAccount.value;
+                    const targetAccountId = EL.uploadTargetAccount ? EL.uploadTargetAccount.value : "1";
                     try {
                         await ensureZaimDataAvailable(targetAccountId);
                     } catch (e) {
@@ -173,7 +197,7 @@ export async function startBackgroundParsing() {
 
                     const result = await parseReceiptImage(item.compressedBase64, targetAccountId);
 
-                    // Add point usage logic
+                    // Add point usage logic as a negative item if present
                     if (result && result.point_usage > 0) {
                         if (!result.items || !Array.isArray(result.items)) result.items = [];
                         result.items.push({
@@ -203,10 +227,17 @@ export async function startBackgroundParsing() {
                 if (/** @type {any} */ (err).status === 429) {
                     showToast("Geminiのレートリミットに達しました。時間を置いてから再度お試しください。", 'warning');
                     break;
-                } else if (/** @type {any} */ (err).status === 400 && err.message.includes("API Key is not configured")) {
-                    showToast("Gemini APIキーが設定されていません。設定画面を開きます。", 'warning');
-                    openGeminiSettings();
-                    break;
+                } else if (/** @type {any} */ (err).status === 400) {
+                    const msg = err.message || "";
+                    if (msg.includes("API Key is not configured") || msg.includes("Gemini API Key")) {
+                        showToast("Gemini APIキーが設定されていません。設定画面を開きます。", 'warning');
+                        openGeminiSettings();
+                        break;
+                    } else if (msg.includes("Zaim連携が設定されていません") || msg.includes("Zaim")) {
+                        showToast("Zaim連携が設定されていません。連携画面を開きます。", 'warning');
+                        openZaimSettings();
+                        break;
+                    }
                 }
             } finally {
                 updateBatchProgressUI();
@@ -238,3 +269,4 @@ export async function startBackgroundParsing() {
         }
     }
 }
+

@@ -209,30 +209,47 @@ export async function setupEditState(data) {
     switchState('state-edit');
 }
 
+/**
+ * Calculates current total and item counts
+ * @returns {{ subtotal: number, visibleCount: number }}
+ */
+export function calcTotal() {
+    const data = appState.parsedData;
+    if (!data || !data.items) return { subtotal: 0, visibleCount: 0 };
+
+    let subtotal = 0;
+    let visibleCount = 0;
+
+    data.items.forEach(item => {
+        if (item.deleted) return;
+        subtotal += Number(item.price) || 0;
+        visibleCount++;
+    });
+
+    return { subtotal, visibleCount };
+}
+
 export function renderItemsList() {
     const data = appState.parsedData;
     if (!data) return;
 
     EL.itemsContainer.innerHTML = '';
-    let total = 0;
-    let visibleCount = 0;
+    const { subtotal, visibleCount } = calcTotal();
 
     data.items.forEach((item, index) => {
         if (item.deleted) return;
-        total += Number(item.price);
-        visibleCount++;
 
         const itemRow = document.createElement('div');
         itemRow.className = "flex flex-col space-y-2 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 shadow-sm transition-colors";
         itemRow.innerHTML = `
             <div class="flex items-center space-x-2">
-                <button class="delete-btn text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
+                <button class="delete-btn text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="明細を削除">
                     <i class="fa-solid fa-trash"></i>
                 </button>
-                <input type="text" class="name-input flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name}">
+                <input type="text" class="name-input flex-grow min-w-0 p-2 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent dark:text-gray-100 transition-colors" value="${item.name || ''}" placeholder="品目名">
                 <div class="relative flex-shrink-0 transition-all duration-200" style="width: calc(${Math.max(3, String(item.price).length)}ch + 2.5rem);">
                     <span class="absolute left-2 top-2 ${Number(item.price) < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} text-sm">¥</span>
-                    <input type="number" class="price-input w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${Number(item.price) < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price}">
+                    <input type="number" class="price-input w-full p-2 pl-6 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-right bg-transparent ${Number(item.price) < 0 ? 'text-red-600 dark:text-red-400' : 'dark:text-gray-100'} transition-colors" value="${item.price || 0}">
                 </div>
             </div>
             <div class="flex items-center space-x-2 pl-10">
@@ -246,10 +263,10 @@ export function renderItemsList() {
         `;
 
         const deleteBtn = itemRow.querySelector('.delete-btn');
-        const nameInput = itemRow.querySelector('.name-input');
-        const priceInput = itemRow.querySelector('.price-input');
-        const catSelect = itemRow.querySelector('.cat-select');
-        const genSelect = itemRow.querySelector('.gen-select');
+        const nameInput = /** @type {HTMLInputElement} */ (itemRow.querySelector('.name-input'));
+        const priceInput = /** @type {HTMLInputElement} */ (itemRow.querySelector('.price-input'));
+        const catSelect = /** @type {HTMLSelectElement} */ (itemRow.querySelector('.cat-select'));
+        const genSelect = /** @type {HTMLSelectElement} */ (itemRow.querySelector('.gen-select'));
 
         deleteBtn.addEventListener('click', () => {
             if (appState.deletionTimer) clearTimeout(appState.deletionTimer);
@@ -264,22 +281,23 @@ export function renderItemsList() {
             }
         });
 
-        nameInput.addEventListener('focus', (e) => e.target.select());
+        nameInput.addEventListener('focus', (e) => /** @type {HTMLInputElement} */(e.target).select());
         nameInput.addEventListener('change', (e) => {
-            item.name = e.target.value;
+            item.name = /** @type {HTMLInputElement} */(e.target).value;
         });
 
-        priceInput.addEventListener('focus', (e) => e.target.select());
+        priceInput.addEventListener('focus', (e) => /** @type {HTMLInputElement} */(e.target).select());
         priceInput.addEventListener('input', (e) => {
-            e.target.parentElement.style.width = `calc(${Math.max(3, e.target.value.length)}ch + 2.5rem)`;
+            const val = /** @type {HTMLInputElement} */(e.target).value;
+            /** @type {HTMLElement} */(/** @type {HTMLElement} */(e.target).parentElement).style.width = `calc(${Math.max(3, val.length)}ch + 2.5rem)`;
         });
         priceInput.addEventListener('change', (e) => {
-            item.price = parseInt(e.target.value) || 0;
+            item.price = parseInt(/** @type {HTMLInputElement} */(e.target).value) || 0;
             if (data === appState.parsedData) renderItemsList();
         });
 
         catSelect.addEventListener('change', (e) => {
-            const catId = parseInt(e.target.value);
+            const catId = parseInt(/** @type {HTMLSelectElement} */(e.target).value);
             item.category_id = catId;
             const genres = data.master_genres ? data.master_genres.filter(g => g.category_id == catId) : [];
             item.genre_id = genres.length > 0 ? genres[0].id : 0;
@@ -287,13 +305,13 @@ export function renderItemsList() {
         });
 
         genSelect.addEventListener('change', (e) => {
-            item.genre_id = parseInt(e.target.value);
+            item.genre_id = parseInt(/** @type {HTMLSelectElement} */(e.target).value);
         });
 
         EL.itemsContainer.appendChild(itemRow);
     });
 
-    EL.totalAmount.textContent = `¥${total.toLocaleString()}`;
+    EL.totalAmount.textContent = `¥${subtotal.toLocaleString()}`;
     EL.btnRegisterCount.textContent = String(visibleCount);
 }
 
@@ -329,3 +347,4 @@ export function renderBulkMenuCategories(categories) {
         </button>
     `).join('');
 }
+

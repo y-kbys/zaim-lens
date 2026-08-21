@@ -88,7 +88,10 @@ export const initReceiptFeatures = () => {
     });
 
     EL.imageUpload.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */(e.target).files));
+        const files = Array.from(/** @type {HTMLInputElement} */(e.target).files || []);
+        if (files.length > 0) {
+            await handleImageFiles(files);
+        }
     });
 
     EL.btnCamera.addEventListener('click', (e) => {
@@ -98,7 +101,67 @@ export const initReceiptFeatures = () => {
     });
 
     EL.cameraCapture.addEventListener('change', async (e) => {
-        await handleImageFiles(Array.from(/** @type {HTMLInputElement} */(e.target).files));
+        const files = Array.from(/** @type {HTMLInputElement} */(e.target).files || []);
+        if (files.length > 0) {
+            await handleImageFiles(files);
+        }
+    });
+
+    // Drag & Drop on Upload Area
+    const uploadLabel = document.querySelector('label[for="image-upload"]');
+    if (uploadLabel) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadLabel.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadLabel.classList.add('border-blue-600', 'bg-blue-100', 'dark:bg-blue-800/80');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadLabel.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadLabel.classList.remove('border-blue-600', 'bg-blue-100', 'dark:bg-blue-800/80');
+            });
+        });
+
+        uploadLabel.addEventListener('drop', async (e) => {
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const imageFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                if (imageFiles.length > 0) {
+                    await handleImageFiles(imageFiles);
+                } else {
+                    showToast("画像ファイル（JPEG/PNG等）をドロップしてください。", "warning");
+                }
+            }
+        });
+    }
+
+    // Global Clipboard Paste Support (Ctrl+V / Cmd+V)
+    window.addEventListener('paste', async (e) => {
+        // Do not intercept paste if user is typing into an input/textarea
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+            return;
+        }
+
+        const items = (e.clipboardData || /** @type {any} */(window).clipboardData)?.items;
+        if (!items) return;
+
+        const pastedFiles = [];
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                if (blob) pastedFiles.push(blob);
+            }
+        }
+
+        if (pastedFiles.length > 0) {
+            e.preventDefault();
+            showToast("クリップボードから画像を取り込みました", "info");
+            await handleImageFiles(pastedFiles);
+        }
     });
 
     EL.btnParse.addEventListener('click', async () => {
@@ -151,9 +214,15 @@ export const initReceiptFeatures = () => {
     EL.btnAddItem.addEventListener('click', () => {
         let defaultCatId = 101;
         let defaultGenId = 10101;
-        if (appState.parsedData.items.length > 0) {
-            defaultCatId = appState.parsedData.items[0].category_id;
-            defaultGenId = appState.parsedData.items[0].genre_id;
+        if (appState.parsedData && appState.parsedData.items && appState.parsedData.items.length > 0) {
+            defaultCatId = appState.parsedData.items[0].category_id || 101;
+            defaultGenId = appState.parsedData.items[0].genre_id || 10101;
+        }
+        if (!appState.parsedData) {
+            appState.parsedData = { items: [] };
+        }
+        if (!appState.parsedData.items) {
+            appState.parsedData.items = [];
         }
         appState.parsedData.items.push({ name: "新規品目", price: 0, category_id: defaultCatId, genre_id: defaultGenId });
         renderItemsList();
@@ -165,7 +234,7 @@ export const initReceiptFeatures = () => {
         appState.parsedData.store = EL.editStore.value;
         appState.parsedData.point_usage = 0;
 
-        let itemsToRegister = [...appState.parsedData.items]
+        let itemsToRegister = [...(appState.parsedData.items || [])]
             .filter(i => !i.deleted)
             .filter(i => i.name.trim() !== '' || i.price !== 0);
 
@@ -209,7 +278,7 @@ export const initReceiptFeatures = () => {
             showLoading(force ? '強制的に登録中...' : 'Zaimに登録中...');
             let shouldHideLoading = true;
             try {
-                const targetAccountId = EL.editTargetAccount.value;
+                const targetAccountId = EL.editTargetAccount.value || "1";
                 const registerData = { ...appState.parsedData, items: itemsToRegister };
                 const payload = {
                     receipt_data: registerData,
@@ -232,8 +301,11 @@ export const initReceiptFeatures = () => {
                 }
 
                 localStorage.setItem(getPrefixedKey('last_used_zaim_profile_parser'), targetAccountId);
-                localStorage.setItem(getPrefixedKey(`last_used_payment_source_id_${targetAccountId}`), EL.editFromAccount.value);
+                if (EL.editFromAccount.value) {
+                    localStorage.setItem(getPrefixedKey(`last_used_payment_source_id_${targetAccountId}`), EL.editFromAccount.value);
+                }
                 sendGAEvent('save_receipt_result');
+                showToast("Zaimへの登録が完了しました。", "success");
 
                 if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
                     advanceQueue();
@@ -277,3 +349,4 @@ export const initReceiptFeatures = () => {
         loadZaimAccounts();
     });
 };
+
