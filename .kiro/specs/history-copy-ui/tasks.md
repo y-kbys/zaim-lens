@@ -1,0 +1,72 @@
+# Implementation Plan: history-copy-ui
+
+- [x] 1. 履歴取得条件フォームと期間計算ロジックの実装・検証
+- [x] 1.1 コピー元アカウント選択および期間（今月/先月/過去1ヶ月/3ヶ月/月指定/カスタム）の日付範囲計算とバリデーションを整備する (P)
+  - `resolveDateRange` の日付計算（月初・月末・指定日数）および不正日付（開始日>終了日）エラー検知を実装する
+  - アカウント未選択警告、コピー元変更時の状態初期化およびコピー先選択肢からの除外連動を確認する
+  - 期間選択変更に応じて月指定インプットおよびカスタム範囲インプットの表示/非表示が正しく切り替わることを確認する
+  - _Requirements: 1.1, 1.2, 1.3, 1.4_
+  - _Boundary: static/js/features/history/index.js, templates/components/_copy_panel.html_
+- [x] 1.2 履歴取得 API クライアントと取得時ローディング/スケルトン表示を連携する (P)
+  - `/api/history` 非同期呼び出しおよびレスポンス取得中のローディング/スケルトン切り替えを実装する
+  - API 通信エラー時のトースト通知とローディング解除をハンドリングする
+  - 履歴取得完了時にローディングが解除され後続ステップが表示されることを確認する
+  - _Requirements: 1.1_
+  - _Boundary: static/js/features/history/api.js, static/js/features/history/index.js_
+
+- [x] 2. 履歴アコーディオン一覧と選択状態管理の実装・検証
+- [x] 2.1 取得した支出明細のレシート単位グルーピングおよびアコーディオン DOM 描画を実装する (P)
+  - `groupPaymentsByReceipt` による同一 `receipt_id` の集約と日付・店名・合計金額のヘッダー表示を構築する
+  - アコーディオンヘッダークリックによる明細リストの展開/折りたたみ表示を実装する
+  - 取得明細が 0 件のときの空状態メッセージ表示を確認する
+  - _Requirements: 2.1, 2.2_
+  - _Boundary: static/js/features/history/ui.js, static/js/features/history/index.js_
+- [x] 2.2 親子チェックボックス連動と全選択/全解除、件数カウンター更新を実装する (P)
+  - レシート単位の親チェックボックスによる配下アイテムの一括選択/全解除を実装する
+  - 個別品目変更時に親チェックボックスが全選択・未選択・不確定（`indeterminate`）状態へ正しく連動することを確認する
+  - 「全選択 / 全解除」ボタンによる全アイテムの一括トグルおよびボタン文言切り替えを実装する
+  - 選択中のレシート件数および品目数が選択変更に即座に追従して更新されることを確認する
+  - _Requirements: 2.3, 2.4, 2.5, 3.2_
+  - _Boundary: static/js/features/history/ui.js, static/js/features/history/index.js_
+
+- [x] 3. コピー先設定と確認モーダル・カテゴリ付替の実装・検証
+- [x] 3.1 コピー先アカウントおよび出金元口座の選択連動と「確認画面へ進む」ボタンの活性制御を実装する (P)
+  - コピー先アカウント選択によるカテゴリ・口座マスタ（`loadDestInternalAccounts`）の取得と選択肢更新を実装する
+  - 選択中品目数が 1 件以上のときの確認ボタン活性化、0 件時の非活性化制御を確認する
+  - 直近利用したコピー先アカウントおよび出金元口座の localStorage 保存・復元を確認する
+  - _Requirements: 3.1, 3.3_
+  - _Boundary: static/js/features/history/index.js, static/js/api/zaim.js_
+- [x] 3.2 コピー内容確認モーダルにおける明細プレビューとカテゴリ・ジャンル・口座の動的付け替えを実装する (P)
+  - 選択された明細のみを抽出した確認モーダル（`_modals.html`）の動的レンダリングを実装する
+  - カテゴリ変更時に対応するジャンル選択肢がコピー先マスタで動的に再生成されることを確認する
+  - コピー先出金元口座の一括設定値の反映およびレシートごとの個別出金元口座指定を実装する
+  - _Requirements: 4.1, 4.2, 4.3_
+  - _Boundary: static/js/features/history/ui.js, templates/components/_modals.html_
+
+- [x] 4. 一括コピー実行・重複検知・完了・リセットフローの実装・検証
+- [x] 4.1 コピー実行ペイロード構築とバックエンド一括コピー API 連携を実装する
+  - 確認モーダル内の各品目設定（カテゴリ、ジャンル、口座、金額、日付等）から `CopyRequestPayload` を組み立てる
+  - `/api/copy` への非同期送信とコピー実行中ローディング表示を実装する
+  - _Requirements: 5.1_
+  - _Boundary: static/js/features/history/index.js, static/js/features/history/api.js_
+- [x] 4.2 重複検知時の警告ダイアログ表示と強制コピー（force=true）再試行を実装する
+  - バックエンドから `duplicate_found: true` が返却された際に共通確認モーダルを表示する
+  - ユーザーが「OK」を選択した際に `force: true` を付与してコピー処理を再実行することを確認する
+  - ユーザーがキャンセルした際に処理が中断され安全に停止することを確認する
+  - _Requirements: 5.2, 5.3_
+  - _Boundary: static/js/features/history/index.js, static/js/utils/dom.js_
+- [x] 4.3 コピー完了画面遷移と状態リセット・初期画面復帰を実装する
+  - コピー成功時に完了画面（`copy-step-success`）へ遷移し、成功レシート件数および品目数を通知する
+  - 「トップに戻る」押下時に全入力・選択状態が初期化され初期設定画面へ復帰することを確認する
+  - _Requirements: 5.4, 5.5_
+  - _Boundary: static/js/features/history/index.js, static/js/features/history/ui.js_
+
+- [x] 5. 総合動作検証とユニットテスト
+- [x] 5.1* 日付計算およびグルーピング・選択カウントロジックのユニットテストを作成・検証する (P)
+  - `resolveDateRange`, `groupPaymentsByReceipt`, `getSelectedCounts` の単体テストを作成し実行する
+  - _Requirements: 1.1, 1.3, 2.1, 3.2_
+  - _Boundary: static/js/features/history/index.js, static/js/features/history/ui.js_
+- [x] 5.2* 履歴取得から確認モーダル・重複警告・一括コピー完了までの一連のE2Eフローをブラウザで検証する (P)
+  - 履歴取得、アコーディオン展開、カテゴリ付替、重複ダイアログ、完了画面遷移の総合動作を確認する
+  - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 5.2, 5.4, 5.5_
+  - _Boundary: templates/components/_copy_panel.html, static/js/features/history/index.js_

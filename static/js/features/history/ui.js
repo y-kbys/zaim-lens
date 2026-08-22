@@ -1,21 +1,13 @@
 import { appState } from '../../state.js';
 import { EL, generateCategoryOptions, generateGenreOptions } from '../../utils/dom.js';
+import { countSelectedItems } from './logic.js';
 
 /**
  * 現在の選択状態（件数・品目数）を返す
  * @returns {{ receiptCount: number, itemCount: number }}
  */
 export function getSelectedCounts() {
-    const itemKeys = Array.from(appState.selectedHistoryIds);
-    const receiptIndices = new Set();
-    itemKeys.forEach(key => {
-        const [rIdx] = key.split('-');
-        receiptIndices.add(rIdx);
-    });
-    return {
-        receiptCount: receiptIndices.size,
-        itemCount: itemKeys.length
-    };
+    return countSelectedItems(appState.selectedHistoryIds);
 }
 
 /**
