@@ -343,18 +343,22 @@ export interface CopyResponse {
 
 ## Testing Strategy
 
-### Unit Tests
-- **日付範囲計算テスト (`resolveDateRange`)**:
-  - `this_month`, `last_month`, `past_month`, `90` (日数指定) の開始日・終了日計算の正確性
-  - `month` (YYYY-MM) からの月初・月末算出
-  - `custom` 指定時の開始日・終了日大小関係バリデーション
-- **グルーピングテスト (`groupPaymentsByReceipt`)**:
-  - 同一 `receipt_id` を持つ複数明細が 1 つの `GroupedReceipt` に合約され合計金額が一致すること
-  - `receipt_id` が存在しない単一明細が独立したグループとして生成されること
-- **親子選択カウントテスト (`getSelectedCounts`)**:
-  - `selectedHistoryIds`（`Set<string>`）から一意なレシート数および品目数が正確に算出されること
+### 1. Static Analysis & Type Checking (必須静的検証)
+- **コマンド**: `npx --package typescript tsc -p jsconfig.json --noEmit`
+- **検証項目**:
+  - ES Modules 間の import/export 契約および関数シグネチャ（引数型・個数・戻り値）の整合性
+  - JSDoc 型アノテーションに基づく型安全性および未定義変数/プロパティ参照の排除
+  - CI パイプライン（`Static Analysis` ワークフロー）との完全一致
 
-### UI / Integration Tests
+### 2. Unit Tests (ロジック単体テスト)
+- **コマンド**: `node --test tests/test_history_logic.js`
+- **対象**: `static/js/features/history/logic.js`
+- **検証項目**:
+  - **日付範囲計算テスト (`calculateDateRange`)**: `this_month`, `last_month`, `month`, `custom`, 日数指定の算出精度および開始日>終了日のバリデーションエラー検知
+  - **グルーピングテスト (`groupPaymentsByReceipt`)**: 同一 `receipt_id` を持つ複数明細の合約、合計金額の一致、単一明細の独立処理
+  - **選択集計・データ構築テスト (`countSelectedItems`, `buildSelectedByReceipt`)**: 一意なレシート数・品目数の集計、モーダル用データ構造の正確性
+
+### 3. UI / Integration Tests (結合・E2E検証)
 - **アコーディオン操作**:
   - レシートヘッダークリックで明細リストの表示/非表示が切り替わること
   - 親チェックボックスのクリックで配下の子アイテム全選択/全解除が連動すること
@@ -365,3 +369,19 @@ export interface CopyResponse {
 - **コピー実行 & 重複フロー**:
   - コピー実行時に正しい JSON ペイロードが送信されること
   - 重複警告時に確認ダイアログが表示され、OK 押下で `force: true` が付与されて再試行されること
+
+### 4. Canonical Validation Commands (標準検証コマンドセット)
+コミット前および機能完了時には、以下の全検証コマンドを実行してエラーがないことを確認する。
+```bash
+# 1. バックエンド単体・結合テスト
+uv run pytest
+
+# 2. フロントエンドロジック単体テスト
+node --test tests/test_history_logic.js
+
+# 3. フロントエンド静的型チェック
+npx --package typescript tsc -p jsconfig.json --noEmit
+
+# 4. スモーク起動テスト
+uv run python -c "from main import app; from fastapi.testclient import TestClient; client = TestClient(app); res = client.get('/'); assert res.status_code == 200"
+```
