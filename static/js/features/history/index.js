@@ -6,6 +6,7 @@ import { updateDestAccountOptions, loadDestInternalAccounts } from '../../api/za
 
 import { fetchHistory, executeCopy } from './api.js';
 import { renderHistoryList, updateCopyCountUI, closeCopyModal, resetCopyApp, renderConfirmList, updateReceiptUIState, updateSelectAllButtonUI } from './ui.js';
+import { calculateDateRange, groupPaymentsByReceipt, buildSelectedByReceipt } from './logic.js';
 
 // Re-export for external use (e.g. main.js imports resetCopyApp via this module)
 export { resetCopyApp };
@@ -13,112 +14,25 @@ export { resetCopyApp };
 /**
  * 期間選択セレクトに応じた日付範囲を計算する
  * @param {string} mode
- * @returns {{ startDate: string, endDate: string, periodInDays: number }}
+ * @returns {{ startDate: string, endDate: string, periodInDays: number } | null}
  */
 function resolveDateRange(mode) {
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const formatDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const result = calculateDateRange(mode, {
+        monthVal: EL.periodMonthInput.value,
+        customStart: EL.periodStartInput.value,
+        customEnd: EL.periodEndInput.value
+    });
 
-    let startDate = '';
-    let endDate = '';
-    let periodInDays = 0;
-
-    if (mode === 'this_month') {
-        startDate = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
-        endDate = formatDate(now);
-    } else if (mode === 'last_month') {
-        startDate = formatDate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-        endDate = formatDate(new Date(now.getFullYear(), now.getMonth(), 0));
-    } else if (mode === 'month') {
-        const val = EL.periodMonthInput.value;
-        if (!val) { showToast("月を指定してください。", "warning"); return null; }
-        const [y, m] = val.split('-').map(Number);
-        startDate = formatDate(new Date(y, m - 1, 1));
-        endDate = formatDate(new Date(y, m, 0));
-    } else if (mode === 'custom') {
-        startDate = EL.periodStartInput.value;
-        endDate = EL.periodEndInput.value;
-        if (!startDate || !endDate) { showToast("開始日と終了日を指定してください。", "warning"); return null; }
-        if (startDate > endDate) { showToast("開始日が終了日より後になっています。", "warning"); return null; }
-    } else if (mode === 'past_month') {
-        const start = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate() + 1);
-        startDate = formatDate(start);
-        endDate = formatDate(now);
-    } else {
-        periodInDays = parseInt(mode);
+    if (result.error) {
+        showToast(result.error, "warning");
+        return null;
     }
 
-    return { startDate, endDate, periodInDays };
-}
-
-/**
- * APIから受け取った履歴データをレシート単位にグループ化する
- * @param {any[]} rawPayments
- * @returns {any[]}
- */
-function groupPaymentsByReceipt(rawPayments) {
-    const groupedHistory = [];
-    const receiptMap = {};
-
-    rawPayments.forEach(item => {
-        const rid = item.receipt_id;
-        if (rid && rid > 0) {
-            if (receiptMap[rid]) {
-                receiptMap[rid].items.push(item);
-                receiptMap[rid].amount += item.amount;
-                receiptMap[rid].date = item.date;
-                receiptMap[rid].category_name = item.category_name;
-                receiptMap[rid].place = item.place;
-            } else {
-                receiptMap[rid] = {
-                    isGroup: true,
-                    receipt_id: rid,
-                    date: item.date,
-                    category_name: item.category_name,
-                    place: item.place,
-                    items: [item],
-                    amount: item.amount
-                };
-                groupedHistory.push(receiptMap[rid]);
-            }
-        } else {
-            groupedHistory.push({
-                isGroup: false,
-                id: item.id,
-                date: item.date,
-                category_name: item.category_name,
-                place: item.place,
-                items: [item],
-                amount: item.amount
-            });
-        }
-    });
-
-    return groupedHistory;
-}
-
-/**
- * 確認モーダル用に、選択済みアイテムをレシートごとにまとめる
- * @returns {{ sortedReceiptIndices: number[], selectedByReceipt: Record<string, { items: { idx: number, data: any }[], group: any }> }}
- */
-function buildSelectedByReceipt() {
-    const selectedByReceipt = {};
-    Array.from(appState.selectedHistoryIds).forEach(itemKey => {
-        const [rIdx, iIdx] = itemKey.split('-').map(Number);
-        if (!selectedByReceipt[rIdx]) {
-            selectedByReceipt[rIdx] = {
-                items: [],
-                group: appState.fetchedHistory[rIdx]
-            };
-        }
-        selectedByReceipt[rIdx].items.push({
-            idx: iIdx,
-            data: appState.fetchedHistory[rIdx].items[iIdx]
-        });
-    });
-    const sortedReceiptIndices = Object.keys(selectedByReceipt).map(Number).sort((a, b) => a - b);
-    return { sortedReceiptIndices, selectedByReceipt };
+    return {
+        startDate: result.startDate,
+        endDate: result.endDate,
+        periodInDays: result.periodInDays
+    };
 }
 
 /**
@@ -309,7 +223,7 @@ export const initHistoryFeatures = () => {
         const destName = destSelect.options[destSelect.selectedIndex].text;
         EL.confirmDestName.textContent = destName;
 
-        const { sortedReceiptIndices, selectedByReceipt } = buildSelectedByReceipt();
+        const { sortedReceiptIndices, selectedByReceipt } = buildSelectedByReceipt(appState.selectedHistoryIds, appState.fetchedHistory);
         renderConfirmList(sortedReceiptIndices, selectedByReceipt);
 
         EL.copyConfirmModal.classList.remove('hidden');

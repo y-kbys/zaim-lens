@@ -73,6 +73,7 @@ export const appState = {
     /** @type {QueueItem[]} */
     queue: [],
     currentQueueIndex: -1,
+    registeredReceiptCount: 0,
     isParsingLoopRunning: false,
 
     // --- Auth & Multi-User ---

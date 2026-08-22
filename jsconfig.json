@@ -12,5 +12,5 @@
     "strictNullChecks": false,
     "useUnknownInCatchVariables": false
   },
-  "exclude": ["node_modules", "static/app.js"]
+  "exclude": ["node_modules", "static/app.js", "tests"]
 }
