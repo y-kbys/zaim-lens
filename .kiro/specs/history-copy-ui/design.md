@@ -66,6 +66,7 @@ graph TD
     subgraph Feature_Layer ["History Feature Layer (static/js/features/history/)"]
         Index["index.js (Orchestration & Event Listeners)"]
         UI["ui.js (DOM Rendering & State Reflection)"]
+        Logic["logic.js (Pure Calculation & Grouping)"]
         API["api.js (History API Client)"]
     end
 
@@ -85,10 +86,12 @@ graph TD
     PanelCopy --> Index
     ModalCopy --> Index
     Index --> UI
+    Index --> Logic
     Index --> API
     Index --> AppState
     Index --> DOMUtils
     Index --> ZaimAPIHelper
+    UI --> Logic
     UI --> AppState
     UI --> DOMUtils
     API --> BackendAPI
@@ -102,9 +105,10 @@ graph TD
 |---|---|---|---|
 | **Structure** | Jinja2 Template / HTML5 | パネルコンテナおよびモーダル構造の定義 | `_copy_panel.html`, `_modals.html` |
 | **Styling** | Tailwind CSS / FontAwesome 6 | アコーディオン、バッジ、レスポンシブ配置 | ダークモード対応、Tailwind ユーティリティクラス |
-| **Logic / Runtime** | Vanilla JavaScript (ES2022 Modules) | イベントハンドリング、日付計算、DOM生成 | フレームワーク非依存 |
+| **Logic / Runtime** | Vanilla JavaScript (ES2022 Modules) | イベントハンドリング、純粋計算・グルーピング、DOM生成 | フレームワーク非依存 |
 | **State** | In-Memory Object (`appState`) + localStorage | 履歴データ、選択アイテムSet、直近利用設定の保持 | ページリロード時のアカウント自動選択 |
 | **API Client** | Native `fetch` + Firebase Auth JWT | バックエンド REST API との通信 | `apiFetch` 経由 |
+| **Testing** | Node.js Test Runner (`node:test`) | 純粋計算・日付範囲・グルーピングの単体テスト | `tests/test_history_logic.js` |
 
 ---
 
@@ -120,8 +124,9 @@ zaim-lens/
 │   └── js/
 │       ├── features/
 │       │   └── history/
-│       │       ├── index.js        # イベント登録、期間計算、グルーピング、コピー実行制御、リセット
+│       │       ├── index.js        # イベント登録、コピー実行制御、リセット
 │       │       ├── ui.js           # アコーディオン描画、確認モーダルリスト生成、カテゴリ連動、件数更新
+│       │       ├── logic.js        # 純粋ロジック（日付計算、レシート集約、選択件数・マップ構築）
 │       │       └── api.js          # /api/history および /api/copy の非同期呼び出し関数
 │       ├── api/
 │       │   ├── backend.js          # 共通 API クライアント (apiFetch)
@@ -129,6 +134,8 @@ zaim-lens/
 │       ├── utils/
 │       │   └── dom.js              # DOM 要素参照 (EL)、トースト、確認ダイアログ
 │       └── state.js                # アプリケーション共通状態定義
+└── tests/
+    └── test_history_logic.js       # history/logic.js の単体テストスイート (Node.js test runner)
 ```
 
 ---
