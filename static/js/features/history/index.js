@@ -223,7 +223,7 @@ export const initHistoryFeatures = () => {
         const destName = destSelect.options[destSelect.selectedIndex].text;
         EL.confirmDestName.textContent = destName;
 
-        const { sortedReceiptIndices, selectedByReceipt } = buildSelectedByReceipt();
+        const { sortedReceiptIndices, selectedByReceipt } = buildSelectedByReceipt(appState.selectedHistoryIds, appState.fetchedHistory);
         renderConfirmList(sortedReceiptIndices, selectedByReceipt);
 
         EL.copyConfirmModal.classList.remove('hidden');
