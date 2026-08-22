@@ -3,7 +3,7 @@ import { EL, showToast, showLoading, hideLoading, switchState } from '../../util
 import { compressImage } from './image.js';
 import { parseReceiptImage } from './api.js';
 import { ensureZaimDataAvailable } from '../../api/zaim.js';
-import { updateBatchProgressUI, setupEditState } from './ui.js';
+import { updateBatchProgressUI, setupEditState, resetApp } from './ui.js';
 import { openGeminiSettings, openZaimSettings } from '../settings.js';
 
 // Each queue item's parsing Promise is tracked here
@@ -22,6 +22,7 @@ export const handleImageFiles = async (files) => {
         compressedBase64: null
     }));
     appState.currentQueueIndex = 0;
+    appState.registeredReceiptCount = 0;
     appState.isParsingLoopRunning = false;
     parsePromises.clear();
 
@@ -89,12 +90,19 @@ export async function advanceQueue() {
     appState.currentQueueIndex++;
 
     if (appState.currentQueueIndex >= appState.queue.length) {
+        const registeredCount = appState.registeredReceiptCount || 0;
         appState.currentQueueIndex = -1;
         appState.queue = [];
+        appState.registeredReceiptCount = 0;
         parsePromises.clear();
         updateBatchProgressUI();
         hideLoading();
-        switchState('state-success');
+
+        if (registeredCount > 0) {
+            switchState('state-success');
+        } else {
+            resetApp();
+        }
         return;
     }
 

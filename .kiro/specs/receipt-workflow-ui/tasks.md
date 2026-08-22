@@ -80,14 +80,25 @@
   - _Requirements: 5.1, 5.2, 5.3_
   - _Boundary: receipt/ui.js, static/js/features/auth.js_
 
-- [x] 5. 統合検証
-- [x]* 5.1 レシート取り込みから解析・編集・登録までの一連のワークフロー統合検証
-  - 画像選択から Gemini 解析結果の展開、品目追加・金額修正、Zaim への一括登録成功までの一連の動作をブラウザ上で検証
-  - 複数画像キューの順次完了動作を確認
-  - _Requirements: 1.1, 2.2, 3.1, 4.1, 4.4_
-  - _Boundary: receipt/index.js, receipt/queue.js, receipt/ui.js_
-- [x]* 5.2 重複検知警告モーダルおよびエラー復帰パスの動作検証
-  - 同一日付・同一金額での重複登録試行時に警告モーダルが表示され、強制登録が正常に実行されることを検証
-  - APIキー未設定時の誘導モーダル起動を確認
-  - _Requirements: 2.3, 2.4, 4.2, 4.3_
-  - _Boundary: receipt/ui.js, templates/components/_modals.html_
+- [x] 5. スキップ制御と完了ライフサイクルの改善
+- [x] 5.1 (P) 登録成功件数の追跡とキューセッション初期化
+  - `appState` に `registeredReceiptCount` を追加し、新規キュー投入時（`handleImageFiles`）に 0 に初期化
+  - Zaim への支出登録成功時に `registeredReceiptCount` をインクリメント
+  - キューセッション内の実際の登録成功件数が正確にカウント・保持されること
+  - _Requirements: 4.4, 4.5, 4.6_
+  - _Boundary: state.js, receipt/queue.js, receipt/ui.js_
+- [x] 5.2 全スキップ時の初期画面復帰および完了画面出し分け制御
+  - アクティブなレシートの「スキップ」ボタン押下時に登録を行わず `advanceQueue()` を呼び出す制御を整備
+  - `advanceQueue()` においてキューの全処理完了時（`currentQueueIndex >= queue.length`）に登録件数を判定
+  - `registeredReceiptCount > 0` の場合は登録完了画面（`state-success`）へ遷移し、`registeredReceiptCount === 0`（全スキップ等）の場合は `resetApp()` で初期（トップ）画面へ静かに復帰する制御を実装
+  - 全レシートをスキップした際に完了画面が表示されず、トップ画面へ復帰すること
+  - _Depends: 5.1_
+  - _Requirements: 1.5, 4.5, 4.6_
+  - _Boundary: receipt/queue.js, receipt/index.js, receipt/ui.js_
+
+- [x] 6. 統合検証
+- [x]* 6.1 全スキップ時および1件以上登録時の画面遷移・キューライフサイクルの検証
+  - 複数枚のレシートを投入して全件スキップした場合に完了画面が出ずトップ画面へ戻ることを検証
+  - 1件以上登録して残りをスキップした場合に完了画面が正常に表示されることを検証
+  - _Requirements: 1.5, 4.5, 4.6_
+  - _Boundary: receipt/queue.js, receipt/ui.js_

@@ -53,6 +53,7 @@ export async function resetApp() {
 
     appState.queue = [];
     appState.currentQueueIndex = -1;
+    appState.registeredReceiptCount = 0;
     updateBatchProgressUI();
 
     EL.imageUpload.value = '';

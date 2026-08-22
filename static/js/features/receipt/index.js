@@ -307,7 +307,9 @@ export const initReceiptFeatures = () => {
                 sendGAEvent('save_receipt_result');
                 showToast("Zaimへの登録が完了しました。", "success");
 
-                if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
+                appState.registeredReceiptCount = (appState.registeredReceiptCount || 0) + 1;
+
+                if (appState.currentQueueIndex !== -1 && appState.queue.length > 0) {
                     advanceQueue();
                     shouldHideLoading = false; 
                 } else {
@@ -327,7 +329,7 @@ export const initReceiptFeatures = () => {
 
     EL.btnReset.addEventListener('click', resetApp);
     EL.btnSkip.addEventListener('click', () => {
-        if (appState.currentQueueIndex !== -1 && appState.queue.length > 1) {
+        if (appState.currentQueueIndex !== -1 && appState.queue.length > 0) {
             advanceQueue();
         } else {
             resetApp();
