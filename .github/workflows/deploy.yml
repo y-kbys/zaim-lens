@@ -51,9 +51,49 @@ jobs:
           echo "SW Cache Name updated to: zaim-lens-${VERSION}"
 
       - name: Generate env.yaml
+        env:
+          DEVELOPER_EMAILS: ${{ secrets.DEVELOPER_EMAILS }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+          ZAIM_CALLBACK_URL: ${{ secrets.ZAIM_CALLBACK_URL }}
+          ZAIM_CONSUMER_KEY: ${{ secrets.ZAIM_CONSUMER_KEY }}
+          ZAIM_CONSUMER_SECRET: ${{ secrets.ZAIM_CONSUMER_SECRET }}
+          APP_VERSION: v${{ github.run_number }}
         run: |
-          echo '${{ toJson(secrets) }}' | jq -r 'to_entries | .[] | select((.key | ascii_upcase) | IN("WIF_PROVIDER", "WIF_SERVICE_ACCOUNT", "GITHUB_TOKEN") | not) | "\(.key): \(.value | @json)"' > env.yaml
-          echo "APP_VERSION: \"v${{ github.run_number }}\"" >> env.yaml
+          python3 - << 'EOF'
+          import json, os
+
+          keys = [
+              "DEVELOPER_EMAILS",
+              "ENCRYPTION_KEY",
+              "FIREBASE_API_KEY",
+              "FIREBASE_APP_ID",
+              "FIREBASE_AUTH_DOMAIN",
+              "FIREBASE_MEASUREMENT_ID",
+              "FIREBASE_MESSAGING_SENDER_ID",
+              "FIREBASE_STORAGE_BUCKET",
+              "GA_MEASUREMENT_ID",
+              "ZAIM_CALLBACK_URL",
+              "ZAIM_CONSUMER_KEY",
+              "ZAIM_CONSUMER_SECRET",
+              "APP_VERSION",
+          ]
+
+          lines = []
+          for k in keys:
+              v = os.environ.get(k)
+              if v:
+                  lines.append(f"{k}: {json.dumps(v)}")
+
+          with open("env.yaml", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines) + "\n")
+          EOF
           echo "Generated env.yaml for environment: ${{ github.event.repository.default_branch == github.ref_name && 'prod' || 'dev' }}"
           # Show non-sensitive keys for debugging
           cat env.yaml | sed 's/: .*/: ***/'
