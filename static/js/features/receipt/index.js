@@ -377,6 +377,11 @@ export const initReceiptFeatures = () => {
         });
     }
 
+    // React to Zaim accounts update
+    window.addEventListener('zaim-accounts-updated', () => {
+        updateUnlinkedBannerState();
+    });
+
     // Initial banner state check
     updateUnlinkedBannerState();
 };

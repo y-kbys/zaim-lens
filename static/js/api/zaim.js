@@ -81,6 +81,7 @@ export async function refreshAllAccountDropdowns() {
         if (!response.ok) return;
         const data = await response.json();
         appState.accounts = data.accounts || [];
+        appState.accountsLoaded = true;
 
         const options = appState.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         const placeholder = '<option value="" disabled selected>アカウントを選択...</option>';
@@ -122,8 +123,16 @@ export async function refreshAllAccountDropdowns() {
             sessionStorage.removeItem('zaim_auth_pending');
         }
 
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('zaim-accounts-updated'));
+        }
+
         return appState.accounts;
     } catch (err) {
+        appState.accountsLoaded = true;
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('zaim-accounts-updated'));
+        }
         console.error("Failed to refresh account dropdowns:", err);
     }
 }
@@ -299,6 +308,12 @@ export const loadTargetAccounts = async () => {
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
         const accounts = data.accounts || [];
+        appState.accounts = accounts;
+        appState.accountsLoaded = true;
+
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('zaim-accounts-updated'));
+        }
 
         if (accounts.length === 0) {
             EL.editTargetAccount.innerHTML = '<option value="">Zaim設定が必要です</option>';
@@ -330,6 +345,10 @@ export const loadTargetAccounts = async () => {
 
         return true;
     } catch (err) {
+        appState.accountsLoaded = true;
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('zaim-accounts-updated'));
+        }
         console.error("Failed to load target accounts", err);
         EL.editTargetAccount.innerHTML = '<option value="">設定エラー</option>';
         EL.uploadTargetAccount.innerHTML = '<option value="">設定エラー</option>';

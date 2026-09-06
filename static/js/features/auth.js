@@ -199,6 +199,11 @@ export const initFirebaseAuth = async (callbacks = {}) => {
             } else {
                 appState.user = null;
                 appState.idToken = null;
+                appState.accounts = [];
+                appState.accountsLoaded = false;
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('zaim-accounts-updated'));
+                }
 
                 // ONLY show login overlay if auth state is confirmed negative
                 EL.loginOverlay.classList.remove('hidden');

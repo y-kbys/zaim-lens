@@ -121,11 +121,23 @@ export function validateReceiptForm() {
 }
 
 /**
+ * Pure logic to determine if unlinked banner should be shown
+ * @param {{ user?: any, accountsLoaded?: boolean, accounts?: any[] }} state
+ * @returns {boolean}
+ */
+export function isUnlinkedBannerVisible(state) {
+    if (!state || !state.user || !state.accountsLoaded) {
+        return false;
+    }
+    return !state.accounts || state.accounts.length === 0;
+}
+
+/**
  * Update unlinked guide banner visibility
  */
 export function updateUnlinkedBannerState() {
     if (!EL.unlinkedGuideBanner) return;
-    const isUnlinked = !appState.accounts || appState.accounts.length === 0;
+    const isUnlinked = isUnlinkedBannerVisible(appState);
     if (isUnlinked) {
         EL.unlinkedGuideBanner.classList.remove('hidden');
         if (EL.btnParse) {

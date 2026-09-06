@@ -60,6 +60,8 @@ export const appState = {
     parsedData: null,
     /** @type {ZaimAccount[]} */
     accounts: [],
+    /** @type {boolean} */
+    accountsLoaded: false,
     /** @type {HistoryItem[]} */
     fetchedHistory: [],
     /** @type {Set<string>} */
