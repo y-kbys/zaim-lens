@@ -47,6 +47,8 @@
  * @property {any} result
  * @property {string} [blobUri]
  * @property {string} [compressedBase64]
+ * @property {any} [error]
+ * @property {Promise<any>|null} [_parsePromise]
  */
 
 /**

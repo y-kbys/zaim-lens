@@ -180,10 +180,13 @@ export async function selectQueueItem(index) {
 
         if (appState.currentQueueIndex === index) {
             hideLoading();
-            if (item.status === 'complete') setupEditState(item.result);
-            else if (item.status === 'error') {
+            const targetItem = appState.queue[index];
+            const finalStatus = targetItem ? targetItem.status : /** @type {string} */ (item.status);
+            if (finalStatus === 'complete') {
+                setupEditState(targetItem ? targetItem.result : item.result);
+            } else if (finalStatus === 'error') {
                 showToast("解析に失敗しました。", 'warning');
-                setupEditState(item.result || { date: "", store: "", items: [] });
+                setupEditState((targetItem ? targetItem.result : item.result) || { date: "", store: "", items: [] });
             } else {
                 setupEditState({ date: "", store: "", items: [] });
             }
