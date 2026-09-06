@@ -23,8 +23,10 @@ FastAPI によるバックエンド（3層アーキテクチャ）と、Vanilla 
 
 ### Frontend Feature Modules (`/static/js/features/`)
 **Location**: `static/js/features/`  
-**Purpose**: 機能ドメインごとのフロントエンド実装（例: `receipt/`, `history/`）  
-**Rule**: Feature ごとに `ui.js` (DOM描画・イベント), `logic.js` or `queue.js` (状態・ロジック), `api.js` (バックエンド通信), `index.js` (初期化) に責務を分離する。
+**Purpose**: 機能ドメインごとのフロントエンド実装（例: `receipt/`, `history/`, `auth.js`, `settings.js`）  
+**Rule**:
+- 複雑なドメイン機能（`receipt/`, `history/` 等）はディレクトリに分割し、`ui.js` (DOM描画・イベント), `logic.js` または `queue.js` (状態・ロジック), `api.js` (バックエンド通信), `index.js` (初期化) に責務を分離する。画像前処理等の特定処理は `image.js` など専用サブモジュールに切り出す。
+- 単機能や設定系などのコンパクトな機能（`auth.js`, `settings.js` 等）は、過度な分割を避け単一モジュールとして同階層に配置可能とする。
 
 ### Frontend Shared & Infrastructure (`/static/js/api/`, `/static/js/utils/`, `/static/js/state.js`)
 **Location**: `static/js/`  

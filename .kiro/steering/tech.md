@@ -49,6 +49,9 @@ uv run pytest
 npm run build:css
 npm run watch:css
 
+# ライセンス一覧生成 (OSS_LICENSES.txt)
+npm run build:licenses
+
 # サーバー起動 (ローカル開発)
 uv run uvicorn main:app --reload --port 8000
 ```

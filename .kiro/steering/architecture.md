@@ -260,7 +260,17 @@ sequenceDiagram
 ---
 
 ## 6. テスト戦略
+### 6.1 バックエンド テストスイート (`uv run pytest`)
 - `tests/test_gemini_service.py`: Geminiモデルフォールバックチェーンおよびモック解析の検証。
+- `tests/test_gemini_parsing.py`: Geminiレスポンスのパースおよびデータ抽出ロジックの検証。
 - `tests/test_api_parse.py`: `/api/parse` エンドポイントの統合テスト。
 - `tests/test_db_encryption.py`: Fernet暗号化・復号の完全性検証。
 - `tests/test_gemini_credentials.py`: クレデンシャル保存・削除・マスキングの検証。
+- `tests/test_zaim_api.py`: Zaim APIエンドポイント・カテゴリ・重複チェック連携のテスト。
+- `tests/test_zaim_oauth.py`: Zaim OAuth 1.0aフローおよびセッション管理のテスト。
+- `tests/test_zaim_service.py`: Zaim支出明細構築および登録処理のテスト。
+
+### 6.2 フロントエンド テストスイート (`npm run test`)
+- `tests/test_history_logic.js`: 履歴コピーの日付範囲計算、レシート別グルーピング、選択件数集計の単体テスト。
+- `tests/test_receipt_queue_logic.js`: レシートキューの選択・スキップ・削除・状態遷移ロジックの単体テスト。
+- `tests/test_receipt_validation.js`: レシート入力値（日付・品目・金額・ステータス）のリアルタイムバリデーション単体テスト。
