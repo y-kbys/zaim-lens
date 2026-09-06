@@ -51,4 +51,6 @@ jobs:
         run: uv sync --locked
 
       - name: Run backend tests
+        env:
+          ENCRYPTION_KEY: dummy_test_encryption_key_for_ci
         run: uv run pytest
