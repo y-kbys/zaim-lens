@@ -8,7 +8,7 @@
   - _Requirements: 1.2_
   - _Boundary: receipt/image.js_
 - [x] 1.2 (P) APIクライアント層のエラー正規化とリクエストハンドリング
-  - `/api/parse-receipt` 呼び出しおよび認証ヘッダー付与の実装
+  - `/api/parse` 呼び出しおよび認証ヘッダー付与の実装
   - `/api/register` 呼び出し（`force` フラグ対応）の実装
   - HTTP 400（キー未設定/未連携）、HTTP 409（重複検知）、HTTP 429（レート制限）、HTTP 500 の各エラーレスポンスを適切な構造化オブジェクトへ正規化
   - バックエンドからのレスポンスおよび各種エラーが統一された形式で呼び出し元へ返却されること
@@ -25,23 +25,22 @@
 - [x] 2.1 複数入力ソースからの画像取り込み・キューイングとプレビュー制御
   - ファイル選択（`input[type="file"]`）、カメラ撮影（`capture="environment"`）、ドラッグ＆ドロップ、クリップボード貼り付け（`Paste` イベント）の入力ハンドリングを統合
   - 画像投入時に順次バックグラウンド圧縮を実行し、先頭画像のプレビューと「解析を実行」ボタンを活性化
-  - キュー内の各アイテムのステータス（未処理/解析中/完了/エラー）バッジおよび進捗インジケーター（X / Y 枚目）の表示更新
-  - キュー内レシートの個別削除処理の実装
+  - キュー内の進捗インジケーター（X / Y 枚目）の表示更新
   - 任意の入力方法で追加された複数画像がキューに登録され、プレビューと進捗が正しく表示されること
   - _Depends: 1.1, 1.3_
-  - _Requirements: 1.1, 1.3, 1.4_
-  - _Boundary: receipt/index.js, receipt/queue.js, _parser_panel.html_
+  - _Requirements: 1.1, 1.3_
+  - _Boundary: receipt/index.js, receipt/queue.js, templates/components/_parser_panel.html_
 - [x] 2.2 バックグラウンド順次解析制御・進捗表示およびエラー時の設定誘導
   - 「解析を実行」クリック時に解析処理を開始し、ローディングアニメーションの表示と二重送信防止制御を実装
   - 解析完了時に店舗名・購入日・品目一覧・ポイント利用額・マスタカテゴリを編集画面へバインド
   - APIキー未設定または Zaim 未連携エラー発生時に、該当設定モーダルを開く誘導ボタンとメッセージを表示
-  - レート制限（HTTP 429）やサーバーエラー時にトースト通知と再試行ボタンを提供
+  - レート制限（HTTP 429）やサーバーエラー時にトースト通知を表示
   - 解析完了後に明細編集画面へスムーズに遷移し、エラー時には適切な復帰導線が提供されること
   - _Depends: 1.2, 2.1_
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
   - _Boundary: receipt/queue.js, templates/components/_parser_panel.html_
 
-- [x] 3. コア機能 B: レシート明細のインタラクティブ編集・バリデーション
+- [x] 3. コア機能 B: レシート明細のインタラクティブ編集
 - [x] 3.1 店舗・日付・口座入力のバインドとカテゴリ/ジャンル連動セレクト
   - 店舗名・購入日・支出元口座（Zaim口座）の変更を即時バインドするイベント処理を実装
   - 明細テーブルにおけるカテゴリ変更イベントを監視し、選択されたカテゴリに属するジャンル一覧を動的にフィルタリングしてセレクトボックスを再構築
@@ -55,32 +54,24 @@
   - 明細の増減や金額・ポイント変更に伴い、合計金額表示が即座に再計算・反映されること
   - _Requirements: 3.3, 3.4_
   - _Boundary: receipt/ui.js_
-- [x] 3.3 必須項目バリデーションと登録ボタン制御
-  - 購入日の未入力チェック、品名空欄チェック、有効金額（1円以上整数）チェックを実装
-  - バリデーションエラー発生時に該当入力フィールドを赤枠ハイライト表示
-  - 不正入力が存在する場合は「Zaimに登録」ボタンを非活性化（Disabled）
-  - 入力不備がある状態で登録送信が行えず、不備が解消された時点で即座にボタンが活性化すること
-  - _Requirements: 3.5_
-  - _Boundary: receipt/ui.js_
 
 - [x] 4. コア機能 C: Zaim 支出登録・重複検知確認モーダルとアカウント連動
 - [x] 4.1 重複確認モーダルの制御と強制登録再送フロー
   - 「Zaimに登録」実行時のリクエストペイロード構築と API 送信処理の実装
-  - HTTP 409（重複検知）受信時に重複確認モーダル（`duplicate-modal`）を開き、既存支出情報（日付・金額・店舗）を表示
-  - モーダルで「強制的に登録」が選択された場合に `force: true` を付与して再送するフローの実装
+  - HTTP 409（重複検知）受信時に重複確認ダイアログ（`showConfirm`）を開き、既存支出情報（日付・金額・店舗）を表示
+  - 確認ダイアログで承認された場合に `force: true` を付与して再送するフローの実装
   - 登録成功時の成功トースト表示、キューの完了状態移行、および次レシートへの自動進行（`advanceQueue`）
-  - 重複時に確認モーダルから安全に強制登録でき、完了後に次レシートへスムーズに進行すること
-  - _Depends: 1.2, 3.3_
+  - 重複時に確認ダイアログから安全に強制登録でき、完了後に次レシートへスムーズに進行すること
+  - _Depends: 1.2, 3.2_
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
-  - _Boundary: receipt/ui.js, templates/components/_modals.html, receipt/api.js_
-- [x] 4.2 認証・Zaim 連携状態に応じた UI ガイドとマルチアカウント連動マスタ切り替え
-  - 未ログインまたは Zaim 未連携時にアップロードエリアへ案内バナーを表示し解析を制御
+  - _Boundary: receipt/ui.js, receipt/api.js, receipt/index.js_
+- [x] 4.2 マルチアカウント連動マスタ切り替え
   - Zaim アカウント選択ドロップダウンの変更を検知し、該当アカウントの口座一覧およびマスタカテゴリ/ジャンルを再取得して編集テーブルの選択肢を更新
   - アカウント切り替えに伴い、口座およびカテゴリ選択肢が即座に該当アカウントのものへ更新されること
-  - _Requirements: 5.1, 5.2, 5.3_
-  - _Boundary: receipt/ui.js, static/js/features/auth.js_
+  - _Requirements: 5.2, 5.3_
+  - _Boundary: receipt/ui.js, receipt/index.js, api/zaim.js_
 
-- [x] 5. スキップ制御と完了ライフサイクルの改善
+- [x] 5. スキップ制御と完了ライフサイクル
 - [x] 5.1 (P) 登録成功件数の追跡とキューセッション初期化
   - `appState` に `registeredReceiptCount` を追加し、新規キュー投入時（`handleImageFiles`）に 0 に初期化
   - Zaim への支出登録成功時に `registeredReceiptCount` をインクリメント
@@ -96,9 +87,47 @@
   - _Requirements: 1.5, 4.5, 4.6_
   - _Boundary: receipt/queue.js, receipt/index.js, receipt/ui.js_
 
-- [x] 6. 統合検証
-- [x]* 6.1 全スキップ時および1件以上登録時の画面遷移・キューライフサイクルの検証
-  - 複数枚のレシートを投入して全件スキップした場合に完了画面が出ずトップ画面へ戻ることを検証
-  - 1件以上登録して残りをスキップした場合に完了画面が正常に表示されることを検証
-  - _Requirements: 1.5, 4.5, 4.6_
-  - _Boundary: receipt/queue.js, receipt/ui.js_
+- [ ] 6. キュー個別操作・サムネイル一覧および再試行UIの拡張
+- [ ] 6.1 (P) キューサムネイル一覧表示と任意アイテム選択・安全な個別削除処理の実装
+  - `_parser_panel.html` および `ui.js` に複数枚投入時のキューサムネイル一覧（`renderQueueThumbnails`）を追加
+  - 各サムネイルにインデックス番号、状態バッジ（待機/解析中/完了/エラー）、および個別削除 `×` ボタンを配置
+  - サムネイルクリック時に `selectQueueItem(index)` を呼び出し、任意レシートへアクティブ表示を即時切り替え
+  - 個別削除実行時、`removeQueueItem(index)` 内で `parsePromises` のインデックス整合性を担保し、進行中解析の破棄または安全なインデックスシフトを処理
+  - 複数画像投入時にサムネイル一覧が表示され、クリックでの切り替えおよび `×` ボタンでの削除が正常に行えること
+  - _Requirements: 1.3, 1.4_
+  - _Boundary: receipt/ui.js, receipt/queue.js, templates/components/_parser_panel.html_
+- [ ] 6.2 (P) 解析失敗・レート制限時のインライン再試行機能の実装
+  - キューアイテムの解析失敗（レート制限429、ネットワーク500等）発生時、トーストに加えてインラインの再試行ボタン（`#btn-parse-retry`）を表示
+  - 再試行ボタン押下時に `retryQueueItem(index)` を実行し、該当アイテムのみ再パースを要求してステータスを `complete` へ更新
+  - エラーとなったレシートで「再試行」ボタンが表示され、クリック時に単一レシートの再解析が成功して明細が反映されること
+  - _Requirements: 2.4_
+  - _Boundary: receipt/queue.js, templates/components/_parser_panel.html, receipt/index.js_
+
+- [ ] 7. リアルタイムバリデーションおよび連携ガイドバナーの拡充
+- [ ] 7.1 (P) 必須項目のリアルタイム検証と赤枠ハイライト・登録ボタン制御の実装
+  - `receipt/ui.js` に `validateReceiptForm()` を実装し、日付・品名・金額の `input`/`change` イベントを監視
+  - 日付が未入力の場合、または品名が空欄・金額が不正（非整数や0円のみ）な行が存在する場合、該当入力フィールドに `border-red-500` / `ring-red-500` を付与
+  - 入力不備が存在する間は「Zaimへ登録」ボタンを `disabled` に制御し、全項目が妥当になった瞬間に即座に活性化
+  - 不正な入力値に対して即座に赤枠が表示され登録ボタンが無効化され、正しい値を入力すると即座に有効化されること
+  - _Requirements: 3.5_
+  - _Boundary: receipt/ui.js, receipt/index.js_
+- [ ] 7.2 (P) 未ログイン・Zaim未連携時のガイドバナーコンポーネント表示制御
+  - `_parser_panel.html` のアップロードエリアに未連携案内ガイドバナー（`#unlinked-guide-banner`）を配置
+  - ユーザーが未ログインまたは Zaim 連携アカウント数が 0 件の場合にバナーを表示し、「Zaim連携設定」を開くボタンを提供
+  - 未連携時は「解析を実行」ボタンを非活性化して無効な解析リクエスト送信を防止
+  - Zaim未連携時にアップロード画面へ明確なガイドバナーが表示され、解析ボタンが無効化されていること
+  - _Requirements: 5.1_
+  - _Boundary: templates/components/_parser_panel.html, receipt/ui.js, static/js/features/auth.js_
+
+- [ ] 8. 統合検証と単体テスト
+- [ ] 8.1 (P) 入力バリデーション純粋関数の単体テスト実装
+  - `tests/test_receipt_validation.js` を作成し、`validateReceiptForm` の各種入力ケース（正常系、日付欠落、品名空白、金額不正）をテスト
+  - `node --test tests/test_receipt_validation.js` を実行し、全テストケースがパスすること
+  - _Requirements: 3.5_
+  - _Boundary: tests/test_receipt_validation.js_
+- [ ] 8.2 キュー操作・再試行・全スキップ復帰の統合検証
+  - `tests/test_receipt_queue_logic.js` にサムネイル選択・個別削除時のステータス遷移テストを追加
+  - `node --test tests/*.js` および `uv run pytest` を実行し、既存テストおよび新機能の回帰がないことを検証
+  - すべてのテストが成功し、全要件（Req 1.1〜5.3）の動作が保証されていること
+  - _Requirements: 1.3, 1.4, 1.5, 2.4, 4.5, 4.6_
+  - _Boundary: tests/test_receipt_queue_logic.js_
