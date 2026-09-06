@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "scripts": {
     "type-check": "npx --package typescript tsc -p jsconfig.json --noEmit",
     "test": "node --test tests/*.js",
