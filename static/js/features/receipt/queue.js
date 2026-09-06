@@ -6,8 +6,63 @@ import { ensureZaimDataAvailable } from '../../api/zaim.js';
 import { updateBatchProgressUI, setupEditState, resetApp } from './ui.js';
 import { openGeminiSettings, openZaimSettings } from '../settings.js';
 
-// Each queue item's parsing Promise is tracked here
+// Each queue item's parsing Promise is tracked here (kept for compatibility)
 export const parsePromises = new Map();
+
+/**
+ * Parses a single queue item
+ * @param {any} item
+ */
+export async function parseSingleItem(item) {
+    item.status = 'parsing';
+    updateBatchProgressUI();
+
+    const promise = (async () => {
+        try {
+            if (!item.compressedBase64 && item.file) {
+                item.compressedBase64 = await compressImage(item.file);
+                item.file = null;
+            }
+
+            const targetAccountId = EL.uploadTargetAccount ? EL.uploadTargetAccount.value : "1";
+            try {
+                await ensureZaimDataAvailable(targetAccountId);
+            } catch (e) {
+                console.error("Zaim data prep failed", e);
+            }
+
+            const result = await parseReceiptImage(item.compressedBase64, targetAccountId);
+
+            // Add point usage logic as a negative item if present
+            if (result && result.point_usage > 0) {
+                if (!result.items || !Array.isArray(result.items)) result.items = [];
+                result.items.push({
+                    name: "ポイント利用",
+                    price: -result.point_usage,
+                    category_id: result.items.length > 0 ? result.items[0].category_id : 101,
+                    genre_id: result.items.length > 0 ? result.items[0].genre_id : 10101
+                });
+                result.point_usage = 0;
+            }
+
+            item.result = result;
+            item.status = 'complete';
+            item.error = null;
+            return result;
+        } catch (err) {
+            console.error("Failed to parse item:", err);
+            item.status = 'error';
+            item.error = err.message || '解析に失敗しました';
+            item.result = { error: item.error, items: [] };
+            throw err;
+        } finally {
+            updateBatchProgressUI();
+        }
+    })();
+
+    item._parsePromise = promise;
+    return promise;
+}
 
 /**
  * Handle new files added to the queue
@@ -19,7 +74,9 @@ export const handleImageFiles = async (files) => {
         file,
         status: 'idle',
         result: null,
-        compressedBase64: null
+        compressedBase64: null,
+        error: null,
+        _parsePromise: null
     }));
     appState.currentQueueIndex = 0;
     appState.registeredReceiptCount = 0;
@@ -48,6 +105,7 @@ export const handleImageFiles = async (files) => {
                     try {
                         item.compressedBase64 = await compressImage(item.file);
                         item.file = null;
+                        updateBatchProgressUI();
                     } catch (e) {
                         console.error(`Failed to compress image ${i}:`, e);
                     }
@@ -64,23 +122,136 @@ export const handleImageFiles = async (files) => {
 };
 
 /**
+ * Select an item in the queue to become active
+ * @param {number} index
+ */
+export async function selectQueueItem(index) {
+    if (index < 0 || index >= appState.queue.length) return;
+    appState.currentQueueIndex = index;
+    const item = appState.queue[index];
+
+    if (!item.compressedBase64 && item.file) {
+        showLoading("画像を最適化中...");
+        try {
+            item.compressedBase64 = await compressImage(item.file);
+            item.file = null;
+        } catch (e) {
+            console.error("Manual compression failed", e);
+        } finally {
+            if (appState.currentQueueIndex === index) {
+                hideLoading();
+            }
+        }
+    }
+
+    appState.currentImageUri = item.compressedBase64;
+    EL.imagePreview.src = appState.currentImageUri || "";
+    updateBatchProgressUI();
+
+    // If still in upload screen and not parsed yet
+    if (EL.stateEdit.classList.contains('hidden') && item.status === 'idle') {
+        return;
+    }
+
+    if (item.status === 'complete') {
+        hideLoading();
+        setupEditState(item.result);
+    } else if (item.status === 'error') {
+        hideLoading();
+        showToast("この画像の解析に失敗していました。「再試行」するか手入力で編集してください。", 'warning');
+        setupEditState(item.result || { date: "", store: "", items: [] });
+    } else {
+        setupEditState(null);
+        showLoading("解析結果を待機中...");
+
+        if (!appState.isParsingLoopRunning) {
+            startBackgroundParsing();
+        }
+
+        const waitLoop = async () => {
+            while (appState.currentQueueIndex === index) {
+                if (item.status === 'complete' || item.status === 'error') break;
+                if (!appState.isParsingLoopRunning) break;
+                await new Promise(r => setTimeout(r, 100));
+            }
+        };
+
+        await waitLoop();
+
+        if (appState.currentQueueIndex === index) {
+            hideLoading();
+            if (item.status === 'complete') setupEditState(item.result);
+            else if (item.status === 'error') {
+                showToast("解析に失敗しました。", 'warning');
+                setupEditState(item.result || { date: "", store: "", items: [] });
+            } else {
+                setupEditState({ date: "", store: "", items: [] });
+            }
+        }
+    }
+}
+
+/**
  * Remove an item from the queue
  * @param {number} index 
  */
-export function removeQueueItem(index) {
+export async function removeQueueItem(index) {
     if (index < 0 || index >= appState.queue.length) return;
+    const oldIndex = appState.currentQueueIndex;
     appState.queue.splice(index, 1);
-    parsePromises.delete(index);
 
     if (appState.queue.length === 0) {
-        appState.currentQueueIndex = -1;
-        EL.imagePreviewContainer.classList.add('hidden');
-        EL.btnParse.classList.add('hidden');
-        EL.btnParse.disabled = true;
-    } else if (appState.currentQueueIndex >= appState.queue.length) {
-        appState.currentQueueIndex = appState.queue.length - 1;
+        resetApp();
+        return;
     }
+
+    if (index === oldIndex) {
+        const nextIndex = Math.min(index, appState.queue.length - 1);
+        await selectQueueItem(nextIndex);
+    } else if (index < oldIndex) {
+        appState.currentQueueIndex = oldIndex - 1;
+        updateBatchProgressUI();
+    } else {
+        updateBatchProgressUI();
+    }
+}
+
+/**
+ * Retry parsing an item that failed
+ * @param {number} index
+ */
+export async function retryQueueItem(index) {
+    if (index < 0 || index >= appState.queue.length) return;
+    const item = appState.queue[index];
+    item.status = 'idle';
+    item.error = null;
+    item._parsePromise = null;
     updateBatchProgressUI();
+
+    if (index === appState.currentQueueIndex) {
+        showLoading("AIでレシートを再解析中...");
+    }
+
+    try {
+        await parseSingleItem(item);
+        if (index === appState.currentQueueIndex) {
+            hideLoading();
+            setupEditState(item.result);
+            showToast("再解析が完了しました。", "success");
+        }
+    } catch (err) {
+        if (index === appState.currentQueueIndex) {
+            hideLoading();
+            setupEditState(item.result || { date: "", store: "", items: [] });
+            if (/** @type {any} */ (err).status === 429) {
+                showToast("Geminiのレートリミットに達しました。時間を置いてから再度お試しください。", 'warning');
+            } else {
+                showToast("再解析に失敗しました。", "warning");
+            }
+        }
+    } finally {
+        updateBatchProgressUI();
+    }
 }
 
 /**
@@ -106,69 +277,7 @@ export async function advanceQueue() {
         return;
     }
 
-    const nextItem = appState.queue[appState.currentQueueIndex];
-    updateBatchProgressUI();
-
-    if (!nextItem.compressedBase64 && nextItem.file) {
-        showLoading("画像を最適化中...");
-        try {
-            nextItem.compressedBase64 = await compressImage(nextItem.file);
-            nextItem.file = null;
-        } catch (e) {
-            console.error("Manual compression failed", e);
-        } finally {
-            if (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
-                hideLoading();
-            }
-        }
-    }
-
-    appState.currentImageUri = nextItem.compressedBase64;
-    EL.imagePreview.src = appState.currentImageUri || "";
-
-    if (nextItem.status === 'complete') {
-        hideLoading();
-        setupEditState(nextItem.result);
-    } else if (nextItem.status === 'error') {
-        hideLoading();
-        showToast("この画像の解析に失敗していました。スキップするか、手入力で編集してください。", 'warning');
-        setupEditState({ date: "", store: "", items: [] });
-    } else {
-        setupEditState(null); // Show waiting UI
-        showLoading("解析結果を待機中...");
-        
-        if (!appState.isParsingLoopRunning) {
-            startBackgroundParsing();
-        }
-
-        const waitLoop = async () => {
-            while (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
-                const p = parsePromises.get(appState.currentQueueIndex);
-                if (p) {
-                    try { await p; } catch (e) {}
-                    break;
-                }
-                if (!appState.isParsingLoopRunning) {
-                    break;
-                }
-                await new Promise(r => setTimeout(r, 100));
-            }
-        };
-
-        await waitLoop();
-
-        // Re-check index in case user skipped again while waiting
-        if (appState.currentQueueIndex === appState.queue.indexOf(nextItem)) {
-            hideLoading();
-            if (/** @type {any} */ (nextItem).status === 'complete') setupEditState(nextItem.result);
-            else if (/** @type {any} */ (nextItem).status === 'error') {
-                showToast("解析に失敗しました。", 'warning');
-                setupEditState({ date: "", store: "", items: [] });
-            } else {
-                setupEditState({ date: "", store: "", items: [] });
-            }
-        }
-    }
+    await selectQueueItem(appState.currentQueueIndex);
 }
 
 /**
@@ -185,48 +294,7 @@ export async function startBackgroundParsing() {
             const item = appState.queue[i];
             if (item.status !== 'idle') continue;
 
-            // Create promise for the job
-            const promise = (async () => {
-                item.status = 'parsing';
-                updateBatchProgressUI();
-                
-                try {
-                    if (!item.compressedBase64 && item.file) {
-                        item.compressedBase64 = await compressImage(item.file);
-                        item.file = null;
-                    }
-
-                    const targetAccountId = EL.uploadTargetAccount ? EL.uploadTargetAccount.value : "1";
-                    try {
-                        await ensureZaimDataAvailable(targetAccountId);
-                    } catch (e) {
-                        console.error("Zaim data prep failed", e);
-                    }
-
-                    const result = await parseReceiptImage(item.compressedBase64, targetAccountId);
-
-                    // Add point usage logic as a negative item if present
-                    if (result && result.point_usage > 0) {
-                        if (!result.items || !Array.isArray(result.items)) result.items = [];
-                        result.items.push({
-                            name: "ポイント利用",
-                            price: -result.point_usage,
-                            category_id: result.items.length > 0 ? result.items[0].category_id : 101,
-                            genre_id: result.items.length > 0 ? result.items[0].genre_id : 10101
-                        });
-                        result.point_usage = 0;
-                    }
-
-                    item.result = result;
-                    item.status = 'complete';
-                } catch (err) {
-                    console.error(`Failed to parse item ${i}:`, err);
-                    item.status = 'error';
-                    item.result = { error: err.message, items: [] };
-                    throw err; // Re-throw to catch it globally below
-                }
-            })();
-
+            const promise = parseSingleItem(item);
             parsePromises.set(i, promise);
 
             try {
@@ -259,7 +327,7 @@ export async function startBackgroundParsing() {
                  if (/** @type {any} */ (item).status === 'complete') setupEditState(item.result);
                  else if (/** @type {any} */ (item).status === 'error') {
                      showToast("解析に失敗しました。", 'warning');
-                     setupEditState({ date: "", store: "", items: [] });
+                     setupEditState(item.result || { date: "", store: "", items: [] });
                  }
             }
 
@@ -277,4 +345,3 @@ export async function startBackgroundParsing() {
         }
     }
 }
-

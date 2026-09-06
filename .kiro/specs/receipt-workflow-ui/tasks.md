@@ -87,8 +87,8 @@
   - _Requirements: 1.5, 4.5, 4.6_
   - _Boundary: receipt/queue.js, receipt/index.js, receipt/ui.js_
 
-- [ ] 6. キュー個別操作・サムネイル一覧および再試行UIの拡張
-- [ ] 6.1 (P) キューサムネイル一覧表示と任意アイテム選択・安全な個別削除処理の実装
+- [x] 6. キュー個別操作・サムネイル一覧および再試行UIの拡張
+- [x] 6.1 (P) キューサムネイル一覧表示と任意アイテム選択・安全な個別削除処理の実装
   - `_parser_panel.html` および `ui.js` に複数枚投入時のキューサムネイル一覧（`renderQueueThumbnails`）を追加
   - 各サムネイルにインデックス番号、状態バッジ（待機/解析中/完了/エラー）、および個別削除 `×` ボタンを配置
   - サムネイルクリック時に `selectQueueItem(index)` を呼び出し、任意レシートへアクティブ表示を即時切り替え
@@ -96,22 +96,22 @@
   - 複数画像投入時にサムネイル一覧が表示され、クリックでの切り替えおよび `×` ボタンでの削除が正常に行えること
   - _Requirements: 1.3, 1.4_
   - _Boundary: receipt/ui.js, receipt/queue.js, templates/components/_parser_panel.html_
-- [ ] 6.2 (P) 解析失敗・レート制限時のインライン再試行機能の実装
+- [x] 6.2 (P) 解析失敗・レート制限時のインライン再試行機能の実装
   - キューアイテムの解析失敗（レート制限429、ネットワーク500等）発生時、トーストに加えてインラインの再試行ボタン（`#btn-parse-retry`）を表示
   - 再試行ボタン押下時に `retryQueueItem(index)` を実行し、該当アイテムのみ再パースを要求してステータスを `complete` へ更新
   - エラーとなったレシートで「再試行」ボタンが表示され、クリック時に単一レシートの再解析が成功して明細が反映されること
   - _Requirements: 2.4_
   - _Boundary: receipt/queue.js, templates/components/_parser_panel.html, receipt/index.js_
 
-- [ ] 7. リアルタイムバリデーションおよび連携ガイドバナーの拡充
-- [ ] 7.1 (P) 必須項目のリアルタイム検証と赤枠ハイライト・登録ボタン制御の実装
+- [x] 7. リアルタイムバリデーションおよび連携ガイドバナーの拡充
+- [x] 7.1 (P) 必須項目のリアルタイム検証と赤枠ハイライト・登録ボタン制御の実装
   - `receipt/ui.js` に `validateReceiptForm()` を実装し、日付・品名・金額の `input`/`change` イベントを監視
   - 日付が未入力の場合、または品名が空欄・金額が不正（非整数や0円のみ）な行が存在する場合、該当入力フィールドに `border-red-500` / `ring-red-500` を付与
   - 入力不備が存在する間は「Zaimへ登録」ボタンを `disabled` に制御し、全項目が妥当になった瞬間に即座に活性化
   - 不正な入力値に対して即座に赤枠が表示され登録ボタンが無効化され、正しい値を入力すると即座に有効化されること
   - _Requirements: 3.5_
   - _Boundary: receipt/ui.js, receipt/index.js_
-- [ ] 7.2 (P) 未ログイン・Zaim未連携時のガイドバナーコンポーネント表示制御
+- [x] 7.2 (P) 未ログイン・Zaim未連携時のガイドバナーコンポーネント表示制御
   - `_parser_panel.html` のアップロードエリアに未連携案内ガイドバナー（`#unlinked-guide-banner`）を配置
   - ユーザーが未ログインまたは Zaim 連携アカウント数が 0 件の場合にバナーを表示し、「Zaim連携設定」を開くボタンを提供
   - 未連携時は「解析を実行」ボタンを非活性化して無効な解析リクエスト送信を防止
@@ -119,13 +119,13 @@
   - _Requirements: 5.1_
   - _Boundary: templates/components/_parser_panel.html, receipt/ui.js, static/js/features/auth.js_
 
-- [ ] 8. 統合検証と単体テスト
-- [ ] 8.1 (P) 入力バリデーション純粋関数の単体テスト実装
+- [x] 8. 統合検証と単体テスト
+- [x] 8.1 (P) 入力バリデーション純粋関数の単体テスト実装
   - `tests/test_receipt_validation.js` を作成し、`validateReceiptForm` の各種入力ケース（正常系、日付欠落、品名空白、金額不正）をテスト
   - `node --test tests/test_receipt_validation.js` を実行し、全テストケースがパスすること
   - _Requirements: 3.5_
   - _Boundary: tests/test_receipt_validation.js_
-- [ ] 8.2 キュー操作・再試行・全スキップ復帰の統合検証
+- [x] 8.2 キュー操作・再試行・全スキップ復帰の統合検証
   - `tests/test_receipt_queue_logic.js` にサムネイル選択・個別削除時のステータス遷移テストを追加
   - `node --test tests/*.js` および `uv run pytest` を実行し、既存テストおよび新機能の回帰がないことを検証
   - すべてのテストが成功し、全要件（Req 1.1〜5.3）の動作が保証されていること

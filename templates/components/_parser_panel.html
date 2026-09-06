@@ -11,8 +11,25 @@
         </div>
     </div>
 
+    <!-- Queue Thumbnails Bar (visible when multiple receipts) -->
+    <div id="queue-thumbnails-container"
+        class="hidden flex space-x-2 overflow-x-auto py-2 px-1 mb-2 hide-scrollbar z-20 border-b border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-sm">
+        <!-- Injected by ui.js renderQueueThumbnails() -->
+    </div>
+
     <!-- ====== State 1: Upload ====== -->
     <section id="state-upload" class="flex flex-col items-center justify-center h-full space-y-6 pt-10">
+        <!-- Unlinked Guide Banner -->
+        <div id="unlinked-guide-banner" class="hidden w-full p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-xl text-amber-800 dark:text-amber-200 text-sm flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 dark:text-amber-400 text-xl flex-shrink-0"></i>
+                <span>Zaimアカウントが未連携です。レシート登録を行うにはZaim連携が必要です。</span>
+            </div>
+            <button id="btn-unlinked-zaim-connect" type="button" class="whitespace-nowrap px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition active:scale-95 shadow">
+                <i class="fa-solid fa-link mr-1"></i> 連携を設定する
+            </button>
+        </div>
+
         <div class="text-center">
             <p class="text-gray-600 dark:text-gray-300 mb-2">購入履歴の画像を選択</p>
         </div>
@@ -70,11 +87,15 @@
     <!-- ====== State 2: Edit & Review ====== -->
     <section id="state-edit" class="hidden space-y-3">
         <div
-            class="bg-blue-50 dark:bg-blue-900/40 p-2 rounded-lg border border-blue-200 dark:border-blue-800">
+            class="bg-blue-50 dark:bg-blue-900/40 p-2 rounded-lg border border-blue-200 dark:border-blue-800 flex justify-between items-center">
             <div class="flex items-center text-blue-800 dark:text-blue-300 text-xs font-medium">
                 <i class="fa-solid fa-circle-info mr-1"></i> 内容を確認・修正してください
             </div>
+            <button id="btn-parse-retry" type="button" class="hidden text-xs bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1 rounded-full shadow transition-all flex items-center">
+                <i class="fa-solid fa-rotate-right mr-1.5"></i> 再試行
+            </button>
         </div>
+
 
         <div class="flex items-start space-x-3">
             <div id="receipt-thumbnail-container"

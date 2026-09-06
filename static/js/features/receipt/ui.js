@@ -2,10 +2,202 @@ import { appState } from '../../state.js';
 import { EL, showToast, showLoading, hideLoading, switchState, generateCategoryOptions, generateGenreOptions } from '../../utils/dom.js';
 import { getPrefixedKey } from '../../utils/common.js';
 import { getZaimMasterData } from '../../api/zaim.js';
+import { selectQueueItem, removeQueueItem } from './queue.js';
 
 let currentSetupRequestId = 0;
 
+/**
+ * Pure validation logic for receipt edit state
+ * @param {{ date?: string, items?: Array<{ name?: string, price?: number|string, deleted?: boolean }> }} data
+ * @returns {{ isValid: boolean, hasDate: boolean, validItemCount: number, invalidItemIndices: number[] }}
+ */
+export function validateReceiptData(data) {
+    if (!data) {
+        return { isValid: false, hasDate: false, validItemCount: 0, invalidItemIndices: [] };
+    }
+
+    const dateStr = (data.date || '').trim();
+    const hasDate = Boolean(dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr));
+
+    const items = data.items || [];
+    let validItemCount = 0;
+    const invalidItemIndices = [];
+
+    items.forEach((item, index) => {
+        if (item.deleted) return;
+
+        const name = (item.name || '').trim();
+        const rawPrice = item.price;
+        const numPrice = Number(rawPrice);
+        const isPriceValidInt = rawPrice !== '' && rawPrice !== null && rawPrice !== undefined && Number.isInteger(numPrice);
+
+        if (!name && (numPrice !== 0 || !isPriceValidInt)) {
+            invalidItemIndices.push(index);
+        } else if (!isPriceValidInt) {
+            invalidItemIndices.push(index);
+        } else if (name && numPrice !== 0) {
+            validItemCount++;
+        }
+    });
+
+    const isValid = hasDate && validItemCount > 0 && invalidItemIndices.length === 0;
+
+    return {
+        isValid,
+        hasDate,
+        validItemCount,
+        invalidItemIndices
+    };
+}
+
+/**
+ * Validates DOM form inputs and updates UI highlights & register button state
+ */
+export function validateReceiptForm() {
+    if (!appState.parsedData) {
+        if (EL.btnRegister) {
+            EL.btnRegister.disabled = true;
+            EL.btnRegister.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        return { isValid: false, hasDate: false, validItemCount: 0, invalidItemIndices: [] };
+    }
+
+    if (EL.editDate) {
+        appState.parsedData.date = EL.editDate.value;
+    }
+
+    const result = validateReceiptData(appState.parsedData);
+
+    // Date highlight
+    if (EL.editDate) {
+        if (!result.hasDate && EL.editDate.value.trim() === '') {
+            EL.editDate.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+        } else {
+            EL.editDate.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+        }
+    }
+
+    // Item highlights
+    const itemRows = EL.itemsContainer ? EL.itemsContainer.children : [];
+    let activeIndex = 0;
+    (appState.parsedData.items || []).forEach((item, idx) => {
+        if (item.deleted) return;
+        const row = itemRows[activeIndex];
+        if (row) {
+            const nameInput = row.querySelector('.name-input');
+            const priceInput = row.querySelector('.price-input');
+            const isInvalid = result.invalidItemIndices.includes(idx);
+            if (isInvalid) {
+                if (!item.name || !item.name.trim()) {
+                    nameInput?.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                } else {
+                    nameInput?.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+                }
+                const rawPrice = item.price;
+                const numPrice = Number(rawPrice);
+                if (rawPrice === '' || !Number.isInteger(numPrice)) {
+                    priceInput?.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                } else {
+                    priceInput?.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+                }
+            } else {
+                nameInput?.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+                priceInput?.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+            }
+        }
+        activeIndex++;
+    });
+
+    if (EL.btnRegister) {
+        EL.btnRegister.disabled = !result.isValid;
+        if (!result.isValid) {
+            EL.btnRegister.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            EL.btnRegister.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Update unlinked guide banner visibility
+ */
+export function updateUnlinkedBannerState() {
+    if (!EL.unlinkedGuideBanner) return;
+    const isUnlinked = !appState.accounts || appState.accounts.length === 0;
+    if (isUnlinked) {
+        EL.unlinkedGuideBanner.classList.remove('hidden');
+        if (EL.btnParse) {
+            EL.btnParse.disabled = true;
+            EL.btnParse.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    } else {
+        EL.unlinkedGuideBanner.classList.add('hidden');
+        if (EL.btnParse && appState.queue && appState.queue.length > 0) {
+            EL.btnParse.disabled = false;
+            EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
+
+/**
+ * Render horizontal queue thumbnail chips
+ */
+export function renderQueueThumbnails() {
+    if (!EL.queueThumbnailsContainer) return;
+
+    if (!appState.queue || appState.queue.length <= 1) {
+        EL.queueThumbnailsContainer.classList.add('hidden');
+        EL.queueThumbnailsContainer.innerHTML = '';
+        return;
+    }
+
+    EL.queueThumbnailsContainer.classList.remove('hidden');
+    EL.queueThumbnailsContainer.innerHTML = '';
+
+    appState.queue.forEach((item, idx) => {
+        const isActive = idx === appState.currentQueueIndex;
+        const chip = document.createElement('div');
+        chip.className = `flex-shrink-0 flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-all ${
+            isActive
+                ? 'bg-blue-100 dark:bg-blue-900/60 border-blue-500 text-blue-900 dark:text-blue-100 shadow-sm font-bold scale-[1.02]'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+        }`;
+
+        let statusIcon = '<i class="fa-regular fa-clock text-gray-400"></i>';
+        if (item.status === 'parsing') {
+            statusIcon = '<i class="fa-solid fa-spinner fa-spin text-blue-500"></i>';
+        } else if (item.status === 'complete') {
+            statusIcon = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+        } else if (item.status === 'error') {
+            statusIcon = '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+        }
+
+        chip.innerHTML = `
+            ${statusIcon}
+            <span>#${idx + 1}</span>
+            <button type="button" class="delete-chip-btn text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 ml-1 transition-colors" title="このレシートを削除">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        `;
+
+        chip.addEventListener('click', (e) => {
+            if (/** @type {HTMLElement} */(e.target).closest('.delete-chip-btn')) {
+                e.stopPropagation();
+                removeQueueItem(idx);
+            } else {
+                selectQueueItem(idx);
+            }
+        });
+
+        EL.queueThumbnailsContainer.appendChild(chip);
+    });
+}
+
 export function updateBatchProgressUI() {
+    renderQueueThumbnails();
+
     if (appState.currentQueueIndex === -1 || appState.queue.length <= 1) {
         EL.batchProgressContainer.classList.add('hidden');
         return;
@@ -61,6 +253,9 @@ export async function resetApp() {
     EL.btnParse.classList.add('hidden');
     EL.btnParse.disabled = true;
     EL.successReceiptIdContainer.classList.add('hidden');
+    if (EL.btnParseRetry) EL.btnParseRetry.classList.add('hidden');
+
+    updateUnlinkedBannerState();
     switchState('state-upload');
 }
 
@@ -72,7 +267,7 @@ export async function loadZaimAccounts(targetData = null) {
             if (appState.accounts && appState.accounts.length > 0) {
                 targetAccountId = appState.accounts[0].id;
             } else {
-                targetAccountId = "1"; // Absolute last resort, though unlikely to work if user has no account "1"
+                targetAccountId = "1";
             }
         }
         const { accounts, masterData } = await getZaimMasterData(targetAccountId);
@@ -98,13 +293,11 @@ export async function loadZaimAccounts(targetData = null) {
 
                 const isGenreValid = masterData.master_genres.some(g => g.id == item.genre_id && g.category_id == item.category_id);
                 if (!isGenreValid) {
-                    // Try default fallback (category*100 + 99)
                     const genre99 = item.category_id * 100 + 99;
                     const exists99 = masterData.master_genres.find(g => g.id == genre99 && g.category_id == item.category_id);
                     if (exists99) {
                         item.genre_id = genre99;
                     } else {
-                        // If even fallback doesn't exist, pick the first genre of the category
                         const firstGenre = masterData.master_genres.find(g => g.category_id == item.category_id);
                         if (firstGenre) {
                             item.genre_id = firstGenre.id;
@@ -131,9 +324,12 @@ export async function loadZaimAccounts(targetData = null) {
         } else {
             EL.editFromAccount.value = "";
         }
+
+        updateUnlinkedBannerState();
     } catch (err) {
         console.error("Failed to load Zaim accounts/categories", err);
         EL.editFromAccount.innerHTML = '<option value="">読込失敗</option>';
+        updateUnlinkedBannerState();
         throw err;
     }
 }
@@ -149,6 +345,8 @@ export async function setupEditState(data) {
         EL.totalAmount.textContent = "¥0";
         EL.btnRegisterCount.textContent = "0";
         appState.parsedData = null;
+        if (EL.btnParseRetry) EL.btnParseRetry.classList.add('hidden');
+        validateReceiptForm();
         return;
     }
 
@@ -182,6 +380,16 @@ export async function setupEditState(data) {
 
     renderItemsList();
 
+    // Show/hide retry button based on queue item status
+    if (EL.btnParseRetry) {
+        const currentItem = appState.queue[appState.currentQueueIndex];
+        if (currentItem && currentItem.status === 'error') {
+            EL.btnParseRetry.classList.remove('hidden');
+        } else {
+            EL.btnParseRetry.classList.add('hidden');
+        }
+    }
+
     if (appState.currentImageUri) {
         EL.receiptThumbnailContainer.classList.remove('hidden');
         EL.receiptThumbnailContainer.classList.add('thumbnail-loading');
@@ -207,6 +415,7 @@ export async function setupEditState(data) {
         EL.receiptThumbnailContainer.classList.add('hidden');
     }
 
+    validateReceiptForm();
     switchState('state-edit');
 }
 
@@ -275,6 +484,7 @@ export function renderItemsList() {
             item.deleted = true;
             if (data === appState.parsedData) {
                 renderItemsList();
+                validateReceiptForm();
                 EL.snackbar.classList.remove('hidden');
                 EL.snackbar.classList.add('show');
                 EL.snackbar.classList.remove('snackbar-fade-out');
@@ -283,18 +493,28 @@ export function renderItemsList() {
         });
 
         nameInput.addEventListener('focus', (e) => /** @type {HTMLInputElement} */(e.target).select());
+        nameInput.addEventListener('input', (e) => {
+            item.name = /** @type {HTMLInputElement} */(e.target).value;
+            validateReceiptForm();
+        });
         nameInput.addEventListener('change', (e) => {
             item.name = /** @type {HTMLInputElement} */(e.target).value;
+            validateReceiptForm();
         });
 
         priceInput.addEventListener('focus', (e) => /** @type {HTMLInputElement} */(e.target).select());
         priceInput.addEventListener('input', (e) => {
             const val = /** @type {HTMLInputElement} */(e.target).value;
             /** @type {HTMLElement} */(/** @type {HTMLElement} */(e.target).parentElement).style.width = `calc(${Math.max(3, val.length)}ch + 2.5rem)`;
+            item.price = val === '' ? '' : parseInt(val);
+            validateReceiptForm();
         });
         priceInput.addEventListener('change', (e) => {
             item.price = parseInt(/** @type {HTMLInputElement} */(e.target).value) || 0;
-            if (data === appState.parsedData) renderItemsList();
+            if (data === appState.parsedData) {
+                renderItemsList();
+                validateReceiptForm();
+            }
         });
 
         catSelect.addEventListener('change', (e) => {
@@ -302,7 +522,10 @@ export function renderItemsList() {
             item.category_id = catId;
             const genres = data.master_genres ? data.master_genres.filter(g => g.category_id == catId) : [];
             item.genre_id = genres.length > 0 ? genres[0].id : 0;
-            if (data === appState.parsedData) renderItemsList();
+            if (data === appState.parsedData) {
+                renderItemsList();
+                validateReceiptForm();
+            }
         });
 
         genSelect.addEventListener('change', (e) => {
@@ -314,6 +537,7 @@ export function renderItemsList() {
 
     EL.totalAmount.textContent = `¥${subtotal.toLocaleString()}`;
     EL.btnRegisterCount.textContent = String(visibleCount);
+    validateReceiptForm();
 }
 
 export function finalizeDeletion() {
@@ -336,6 +560,7 @@ export function undoDeletion() {
     delete appState.parsedData.items[index].deleted;
     appState.lastDeleted = null;
     renderItemsList();
+    validateReceiptForm();
     EL.snackbar.classList.remove('show');
     EL.snackbar.classList.add('hidden');
 }
@@ -348,4 +573,3 @@ export function renderBulkMenuCategories(categories) {
         </button>
     `).join('');
 }
-
