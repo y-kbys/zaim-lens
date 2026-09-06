@@ -5,7 +5,7 @@ import { sendGAEvent } from '../../utils/analytics.js';
 import { openGeminiSettings, openZaimSettings, closeSettingsDropdown } from '../settings.js';
 
 import { handleImageFiles, advanceQueue, startBackgroundParsing, retryQueueItem } from './queue.js';
-import { setupEditState, resetApp, renderItemsList, undoDeletion, loadZaimAccounts, updateUnlinkedBannerState, validateReceiptForm } from './ui.js';
+import { setupEditState, resetApp, renderItemsList, undoDeletion, loadZaimAccounts, updateUnlinkedBannerState, validateReceiptForm, isUnlinkedBannerVisible } from './ui.js';
 import { registerReceiptData } from './api.js';
 
 // Re-export for potential external use
@@ -166,6 +166,11 @@ export const initReceiptFeatures = () => {
 
     EL.btnParse.addEventListener('click', async () => {
         if (appState.currentQueueIndex === -1) return;
+        if (isUnlinkedBannerVisible(appState)) {
+            showToast('Zaim未連携のため解析を開始できません。連携を設定してください。', 'warning');
+            openZaimSettings();
+            return;
+        }
         startBackgroundParsing();
         sendGAEvent('execute_receipt_analysis');
         

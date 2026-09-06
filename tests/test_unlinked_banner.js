@@ -98,3 +98,47 @@ test('Lifecycle Scenario: state transitions from initial to logged in to linked'
     state.accounts = [];
     assert.equal(isUnlinkedBannerVisible(state), false, 'Banner hidden upon signout');
 });
+
+/**
+ * Pure logic to determine if parse button should be enabled
+ * @param {{ user?: any, accountsLoaded?: boolean, accounts?: any[], queue?: any[] }} state
+ * @returns {boolean}
+ */
+export function isParseButtonEnabled(state) {
+    if (!state || !state.queue || state.queue.length === 0) {
+        return false;
+    }
+    const isUnlinked = isUnlinkedBannerVisible(state);
+    return !isUnlinked;
+}
+
+test('isParseButtonEnabled: disabled when queue is empty even if linked', () => {
+    const state = {
+        user: { email: 'user@example.com' },
+        accountsLoaded: true,
+        accounts: [{ id: 1 }],
+        queue: []
+    };
+    assert.equal(isParseButtonEnabled(state), false);
+});
+
+test('isParseButtonEnabled: disabled when unlinked even if images are queued', () => {
+    const state = {
+        user: { email: 'user@example.com' },
+        accountsLoaded: true,
+        accounts: [], // unlinked
+        queue: [{ file: {} }]
+    };
+    assert.equal(isParseButtonEnabled(state), false);
+});
+
+test('isParseButtonEnabled: enabled when linked and images are queued', () => {
+    const state = {
+        user: { email: 'user@example.com' },
+        accountsLoaded: true,
+        accounts: [{ id: 1 }],
+        queue: [{ file: {} }]
+    };
+    assert.equal(isParseButtonEnabled(state), true);
+});
+

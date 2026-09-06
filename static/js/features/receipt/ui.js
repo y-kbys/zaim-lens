@@ -146,9 +146,14 @@ export function updateUnlinkedBannerState() {
         }
     } else {
         EL.unlinkedGuideBanner.classList.add('hidden');
-        if (EL.btnParse && appState.queue && appState.queue.length > 0) {
-            EL.btnParse.disabled = false;
-            EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (EL.btnParse) {
+            if (appState.queue && appState.queue.length > 0) {
+                EL.btnParse.disabled = false;
+                EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                EL.btnParse.disabled = true;
+                EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
     }
 }

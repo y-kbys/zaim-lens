@@ -3,7 +3,7 @@ import { EL, showToast, showLoading, hideLoading, switchState } from '../../util
 import { compressImage } from './image.js';
 import { parseReceiptImage } from './api.js';
 import { ensureZaimDataAvailable } from '../../api/zaim.js';
-import { updateBatchProgressUI, setupEditState, resetApp } from './ui.js';
+import { updateBatchProgressUI, setupEditState, resetApp, updateUnlinkedBannerState } from './ui.js';
 import { openGeminiSettings, openZaimSettings } from '../settings.js';
 
 // Each queue item's parsing Promise is tracked here (kept for compatibility)
@@ -93,7 +93,7 @@ export const handleImageFiles = async (files) => {
         EL.imagePreview.src = appState.currentImageUri;
         EL.imagePreviewContainer.classList.remove('hidden');
         EL.btnParse.classList.remove('hidden');
-        EL.btnParse.disabled = false;
+        updateUnlinkedBannerState();
         
         hideLoading();
 
