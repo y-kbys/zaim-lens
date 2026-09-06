@@ -28,6 +28,10 @@ jobs:
       - name: Run static analysis (Type Check)
         run: npm run type-check
 
+      - name: Verify Tailwind CSS build is up to date
+        run: |
+          npm run check:css || (echo "::error::static/tailwind.css is out of date. Please run 'npm run build:css' and commit the changes." && exit 1)
+
   backend:
     runs-on: ubuntu-latest
 
