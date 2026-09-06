@@ -13,7 +13,7 @@ FastAPI バックエンド + Jinja2 HTML テンプレート + Vanilla JS (ES Mod
 - **Testing Frameworks**: pytest, pytest-asyncio (Backend), Node.js native test runner (Frontend)
 
 ## Key Libraries & Tools
-- **Generative AI**: Google GenAI SDK (`google-genai` >= 2.17.0)
+- **Generative AI**: Google GenAI SDK (`google-genai` >= 2.22.0)
 - **OAuth / External API**: `requests-oauthlib` (Zaim API v2 / OAuth 1.0a)
 - **Encryption**: `cryptography` (Fernet / AES-128-CBC)
 - **Validation**: Pydantic v2 (`pydantic` >= 2.13.4)

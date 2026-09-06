@@ -20,7 +20,7 @@ Zaim Lens は、レシート画像やオンライン注文履歴のスクリー�
 | **データバリデーション** | Pydantic v2 | `>= 2.13.4` | 型安全なスキーマ定義、シリアライズ/デシリアライズ |
 | **データベース / BaaS** | Google Cloud Firestore / Firebase Admin SDK | `>= 7.5.0` | ユーザー設定・連携情報・キャッシュの永続化 |
 | **認証 (Auth)** | Firebase Authentication (JWT / Bearer) | PyJWT / cryptography | ユーザー認証トークンの検証とユーザーID（UID）解決 |
-| **生成AI SDK** | Google GenAI SDK (`google-genai`) | `>= 2.17.0` | レシート画像のOCR解析・カテゴリ推論（Gemini 2.5/Flash/Lite/Gemmaフォールバック） |
+| **生成AI SDK** | Google GenAI SDK (`google-genai`) | `>= 2.22.0` | レシート画像のOCR解析・カテゴリ推論（Gemini 2.5/Flash/Lite/Gemmaフォールバック） |
 | **外部API連携 (OAuth)** | requests-oauthlib | `>= 2.0.0` | Zaim API (OAuth 1.0a 3-legged) 認証およびAPIコール |
 | **暗号化 (Crypto)** | Cryptography (Fernet / AES-128-CBC) | `>= 50.0.0` | DB保存時のクレデンシャル暗号化 (Zaim Token / Gemini Key) |
 | **セッション管理** | Starlette SessionMiddleware / itsdangerous | `>= 2.2.0` | OAuth認証中の一時トークン・シークレット保持 |
