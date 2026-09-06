@@ -30,9 +30,25 @@ jobs:
 
       - name: Install dependencies and build
         run: |
-          npm install
+          npm ci
           npm run build:css
           npm run build:licenses
+
+      - name: Run frontend tests
+        run: npm run test
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Run backend tests
+        run: |
+          uv sync --locked
+          uv run pytest
 
       - name: Authenticate to Google Cloud
         id: auth

@@ -25,10 +25,10 @@ FastAPI バックエンド + Jinja2 HTML テンプレート + Vanilla JS (ES Mod
 
 | カテゴリ | コマンド | 検証内容 | CI ワークフロー |
 | :--- | :--- | :--- | :--- |
-| **Backend Tests** | `uv run pytest` | API・認証・暗号化・サービステスト | `deploy.yml` |
-| **Frontend Tests** | `npm run test` | `tests/*.js` の単体テスト (`node --test`) | `deploy.yml` 前提 |
+| **Backend Tests** | `uv run pytest` | API・認証・暗号化・サービステスト | `static-analysis.yml`, `deploy.yml` |
+| **Frontend Tests** | `npm run test` | `tests/*.js` の単体テスト (`node --test`) | `static-analysis.yml`, `deploy.yml` |
 | **Static Analysis** | `npm run type-check` | TypeScript JSDoc 型チェック (`tsc -p jsconfig.json --noEmit`) | `static-analysis.yml` |
-| **Frontend All-in-One** | `npm run check` | フロントエンドの単体テスト＋型チェック直列実行 | - |
+| **Frontend All-in-One** | `npm run check` | フロントエンドの単体テスト＋型チェック直列実行 | `static-analysis.yml` |
 
 ## Common Commands
 
