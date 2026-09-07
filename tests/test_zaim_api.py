@@ -1,6 +1,7 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
+
 from main import app
 from services.auth import verify_token
 
@@ -73,7 +74,7 @@ def test_save_zaim_credentials():
     with patch("routers.zaim.get_user_config", return_value=mock_config), \
          patch("routers.zaim.save_user_config") as mock_save, \
          patch("routers.zaim.clear_zaim_master_data_db"):
-        
+
         payload = {
             "name": "New Account",
             "consumer_key": "my_ckey",
@@ -95,7 +96,7 @@ def test_update_zaim_account_name():
     }
     with patch("routers.zaim.get_user_config", return_value=mock_config), \
          patch("routers.zaim.save_user_config") as mock_save:
-        
+
         response = client.patch("/api/zaim/credentials/1/name", json={"name": "Updated Name"})
         assert response.status_code == 200
         assert mock_config["accounts"]["1"]["name"] == "Updated Name"
@@ -110,7 +111,7 @@ def test_delete_zaim_account():
     with patch("routers.zaim.get_user_config", return_value=mock_config), \
          patch("routers.zaim.save_user_config") as mock_save, \
          patch("routers.zaim.clear_zaim_master_data_db"):
-        
+
         response = client.delete("/api/zaim/disconnect/1")
         assert response.status_code == 200
         assert "1" not in mock_config["accounts"]
@@ -125,7 +126,7 @@ def test_register_expense_duplicate_warning():
     with patch("routers.zaim.get_user_config", return_value=mock_config), \
          patch("routers.zaim.get_zaim_session_wrapper"), \
          patch("routers.zaim.check_zaim_duplicate", return_value=True):
-        
+
         payload = {
             "receipt_data": {
                 "date": "2026-08-22",
@@ -151,7 +152,7 @@ def test_register_expense_success_force():
     with patch("routers.zaim.get_user_config", return_value=mock_config), \
          patch("routers.zaim.get_zaim_session_wrapper"), \
          patch("services.zaim_service.register_receipt_items", return_value=2):
-        
+
         payload = {
             "receipt_data": {
                 "date": "2026-08-22",
@@ -181,7 +182,7 @@ def test_copy_history_success():
          patch("routers.zaim.get_zaim_session_wrapper"), \
          patch("routers.zaim.check_zaim_duplicate", return_value=False), \
          patch("services.zaim_service.register_receipt_items", return_value=2):
-        
+
         payload = {
             "source_account_id": "1",
             "destination_account_id": "2",

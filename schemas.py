@@ -1,5 +1,7 @@
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
+
 
 # --- Receipt Analysis Models ---
 class ReceiptItem(BaseModel):

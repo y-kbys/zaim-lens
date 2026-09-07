@@ -1,9 +1,10 @@
-import os
-import pytest
 import base64
 import hashlib
+
 from cryptography.fernet import Fernet
+
 import db
+
 
 def test_encrypt_decrypt_roundtrip(monkeypatch):
     test_key = Fernet.generate_key().decode()
@@ -13,10 +14,10 @@ def test_encrypt_decrypt_roundtrip(monkeypatch):
 
     raw_api_key = "AIzaSyDummyKeyForTestingGeminiAPI12345"
     encrypted = db.encrypt_value(raw_api_key)
-    
+
     assert encrypted != raw_api_key
     assert len(encrypted) > 0
-    
+
     decrypted = db.decrypt_value(encrypted)
     assert decrypted == raw_api_key
 
