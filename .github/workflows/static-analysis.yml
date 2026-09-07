@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  type-check:
+  frontend:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,5 +19,38 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend unit tests
+        run: npm run test
+
       - name: Run static analysis (Type Check)
-        run: npx --package typescript tsc -p jsconfig.json --noEmit
+        run: npm run type-check
+
+      - name: Verify Tailwind CSS build is up to date
+        run: |
+          npm run check:css || (echo "::error::static/tailwind.css is out of date. Please run 'npm run build:css' and commit the changes." && exit 1)
+
+  backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run backend tests
+        env:
+          ENCRYPTION_KEY: dummy_test_encryption_key_for_ci
+        run: uv run pytest

@@ -47,6 +47,8 @@
  * @property {any} result
  * @property {string} [blobUri]
  * @property {string} [compressedBase64]
+ * @property {any} [error]
+ * @property {Promise<any>|null} [_parsePromise]
  */
 
 /**
@@ -58,6 +60,8 @@ export const appState = {
     parsedData: null,
     /** @type {ZaimAccount[]} */
     accounts: [],
+    /** @type {boolean} */
+    accountsLoaded: false,
     /** @type {HistoryItem[]} */
     fetchedHistory: [],
     /** @type {Set<string>} */

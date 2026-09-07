@@ -17,6 +17,9 @@ export const EL = {
     themeToggle: /** @type {HTMLButtonElement} */ (document.getElementById('theme-toggle')),
 
     // Upload State
+    queueThumbnailsContainer: /** @type {HTMLElement} */ (document.getElementById('queue-thumbnails-container')),
+    unlinkedGuideBanner: /** @type {HTMLElement} */ (document.getElementById('unlinked-guide-banner')),
+    btnUnlinkedZaimConnect: /** @type {HTMLButtonElement} */ (document.getElementById('btn-unlinked-zaim-connect')),
     imageUpload: /** @type {HTMLInputElement} */ (document.getElementById('image-upload')),
     imagePreview: /** @type {HTMLImageElement} */ (document.getElementById('image-preview')),
     imagePreviewContainer: /** @type {HTMLElement} */ (document.getElementById('image-preview-container')),
@@ -30,6 +33,7 @@ export const EL = {
     cameraCapture: /** @type {HTMLInputElement} */ (document.getElementById('camera-capture')),
 
     // Edit State
+    btnParseRetry: /** @type {HTMLButtonElement} */ (document.getElementById('btn-parse-retry')),
     editDate: /** @type {HTMLInputElement} */ (document.getElementById('edit-date')),
     editStore: /** @type {HTMLInputElement} */ (document.getElementById('edit-store')),
     itemsContainer: /** @type {HTMLElement} */ (document.getElementById('items-container')),

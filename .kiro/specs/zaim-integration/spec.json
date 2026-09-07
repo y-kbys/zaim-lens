@@ -1,9 +1,9 @@
 {
   "feature_name": "zaim-integration",
   "created_at": "2026-08-22T07:00:19+09:00",
-  "updated_at": "2026-08-22T07:41:48+09:00",
+  "updated_at": "2026-09-06T19:51:00+09:00",
   "language": "ja",
-  "phase": "implemented",
+  "phase": "completed",
   "approvals": {
     "requirements": {
       "generated": true,

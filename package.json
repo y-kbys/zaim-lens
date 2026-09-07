@@ -1,5 +1,10 @@
 {
+  "type": "module",
   "scripts": {
+    "type-check": "npx --package typescript tsc -p jsconfig.json --noEmit",
+    "test": "node --test tests/*.js",
+    "check:css": "npm run build:css && git diff --ignore-space-at-eol --exit-code static/tailwind.css",
+    "check": "npm run test && npm run type-check && npm run check:css",
     "build:css": "npx @tailwindcss/cli -i ./static/input.css -o ./static/tailwind.css",
     "watch:css": "npx @tailwindcss/cli -i ./static/input.css -o ./static/tailwind.css --watch",
     "build:licenses": "npx license-checker --json --out static/OSS_LICENSES.txt"

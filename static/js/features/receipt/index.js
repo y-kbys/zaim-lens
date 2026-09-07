@@ -2,10 +2,10 @@ import { appState } from '../../state.js';
 import { EL, showToast, showLoading, hideLoading, showConfirm, switchState } from '../../utils/dom.js';
 import { getPrefixedKey } from '../../utils/common.js';
 import { sendGAEvent } from '../../utils/analytics.js';
-import { openGeminiSettings, closeSettingsDropdown } from '../settings.js';
+import { openGeminiSettings, openZaimSettings, closeSettingsDropdown } from '../settings.js';
 
-import { handleImageFiles, advanceQueue, startBackgroundParsing } from './queue.js';
-import { setupEditState, resetApp, renderItemsList, undoDeletion, loadZaimAccounts } from './ui.js';
+import { handleImageFiles, advanceQueue, startBackgroundParsing, retryQueueItem } from './queue.js';
+import { setupEditState, resetApp, renderItemsList, undoDeletion, loadZaimAccounts, updateUnlinkedBannerState, validateReceiptForm, isUnlinkedBannerVisible } from './ui.js';
 import { registerReceiptData } from './api.js';
 
 // Re-export for potential external use
@@ -166,6 +166,11 @@ export const initReceiptFeatures = () => {
 
     EL.btnParse.addEventListener('click', async () => {
         if (appState.currentQueueIndex === -1) return;
+        if (isUnlinkedBannerVisible(appState)) {
+            showToast('Zaim未連携のため解析を開始できません。連携を設定してください。', 'warning');
+            openZaimSettings();
+            return;
+        }
         startBackgroundParsing();
         sendGAEvent('execute_receipt_analysis');
         
@@ -350,5 +355,39 @@ export const initReceiptFeatures = () => {
         localStorage.setItem(getPrefixedKey('lastUsedTargetAccount'), val);
         loadZaimAccounts();
     });
+
+    // Parse retry button
+    if (EL.btnParseRetry) {
+        EL.btnParseRetry.addEventListener('click', () => {
+            if (appState.currentQueueIndex !== -1) {
+                retryQueueItem(appState.currentQueueIndex);
+            }
+        });
+    }
+
+    // Unlinked Zaim connect button in banner
+    if (EL.btnUnlinkedZaimConnect) {
+        EL.btnUnlinkedZaimConnect.addEventListener('click', () => {
+            openZaimSettings();
+        });
+    }
+
+    // Date input validation sync
+    if (EL.editDate) {
+        EL.editDate.addEventListener('input', () => {
+            validateReceiptForm();
+        });
+        EL.editDate.addEventListener('change', () => {
+            validateReceiptForm();
+        });
+    }
+
+    // React to Zaim accounts update
+    window.addEventListener('zaim-accounts-updated', () => {
+        updateUnlinkedBannerState();
+    });
+
+    // Initial banner state check
+    updateUnlinkedBannerState();
 };
 

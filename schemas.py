@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # --- Receipt Analysis Models ---
 class ReceiptItem(BaseModel):
@@ -9,10 +9,19 @@ class ReceiptItem(BaseModel):
     genre_id: int
 
 class ReceiptParserResult(BaseModel):
-    date: str
-    store: str
+    date: str = Field(
+        default="",
+        description="購入日（YYYY-MM-DD形式）。画像内に明確な日付が記載されていない場合は、推測せず必ず空文字 \"\" とすること。"
+    )
+    store: str = Field(
+        default="",
+        description="店舗名。不明な場合は空文字 \"\" とすること。"
+    )
     items: List[ReceiptItem]
-    point_usage: int
+    point_usage: int = Field(
+        default=0,
+        description="ポイント利用額。ポイント利用がなければ 0 とすること。"
+    )
 
 # --- API Request Models ---
 class ParseRequest(BaseModel):
