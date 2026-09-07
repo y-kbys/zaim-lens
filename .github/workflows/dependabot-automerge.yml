@@ -10,6 +10,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: dependabot-automerge
+  cancel-in-progress: false
+
 jobs:
   automerge:
     runs-on: ubuntu-latest
@@ -29,7 +33,10 @@ jobs:
             PR_AUTHOR=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json author --jq '.author.login')
             if [ "$PR_AUTHOR" = "app/dependabot" ] || [ "$PR_AUTHOR" = "dependabot[bot]" ] || [ "$PR_AUTHOR" = "dependabot" ]; then
               echo "Merging Dependabot PR (#$PR_NUMBER)..."
-              gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" --merge --delete-branch
+              if ! gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" --squash --delete-branch; then
+                echo "Direct merge failed (likely base branch updated). Requesting rebase from Dependabot..."
+                gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body "@dependabot rebase" || true
+              fi
             else
               echo "PR (#$PR_NUMBER) is not by Dependabot ($PR_AUTHOR), skipping."
             fi

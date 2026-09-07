@@ -1,14 +1,16 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi import HTTPException
+
 from services.zaim_client import (
-    get_zaim_session,
     check_zaim_duplicate,
-    register_payment_item,
     fetch_zaim_accounts_raw,
-    get_zaim_master_data
+    get_zaim_master_data,
+    get_zaim_session,
 )
 from services.zaim_service import register_receipt_items
+
 
 def test_get_zaim_session_individual_consumer_key_priority():
     accounts_config = {
@@ -22,7 +24,7 @@ def test_get_zaim_session_individual_consumer_key_priority():
         }
     }
     with patch("services.zaim_client.OAuth1Session") as mock_session_class:
-        session = get_zaim_session("1", "user_1", accounts_config)
+        _ = get_zaim_session("1", "user_1", accounts_config)
         mock_session_class.assert_called_once_with(
             "custom_key",
             client_secret="custom_secret",
@@ -42,7 +44,7 @@ def test_get_zaim_session_fallback_to_system_keys():
     with patch("services.zaim_client.ZAIM_CONSUMER_KEY", "sys_key"), \
          patch("services.zaim_client.ZAIM_CONSUMER_SECRET", "sys_secret"), \
          patch("services.zaim_client.OAuth1Session") as mock_session_class:
-        session = get_zaim_session("1", "user_1", accounts_config)
+        _ = get_zaim_session("1", "user_1", accounts_config)
         mock_session_class.assert_called_once_with(
             "sys_key",
             client_secret="sys_secret",
@@ -81,7 +83,7 @@ def test_check_zaim_duplicate_found():
         ]
     }
     mock_session.get.return_value = mock_res
-    
+
     # Receipt 1001 total is 800
     assert check_zaim_duplicate(mock_session, "2026-08-22", 800) is True
     # Single item without receipt_id (manual_3) is 200
@@ -118,7 +120,7 @@ def test_fetch_zaim_accounts_raw_active_filter():
         ]
     }
     mock_session.get.return_value = mock_res
-    
+
     accounts = fetch_zaim_accounts_raw(mock_session)
     assert len(accounts) == 2
 
@@ -148,7 +150,7 @@ def test_get_zaim_master_data_success():
         ]
     }
     mock_session.get.side_effect = [cat_res, gen_res]
-    
+
     with patch("services.zaim_client.get_zaim_session", return_value=mock_session):
         data = get_zaim_master_data("1", "user_1", accounts_config)
         assert len(data["categories"]) == 1

@@ -1,10 +1,13 @@
 import os
-from fastapi import APIRouter, HTTPException, Body, Depends
+
+from fastapi import APIRouter, Body, Depends, HTTPException
+
+from db import get_user_config, save_user_config
+from schemas import GeminiCredentialsRequest, ParseRequest
 from services.auth import verify_token
 from services.gemini import analyze_receipt
-from schemas import ParseRequest, GeminiCredentialsRequest
-from db import get_user_config, save_user_config
 from services.master_data_service import get_or_fetch_master_data
+
 
 def build_prompt_context(categories: list, genres: list) -> str:
     lines = ["\n【Zaim カテゴリ＆ジャンル一覧】"]
@@ -43,13 +46,13 @@ async def parse_screenshot(request: ParseRequest = Body(...), user_id: str = Dep
         master_data = get_or_fetch_master_data(user_id, target_account_id, accounts)
         master_categories = master_data.get("categories", [])
         master_genres = master_data.get("genres", [])
-        
+
         master_data_context = build_prompt_context(master_categories, master_genres)
         result_dict = await analyze_receipt(request.image_base64, user_gemini_key, master_data_context)
-        
+
         result_dict["master_categories"] = master_categories
         result_dict["master_genres"] = master_genres
-        
+
         return result_dict
     except Exception as e:
         if isinstance(e, HTTPException):

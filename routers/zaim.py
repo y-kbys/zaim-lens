@@ -1,23 +1,33 @@
 import time
 import traceback
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Body, Depends, Request
+from typing import Optional
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from services.auth import verify_token, verify_token_optional, verify_token_manually
-from services.zaim_client import (
-    ZAIM_CONSUMER_KEY, ZAIM_CONSUMER_SECRET, ZAIM_CALLBACK_URL,
-    get_zaim_session_wrapper,
-    get_zaim_authorization_params, exchange_zaim_access_token,
-    fetch_zaim_accounts_raw, check_zaim_duplicate, 
-    register_payment_item, fetch_history_with_categories
-)
+
+from db import clear_zaim_master_data_db, get_user_config, save_user_config
 from schemas import (
-    RegisterRequest, CopyRequest, ZaimAccount, ZaimCredentialsRequest, ZaimAccountUpdateRequest,
-    ZaimCredentialsResponse
+    CopyRequest,
+    RegisterRequest,
+    ZaimAccount,
+    ZaimAccountUpdateRequest,
+    ZaimCredentialsRequest,
+    ZaimCredentialsResponse,
 )
-from db import get_user_config, save_user_config, clear_zaim_master_data_db
-from services.master_data_service import get_or_fetch_master_data
 from services import zaim_service
+from services.auth import verify_token, verify_token_manually, verify_token_optional
+from services.master_data_service import get_or_fetch_master_data
+from services.zaim_client import (
+    ZAIM_CALLBACK_URL,
+    ZAIM_CONSUMER_KEY,
+    ZAIM_CONSUMER_SECRET,
+    check_zaim_duplicate,
+    exchange_zaim_access_token,
+    fetch_history_with_categories,
+    fetch_zaim_accounts_raw,
+    get_zaim_authorization_params,
+    get_zaim_session_wrapper,
+)
 
 router = APIRouter()
 
@@ -27,7 +37,7 @@ OAUTH_SECRETS = {}
 @router.get("/api/zaim/login")
 async def zaim_login(request: Request, name: str = "デフォルト", idToken: str = None, user_id_dep: str = Depends(verify_token_optional)):
     print(f"DEBUG: zaim_login initiated. name={name}, has_idToken={bool(idToken)}, user_id_dep={user_id_dep}")
-    
+
     # Use idToken from query if user_id_dep didn't resolve (e.g. standard redirect)
     user_id = user_id_dep
     if not user_id and idToken:
@@ -37,7 +47,7 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         except Exception as ve:
             print(f"DEBUG: zaim_login manual verify failed: {ve}")
             pass
-            
+
     if not user_id:
         print("DEBUG: zaim_login failed: No user_id")
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -54,18 +64,18 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
         # Cloud Run / Proxy workaround: Force https if not localhost
         if "localhost" not in callback_url and callback_url.startswith("http://"):
             callback_url = callback_url.replace("http://", "https://", 1)
-            
+
     print(f"DEBUG: zaim_login using callback_url={callback_url}")
 
     try:
         auth_params = get_zaim_authorization_params(callback_url)
-        
+
         # Save request token secret in session to use it in callback
         request.session['user_id'] = user_id
         request.session['zaim_pending_user_id'] = user_id
         request.session['zaim_oauth_token_secret'] = auth_params["oauth_token_secret"]
         request.session['zaim_pending_name'] = name
-        
+
         # Also save in global dictionary to survive strict SameSite cookie blocking
         oauth_token = auth_params["oauth_token"]
         if oauth_token:
@@ -74,7 +84,7 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
                 'name': name,
                 'user_id': user_id
             }
-        
+
         print(f"DEBUG: zaim_login returning auth_url={auth_params['auth_url']}")
         return {"auth_url": auth_params["auth_url"]}
     except Exception as e:
@@ -105,7 +115,7 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
         token_res = exchange_zaim_access_token(oauth_token, request_token_secret, oauth_verifier)
         final_token = token_res.get('oauth_token')
         final_token_secret = token_res.get('oauth_token_secret')
-        
+
         # Save to DB
         config = get_user_config(user_id)
         accounts = config.get("accounts", {})
@@ -118,10 +128,10 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
                     max_id = numeric_id
             except ValueError:
                 pass
-                
+
             if ainfo.get('name') == pending_name:
                 acct_id = aid
-                
+
         if not acct_id:
             acct_id = str(max_id + 1)
 
@@ -133,12 +143,12 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
         }
         config["accounts"] = accounts
         save_user_config(user_id, config)
-        
+
         # Clear sensitive session data
         request.session.pop('zaim_oauth_token_secret', None)
         request.session.pop('zaim_pending_name', None)
         request.session.pop('zaim_pending_user_id', None)
-        
+
         return HTMLResponse("<html><body><script>window.location.href='/';</script></body></html>")
     except Exception as e:
         traceback.print_exc()
@@ -181,7 +191,7 @@ async def get_categories(account_id: str = "1", user_id: str = Depends(verify_to
     try:
         config = get_user_config(user_id)
         master_data = get_or_fetch_master_data(user_id, account_id, config.get("accounts", {}))
-        
+
         return {
             "master_categories": master_data.get("categories", []),
             "master_genres": master_data.get("genres", [])
@@ -207,7 +217,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
                 "message": "重複の可能性がある支出が見つかりました（同一日付・同一金額）。",
                 "duplicate_found": True
             }
-    
+
     # Prepare items list
     items = []
     for item in receipt_data.items:
@@ -217,7 +227,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
             "amount": item.price,
             "name": item.name
         })
-    
+
     # Add point usage as a negative item if present
     if receipt_data.point_usage > 0:
         items.append({
@@ -235,7 +245,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
         from_account_id=request.from_account_id,
         receipt_id=request.receipt_id
     )
-    
+
     return {
         "status": "success",
         "registered_count": success_count,
@@ -261,7 +271,7 @@ async def get_history(account_id: str, period: Optional[int] = 30, start_date: O
         session = get_zaim_session_wrapper(account_id, user_id, config.get("accounts", {}))
         import datetime as dt_module
         now = dt_module.datetime.now()
-        
+
         if start_date and end_date:
             start_date_str = start_date
             end_date_str = end_date
@@ -269,13 +279,13 @@ async def get_history(account_id: str, period: Optional[int] = 30, start_date: O
             end_date_str = now.strftime("%Y-%m-%d")
             computed_start_date = now - dt_module.timedelta(days=period)
             start_date_str = computed_start_date.strftime("%Y-%m-%d")
-        
+
         params = {
             "mapping": 1,
             "start_date": start_date_str,
             "end_date": end_date_str
         }
-        
+
         master_data = get_or_fetch_master_data(user_id, account_id, config.get("accounts", {}))
         history = fetch_history_with_categories(session, master_data, params)
         return {"history": history}
@@ -290,11 +300,11 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         print(f"Starting History Copy from Account {request.source_account_id} to Account {request.destination_account_id}. Items: {len(request.items_to_copy)}")
         config = get_user_config(user_id)
         dest_session = get_zaim_session_wrapper(request.destination_account_id, user_id, config.get("accounts", {}))
-        
+
         # 1. Group items by their receipt/group identity for duplicate check and registration
         # We group by (date, group_id) to handle multiple receipts in one copy request
         receipt_groups = {} # key: (date, group_id or pseudo_id), value: list of items
-        
+
         for item in request.items_to_copy:
             # If group_id is null, it's a single item, but we still group it to process consistently
             gid = item.group_id if item.group_id is not None else f"single_{int(time.time())}_{id(item)}"
@@ -302,7 +312,7 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
             if key not in receipt_groups:
                 receipt_groups[key] = []
             receipt_groups[key].append(item)
-            
+
         # 2. Duplicate check (per receipt group)
         if not request.force:
             for (date, gid), items in receipt_groups.items():
@@ -313,12 +323,12 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
                         "message": f"コピー先に重複の可能性がある支出が見つかりました（{date}・¥{total:,}）。続行しますか？",
                         "duplicate_found": True
                     }
-        
+
         # 3. Execution (per receipt group)
         total_success_count = 0
         group_receipt_id_map = {}
         last_pseudo_id = int(time.time())
-        
+
         for (date, gid), items in receipt_groups.items():
             # Generate or reuse pseudo receipt_id for this group
             if isinstance(gid, int): # Original Zaim group_id
@@ -331,7 +341,7 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
                 new_id = max(int(time.time()), last_pseudo_id + 1)
                 receipt_id = new_id
                 last_pseudo_id = new_id
-            
+
             # Map Pydantic models to dictionaries for the service
             items_list = []
             for item in items:
@@ -344,10 +354,10 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
                     "comment": item.comment,
                     "from_account_id": item.from_account_id
                 })
-            
+
             # [IMPORTANT] The frontend now sends items in the natural order (top-to-bottom).
             # We process them as-is to ensure Zaim registers them in that same order.
-            
+
             # Register this entire receipt group via service
             success_count = zaim_service.register_receipt_items(
                 session=dest_session,
@@ -357,7 +367,7 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
                 receipt_id=receipt_id
             )
             total_success_count += success_count
-            
+
         return {
             "status": "success",
             "success_count": total_success_count,
@@ -377,10 +387,10 @@ async def get_zaim_credentials(account_id: str, user_id: str = Depends(verify_to
     if account_id not in accounts:
         raise HTTPException(status_code=404, detail="Account not found.")
     acc = accounts[account_id]
-    
+
     token = acc.get("token") or ""
     ckey = acc.get("consumer_key") or ""
-    
+
     return ZaimCredentialsResponse(
         id=str(acc["id"]),
         name=acc.get("name", ""),
@@ -411,7 +421,7 @@ async def save_zaim_credentials(req: ZaimCredentialsRequest, user_id: str = Depe
     save_user_config(user_id, config)
     clear_zaim_master_data_db(user_id, target_id)
     return {
-        "status": "success", 
+        "status": "success",
         "message": "Zaim credentials saved.",
         "accounts": [{"id": acc["id"], "name": acc["name"]} for acc in accounts.values()]
     }

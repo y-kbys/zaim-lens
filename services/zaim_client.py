@@ -1,5 +1,6 @@
 import os
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List
+
 from fastapi import HTTPException
 from requests_oauthlib import OAuth1Session
 
@@ -15,11 +16,11 @@ def get_zaim_session(account_id: str, user_id: str, accounts_config: Dict[str, A
     """
     str_account_id = str(account_id)
     acct = accounts_config.get(str_account_id)
-    
+
     if not acct:
         print(f"DEBUG: get_zaim_session failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts_config.keys())}")
         raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
-        
+
     consumer_key = acct.get("consumer_key") or ZAIM_CONSUMER_KEY
     consumer_secret = acct.get("consumer_secret") or ZAIM_CONSUMER_SECRET
 
@@ -43,19 +44,19 @@ def get_zaim_master_data(account_id: str, user_id: str, accounts_config: Dict[st
     session = get_zaim_session(account_id, user_id, accounts_config)
     cat_res = session.get("https://api.zaim.net/v2/home/category")
     gen_res = session.get("https://api.zaim.net/v2/home/genre")
-    
+
     if cat_res.status_code != 200:
         raise HTTPException(status_code=cat_res.status_code, detail=f"Failed to fetch categories from Zaim: {cat_res.text}")
-    
+
     if gen_res.status_code != 200:
         raise HTTPException(status_code=gen_res.status_code, detail=f"Failed to fetch genres from Zaim: {gen_res.text}")
 
     cat_data = cat_res.json().get("categories", [])
     categories = [c for c in cat_data if c.get("mode") == "payment" and c.get("active") != -1]
-    
+
     gen_data = gen_res.json().get("genres", [])
     genres = [g for g in gen_data if g.get("active") != -1]
-        
+
     return {
         "categories": categories,
         "genres": genres
@@ -70,15 +71,15 @@ def get_zaim_authorization_params(callback_url: str) -> Dict[str, str]:
 
     zaim = OAuth1Session(ZAIM_CONSUMER_KEY, client_secret=ZAIM_CONSUMER_SECRET, callback_uri=callback_url)
     request_token_url = "https://api.zaim.net/v2/auth/request"
-    
+
     try:
         fetch_response = zaim.fetch_request_token(request_token_url)
         oauth_token = fetch_response.get('oauth_token')
         oauth_token_secret = fetch_response.get('oauth_token_secret')
-        
+
         base_authorization_url = "https://auth.zaim.net/users/auth"
         authorization_url = zaim.authorization_url(base_authorization_url, oauth_token=oauth_token, oauth_callback=callback_url)
-        
+
         return {
             "auth_url": authorization_url,
             "oauth_token": oauth_token,
@@ -96,14 +97,14 @@ def exchange_zaim_access_token(oauth_token: str, request_token_secret: str, oaut
 
     try:
         zaim = OAuth1Session(
-            ZAIM_CONSUMER_KEY, 
+            ZAIM_CONSUMER_KEY,
             client_secret=ZAIM_CONSUMER_SECRET,
             resource_owner_key=oauth_token,
             resource_owner_secret=request_token_secret
         )
         access_token_url = "https://api.zaim.net/v2/auth/access"
         token_res = zaim.fetch_access_token(access_token_url, verifier=oauth_verifier)
-        
+
         return {
             "oauth_token": token_res.get('oauth_token'),
             "oauth_token_secret": token_res.get('oauth_token_secret')
@@ -145,7 +146,7 @@ def check_zaim_duplicate(session: OAuth1Session, date: str, total_amount: int) -
                 if rid not in groups:
                     groups[rid] = 0
                 groups[rid] += int(h_item.get("amount", 0))
-        
+
         for amt in groups.values():
             if amt == total_amount:
                 return True
@@ -177,14 +178,14 @@ def fetch_history_with_categories(session: OAuth1Session, master_data: Dict[str,
     Fetches history and maps category IDs to names using the provided master data.
     """
     history = fetch_money_history(session, params)
-    
+
     if not master_data or "categories" not in master_data:
         return history
-        
+
     cat_map = {c["id"]: c["name"] for c in master_data.get("categories", [])}
     for item in history:
         item["category_name"] = cat_map.get(item.get("category_id"))
-        
+
     return history
 
 def get_zaim_session_wrapper(account_id: str, user_id: str, accounts_config: Dict[str, Any]):
@@ -193,11 +194,11 @@ def get_zaim_session_wrapper(account_id: str, user_id: str, accounts_config: Dic
 def get_account_from_id(account_id: str, user_id: str, accounts_config: Dict[str, Any]):
     str_account_id = str(account_id)
     acct = accounts_config.get(str_account_id)
-    
+
     if not acct:
         print(f"DEBUG: get_account_from_id failed. user_id: {user_id}, requested account_id: {str_account_id}. Available accounts: {list(accounts_config.keys())}")
         raise HTTPException(status_code=400, detail=f"Account configuration for ID '{account_id}' not found.")
-        
+
     return acct
 
 def get_zaim_master_data_wrapper(account_id: str, user_id: str, accounts_config: Dict[str, Any]):

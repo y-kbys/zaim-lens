@@ -1,9 +1,11 @@
 import base64
-from typing import List, Dict, Any
-from schemas import ReceiptItem, ReceiptParserResult
-from google import genai
-from google.genai import types, errors
+from typing import Any, Dict
+
 from fastapi import HTTPException
+from google import genai
+from google.genai import errors, types
+
+from schemas import ReceiptParserResult
 
 # 先頭から順にフォールバック
 GEMINI_MODEL_CHAIN = [
@@ -19,10 +21,10 @@ async def analyze_receipt(image_base64: str, user_gemini_key: str, master_data_c
     """
     if ";" in image_base64 and "base64," in image_base64:
         image_base64 = image_base64.split("base64,")[1]
-        
+
     try:
         decoded_image_data = base64.b64decode(image_base64)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid image base64 data")
 
     prompt = f"""これは紙のレシートまたはオンラインストアやアプリの購入履歴画面のスクリーンショットである。
@@ -52,10 +54,10 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
             # Validate and return on first success
             result = ReceiptParserResult.model_validate_json(response.text)
             return result.model_dump()
-            
+
         except Exception as e:
             last_error = e
-            # Handle rate limiting specifically: if 429, we might want to try other models 
+            # Handle rate limiting specifically: if 429, we might want to try other models
             # as different models/tiers might have different limits, so we continue the loop.
             continue
 
@@ -63,16 +65,16 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
     if isinstance(last_error, errors.APIError):
         if last_error.code == 429:
             raise HTTPException(
-                status_code=429, 
+                status_code=429,
                 detail="Geminiの実行回数制限（レートリミット）に達しました。しばらく時間を置いてから再度お試しください。"
             )
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"レシートの解析に失敗しました。詳細: {last_error.message}"
         )
-    
+
     raise HTTPException(
-        status_code=500, 
+        status_code=500,
         detail=f"レシートの解析に失敗しました。Geminiからの応答が正しくないか、サーバーエラーが発生しました。詳細: {str(last_error)}"
     )
 

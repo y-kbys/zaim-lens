@@ -1,10 +1,12 @@
 import os
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import HTMLResponse, FileResponse
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+
+from db import clear_zaim_master_data_db, delete_user_config
 from services.auth import verify_token
-from db import delete_user_config, clear_zaim_master_data_db
 
 # Create absolute paths for static files to avoid issues in different execution environments
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -103,7 +105,7 @@ async def delete_user_account(user_id: str = Depends(verify_token)):
     if success:
         # Clear all cache entries for this user
         clear_zaim_master_data_db(user_id)
-            
+
         return {"status": "success", "message": "User data completely removed."}
     else:
         raise HTTPException(status_code=500, detail="Failed to delete user data.")

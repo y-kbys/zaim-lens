@@ -1,14 +1,15 @@
 import os
 import time
+from typing import Optional
+
 import jwt
 import requests
-import datetime
-from typing import Optional
-from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from firebase_admin import auth
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from firebase_admin import auth
+
 from db import firebase_app, update_last_login
 
 # --- Firebase Auth Constants & Cache ---
@@ -27,7 +28,8 @@ def get_firebase_public_keys():
             if "max-age=" in cc:
                 try:
                     max_age = int(cc.split("max-age=")[1].split(",")[0])
-                except: pass
+                except Exception:
+                    pass
             FIREBASE_KEYS_CACHE["expiry"] = time.time() + max_age
             return FIREBASE_KEYS_CACHE["keys"]
     except Exception as e:
@@ -40,7 +42,7 @@ def verify_token_manually(id_token: str) -> str:
     if not project_id:
         print("DEBUG: verify_token_manually failed: FIREBASE_PROJECT_ID and GOOGLE_CLOUD_PROJECT are missing.")
         raise Exception("FIREBASE_PROJECT_ID environment variable is missing.")
-    
+
     try:
         header = jwt.get_unverified_header(id_token)
     except Exception as e:
@@ -50,14 +52,14 @@ def verify_token_manually(id_token: str) -> str:
     kid = header.get("kid")
     public_keys = get_firebase_public_keys()
     cert_str = public_keys.get(kid)
-    
+
     if not cert_str:
         print(f"DEBUG: verify_token_manually failed: Public key for kid '{kid}' not found.")
         raise Exception(f"Public key for kid '{kid}' not found.")
-        
+
     cert_obj = x509.load_pem_x509_certificate(cert_str.encode(), default_backend())
     public_key = cert_obj.public_key()
-    
+
     try:
         decoded = jwt.decode(
             id_token,
@@ -81,7 +83,8 @@ def verify_token_manually(id_token: str) -> str:
              if uid:
                  print(f"DEBUG: verify_token_manually succeeded with loose verification. UID={uid}")
                  return uid
-        except: pass
+        except Exception:
+            pass
         raise e
 
 security = HTTPBearer()
@@ -119,5 +122,5 @@ def verify_token_optional(credentials: HTTPAuthorizationCredentials = Depends(se
         return None
     try:
         return verify_token_logic(credentials.credentials)
-    except:
+    except Exception:
         return None

@@ -1,11 +1,13 @@
 import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from dotenv import load_dotenv
-from db import get_user_config, save_user_config, firebase_app
-from routers import zaim, gemini, system
+
+from db import get_user_config, save_user_config
+from routers import gemini, system, zaim
 
 load_dotenv()
 
@@ -29,7 +31,7 @@ def migrate_env_to_firestore():
                 consumer_secret = os.environ.get(f"ZAIM_ACCOUNT_{acct_id}_CONSUMER_SECRET")
                 token = os.environ.get(f"ZAIM_ACCOUNT_{acct_id}_TOKEN")
                 token_secret = os.environ.get(f"ZAIM_ACCOUNT_{acct_id}_TOKEN_SECRET")
-                
+
                 if all([consumer_key, consumer_secret, token, token_secret]):
                     accounts[acct_id] = {
                         "id": acct_id,
@@ -45,7 +47,7 @@ def migrate_env_to_firestore():
 # Run migration on startup
 try:
     migrate_env_to_firestore()
-except Exception as e:
+except Exception:
     import traceback
     print("WARNING: migrate_env_to_firestore failed during startup:")
     traceback.print_exc()
