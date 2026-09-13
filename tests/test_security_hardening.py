@@ -132,3 +132,38 @@ def test_parse_request_rejects_oversized_image():
     errors = excinfo.value.errors()
     assert any(err["loc"] == ("image_base64",) for err in errors)
 
+
+# --- Task 3: OAuth TTL Tests ---
+
+def test_oauth_secrets_pruning():
+    import time
+    from routers.zaim import OAUTH_SECRETS, prune_expired_oauth_secrets, TTL_SECONDS
+    
+    # Clear existing
+    OAUTH_SECRETS.clear()
+    
+    now = time.time()
+    # Expired token (11 minutes ago)
+    OAUTH_SECRETS["expired_token"] = {
+        "secret": "s1",
+        "name": "Old",
+        "user_id": "u1",
+        "created_at": now - (TTL_SECONDS + 60)
+    }
+    # Fresh token (1 minute ago)
+    OAUTH_SECRETS["fresh_token"] = {
+        "secret": "s2",
+        "name": "New",
+        "user_id": "u2",
+        "created_at": now - 60
+    }
+    
+    prune_expired_oauth_secrets()
+    
+    assert "expired_token" not in OAUTH_SECRETS
+    assert "fresh_token" in OAUTH_SECRETS
+    
+    # Clean up
+    OAUTH_SECRETS.clear()
+
+
