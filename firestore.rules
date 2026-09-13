@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Deny all direct client read/write access.
+    // The backend uses firebase-admin SDK (service account) to access data securely.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

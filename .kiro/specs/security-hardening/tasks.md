@@ -22,7 +22,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
   - _Boundary: OAuth Session Manager_
 
-- [ ] 4. (P) Firestore 全拒否セキュリティルールと GitHub Actions 自動デプロイの設定
+- [x] 4. (P) Firestore 全拒否セキュリティルールと GitHub Actions 自動デプロイの設定
   - リポジトリルートにクライアントからの直接の読み書きを全遮断する `firestore.rules`（`allow read, write: if false;`）を作成する
   - Firebase CLI 連携設定ファイル `firebase.json` を作成し、Firestore ルールファイルと紐付ける
   - GitHub Actions デプロイワークフロー（`.github/workflows/deploy.yml`）に `firebase-tools` を用いたルール自動デプロイステップを追加する

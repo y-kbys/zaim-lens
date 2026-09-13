@@ -118,6 +118,12 @@ jobs:
           # Show non-sensitive keys for debugging
           cat env.yaml | sed 's/: .*/: ***/'
 
+      - name: Deploy Firestore Rules
+        run: |
+          PROJECT_ID=${{ github.ref == 'refs/heads/main' && 'zaim-app-488514' || 'zaim-lens-dev' }}
+          echo "Deploying Firestore security rules to: $PROJECT_ID"
+          npx -y firebase-tools deploy --only firestore:rules --project $PROJECT_ID
+
       - name: Deploy to Cloud Run
         run: |
           SERVICE_NAME=${{ github.ref == 'refs/heads/main' && 'zaim-lens' || 'zaim-lens-dev' }}
