@@ -75,16 +75,6 @@ def verify_token_manually(id_token: str) -> str:
         return uid
     except Exception as e:
         print(f"DEBUG: verify_token_manually JWT decode failed: {e}. project_id={project_id}")
-        # One last attempt: maybe the token audience is slightly different?
-        # Standard decode without strict aud/iss check to see if we can get the UID
-        try:
-             decoded_loose = jwt.decode(id_token, public_key, algorithms=["RS256"], options={"verify_aud": False, "verify_iss": False})
-             uid = decoded_loose.get("uid") or decoded_loose.get("sub")
-             if uid:
-                 print(f"DEBUG: verify_token_manually succeeded with loose verification. UID={uid}")
-                 return uid
-        except Exception:
-            pass
         raise e
 
 security = HTTPBearer()

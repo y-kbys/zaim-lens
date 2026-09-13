@@ -1,3 +1,4 @@
+import html
 import time
 import traceback
 from typing import Optional
@@ -32,10 +33,18 @@ from services.zaim_client import (
 router = APIRouter()
 
 # Temporary in-memory cache for OAuth secrets to handle cross-domain cookie blocking in SPAs
+TTL_SECONDS = 600  # 10 minutes
 OAUTH_SECRETS = {}
+
+def prune_expired_oauth_secrets(ttl: int = TTL_SECONDS):
+    now = time.time()
+    expired = [token for token, data in list(OAUTH_SECRETS.items()) if now - data.get('created_at', 0) > ttl]
+    for token in expired:
+        OAUTH_SECRETS.pop(token, None)
 
 @router.get("/api/zaim/login")
 async def zaim_login(request: Request, name: str = "デフォルト", idToken: str = None, user_id_dep: str = Depends(verify_token_optional)):
+    prune_expired_oauth_secrets()
     print(f"DEBUG: zaim_login initiated. name={name}, has_idToken={bool(idToken)}, user_id_dep={user_id_dep}")
 
     # Use idToken from query if user_id_dep didn't resolve (e.g. standard redirect)
@@ -82,7 +91,8 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
             OAUTH_SECRETS[oauth_token] = {
                 'secret': auth_params["oauth_token_secret"],
                 'name': name,
-                'user_id': user_id
+                'user_id': user_id,
+                'created_at': time.time()
             }
 
         print(f"DEBUG: zaim_login returning auth_url={auth_params['auth_url']}")
@@ -93,8 +103,13 @@ async def zaim_login(request: Request, name: str = "デフォルト", idToken: s
 
 @router.get("/api/zaim/callback")
 async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str):
+    prune_expired_oauth_secrets()
     # Try to load secrets from global dict first (bypasses cookie issues)
     secret_data = OAUTH_SECRETS.pop(oauth_token, None)
+    if secret_data:
+        if time.time() - secret_data.get('created_at', 0) > TTL_SECONDS:
+            secret_data = None
+
     if secret_data:
         request_token_secret = secret_data.get('secret')
         pending_name = secret_data.get('name', 'Zaim Account')
@@ -106,7 +121,7 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
         user_id = request.session.get('zaim_pending_user_id') or request.session.get('user_id')
 
     if not user_id:
-        return HTMLResponse("<html><body><script>alert('Session lost. Please try again.'); window.location.href='/';</script></body></html>")
+        return HTMLResponse("<html><body><script>alert('Session lost or expired. Please try again.'); window.location.href='/';</script></body></html>")
 
     if not request_token_secret:
         raise HTTPException(status_code=400, detail="OAuth request token secret missing in session.")
@@ -152,7 +167,7 @@ async def zaim_callback(request: Request, oauth_token: str, oauth_verifier: str)
         return HTMLResponse("<html><body><script>window.location.href='/';</script></body></html>")
     except Exception as e:
         traceback.print_exc()
-        return HTMLResponse(f"<html><body>OAuth failed: {str(e)} <a href='/'>Back</a></body></html>")
+        return HTMLResponse(f"<html><body>OAuth failed: {html.escape(str(e))} <a href='/'>Back</a></body></html>")
 
 @router.get("/api/zaim/status")
 async def get_zaim_status(user_id: str = Depends(verify_token)):

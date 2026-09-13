@@ -27,7 +27,7 @@ class ReceiptParserResult(BaseModel):
 
 # --- API Request Models ---
 class ParseRequest(BaseModel):
-    image_base64: str
+    image_base64: str = Field(..., min_length=1, max_length=14_000_000)
     account_id: Optional[str] = None
 
 class RegisterRequest(BaseModel):
@@ -53,7 +53,7 @@ class CopyRequest(BaseModel):
     source_account_id: str
     destination_account_id: str
     from_account_id: Optional[int] = None
-    items_to_copy: List[CopyItem]
+    items_to_copy: List[CopyItem] = Field(..., min_length=1, max_length=100)
     force: bool = False
 
 # --- Credential Models ---
