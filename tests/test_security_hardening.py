@@ -58,3 +58,77 @@ def test_verify_token_manually_succeeds_on_valid_claims():
         
         uid = verify_token_manually(dummy_token)
         assert uid == "valid_user_123"
+
+
+# --- Task 2: Schema Validation Tests ---
+
+def test_copy_request_rejects_empty_items():
+    """CopyRequest must reject items_to_copy with 0 items."""
+    with pytest.raises(ValidationError) as excinfo:
+        CopyRequest(
+            source_account_id="1",
+            destination_account_id="2",
+            items_to_copy=[]
+        )
+    errors = excinfo.value.errors()
+    assert any(err["loc"] == ("items_to_copy",) for err in errors)
+
+
+def test_copy_request_accepts_up_to_100_items():
+    """CopyRequest must accept up to 100 items."""
+    item = CopyItem(
+        category_id=101,
+        genre_id=10101,
+        amount=100,
+        date="2026-09-13",
+        name="Item"
+    )
+    req = CopyRequest(
+        source_account_id="1",
+        destination_account_id="2",
+        items_to_copy=[item] * 100
+    )
+    assert len(req.items_to_copy) == 100
+
+
+def test_copy_request_rejects_over_100_items():
+    """CopyRequest must reject more than 100 items."""
+    item = CopyItem(
+        category_id=101,
+        genre_id=10101,
+        amount=100,
+        date="2026-09-13",
+        name="Item"
+    )
+    with pytest.raises(ValidationError) as excinfo:
+        CopyRequest(
+            source_account_id="1",
+            destination_account_id="2",
+            items_to_copy=[item] * 101
+        )
+    errors = excinfo.value.errors()
+    assert any(err["loc"] == ("items_to_copy",) for err in errors)
+
+
+def test_parse_request_rejects_empty_image():
+    """ParseRequest must reject empty image_base64 string."""
+    with pytest.raises(ValidationError) as excinfo:
+        ParseRequest(image_base64="")
+    errors = excinfo.value.errors()
+    assert any(err["loc"] == ("image_base64",) for err in errors)
+
+
+def test_parse_request_accepts_valid_length_image():
+    """ParseRequest accepts image_base64 within valid range."""
+    req = ParseRequest(image_base64="a" * 1000)
+    assert len(req.image_base64) == 1000
+
+
+def test_parse_request_rejects_oversized_image():
+    """ParseRequest rejects image_base64 exceeding 14,000,000 characters."""
+    # We test with 14_000_001 characters
+    with pytest.raises(ValidationError) as excinfo:
+        ParseRequest(image_base64="a" * 14_000_001)
+    errors = excinfo.value.errors()
+    assert any(err["loc"] == ("image_base64",) for err in errors)
+

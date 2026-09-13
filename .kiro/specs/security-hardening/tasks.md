@@ -7,7 +7,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
   - _Boundary: Authentication Service_
 
-- [ ] 2. (P) 履歴コピーおよび画像解析リクエストのサイズ・件数上限バリデーション
+- [x] 2. (P) 履歴コピーおよび画像解析リクエストのサイズ・件数上限バリデーション
   - `CopyRequest` スキーマの `items_to_copy` フィールドに最小 1 件、最大 100 件の境界値制約（`min_length=1, max_length=100`）を設定する
   - `ParseRequest` スキーマの `image_base64` フィールドに最小 1 文字、最大 14,000,000 文字（約10MB相当）の境界値制約（`min_length=1, max_length=14_000_000`）を設定する
   - 101 件以上のアイテムコピーや 14,000,000 文字を超える画像データを受信した際、エンドポイント到達前に 422 Unprocessable Entity で即時遮断されることを確認する
