@@ -4,6 +4,8 @@ from typing import Any, Dict, List
 from fastapi import HTTPException
 from requests_oauthlib import OAuth1Session
 
+from services.zaim_logic import is_duplicate_payment
+
 # --- Zaim OAuth Constants ---
 ZAIM_CONSUMER_KEY = os.environ.get("ZAIM_CONSUMER_KEY")
 ZAIM_CONSUMER_SECRET = os.environ.get("ZAIM_CONSUMER_SECRET")
@@ -135,21 +137,7 @@ def check_zaim_duplicate(session: OAuth1Session, date: str, total_amount: int) -
     res = session.get(url, params=params)
     if res.status_code == 200:
         history = res.json().get("money", [])
-        groups = {}
-        for h_item in history:
-            if h_item.get("mode") != "payment":
-                continue
-            rid = h_item.get("receipt_id")
-            if rid is None or rid == 0:
-                groups[f"manual_{h_item.get('id')}"] = int(h_item.get("amount", 0))
-            else:
-                if rid not in groups:
-                    groups[rid] = 0
-                groups[rid] += int(h_item.get("amount", 0))
-
-        for amt in groups.values():
-            if amt == total_amount:
-                return True
+        return is_duplicate_payment(history, total_amount)
     return False
 
 def register_payment_item(session: OAuth1Session, payload: Dict[str, Any]) -> bool:

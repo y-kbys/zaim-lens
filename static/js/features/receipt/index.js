@@ -5,6 +5,7 @@ import { sendGAEvent } from '../../utils/analytics.js';
 import { openGeminiSettings, openZaimSettings, closeSettingsDropdown } from '../settings.js';
 
 import { handleImageFiles, advanceQueue, startBackgroundParsing, retryQueueItem } from './queue.js';
+import { shouldShowRegistrationToast } from './logic.js';
 import { setupEditState, resetApp, renderItemsList, undoDeletion, loadZaimAccounts, updateUnlinkedBannerState, validateReceiptForm, isUnlinkedBannerVisible } from './ui.js';
 import { registerReceiptData } from './api.js';
 
@@ -310,7 +311,9 @@ export const initReceiptFeatures = () => {
                     localStorage.setItem(getPrefixedKey(`last_used_payment_source_id_${targetAccountId}`), EL.editFromAccount.value);
                 }
                 sendGAEvent('save_receipt_result');
-                showToast("Zaimへの登録が完了しました。", "success");
+                if (shouldShowRegistrationToast(appState.queue)) {
+                    showToast("Zaimへの登録が完了しました。", "success");
+                }
 
                 appState.registeredReceiptCount = (appState.registeredReceiptCount || 0) + 1;
 

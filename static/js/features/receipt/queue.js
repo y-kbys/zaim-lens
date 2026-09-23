@@ -4,6 +4,7 @@ import { compressImage } from './image.js';
 import { parseReceiptImage } from './api.js';
 import { ensureZaimDataAvailable } from '../../api/zaim.js';
 import { updateBatchProgressUI, setupEditState, resetApp, updateUnlinkedBannerState } from './ui.js';
+import { determineQueueCompletionAction } from './logic.js';
 import { openGeminiSettings, openZaimSettings } from '../settings.js';
 
 // Each queue item's parsing Promise is tracked here (kept for compatibility)
@@ -272,7 +273,8 @@ export async function advanceQueue() {
         updateBatchProgressUI();
         hideLoading();
 
-        if (registeredCount > 0) {
+        const action = determineQueueCompletionAction(registeredCount);
+        if (action === 'state-success') {
             switchState('state-success');
         } else {
             resetApp();

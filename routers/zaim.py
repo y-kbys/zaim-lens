@@ -29,6 +29,11 @@ from services.zaim_client import (
     get_zaim_authorization_params,
     get_zaim_session_wrapper,
 )
+from services.zaim_logic import (
+    build_receipt_items,
+    calculate_receipt_total_amount,
+    prepare_copy_receipt_groups,
+)
 
 router = APIRouter()
 
@@ -225,7 +230,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
     receipt_data = request.receipt_data
 
     if not request.force:
-        total_amount = sum(item.price for item in receipt_data.items) - (receipt_data.point_usage or 0)
+        total_amount = calculate_receipt_total_amount(receipt_data.items, receipt_data.point_usage)
         if check_zaim_duplicate(session, receipt_data.date, total_amount):
             return {
                 "status": "warning",
@@ -233,24 +238,7 @@ async def register_to_zaim(request: RegisterRequest = Body(...), user_id: str = 
                 "duplicate_found": True
             }
 
-    # Prepare items list
-    items = []
-    for item in receipt_data.items:
-        items.append({
-            "category_id": item.category_id,
-            "genre_id": item.genre_id,
-            "amount": item.price,
-            "name": item.name
-        })
-
-    # Add point usage as a negative item if present
-    if receipt_data.point_usage > 0:
-        items.append({
-            "category_id": receipt_data.items[0].category_id if len(receipt_data.items) > 0 else 101,
-            "genre_id": receipt_data.items[0].genre_id if len(receipt_data.items) > 0 else 10101,
-            "amount": -receipt_data.point_usage,
-            "name": "ポイント利用"
-        })
+    items = build_receipt_items(receipt_data.items, receipt_data.point_usage)
 
     success_count = zaim_service.register_receipt_items(
         session=session,
@@ -316,70 +304,29 @@ async def copy_history(request: CopyRequest = Body(...), user_id: str = Depends(
         config = get_user_config(user_id)
         dest_session = get_zaim_session_wrapper(request.destination_account_id, user_id, config.get("accounts", {}))
 
-        # 1. Group items by their receipt/group identity for duplicate check and registration
-        # We group by (date, group_id) to handle multiple receipts in one copy request
-        receipt_groups = {} # key: (date, group_id or pseudo_id), value: list of items
-
-        for item in request.items_to_copy:
-            # If group_id is null, it's a single item, but we still group it to process consistently
-            gid = item.group_id if item.group_id is not None else f"single_{int(time.time())}_{id(item)}"
-            key = (item.date, gid)
-            if key not in receipt_groups:
-                receipt_groups[key] = []
-            receipt_groups[key].append(item)
+        # 1. Group items and assign pseudo receipt IDs
+        receipt_groups = prepare_copy_receipt_groups(request.items_to_copy)
 
         # 2. Duplicate check (per receipt group)
         if not request.force:
-            for (date, gid), items in receipt_groups.items():
-                total = sum(i.amount for i in items)
-                if check_zaim_duplicate(dest_session, date, total):
-                     return {
+            for group in receipt_groups:
+                if check_zaim_duplicate(dest_session, group["date"], group["total_amount"]):
+                    return {
                         "status": "warning",
-                        "message": f"コピー先に重複の可能性がある支出が見つかりました（{date}・¥{total:,}）。続行しますか？",
+                        "message": f"コピー先に重複の可能性がある支出が見つかりました（{group['date']}・¥{group['total_amount']:,}）。続行しますか？",
                         "duplicate_found": True
                     }
 
         # 3. Execution (per receipt group)
         total_success_count = 0
-        group_receipt_id_map = {}
-        last_pseudo_id = int(time.time())
-
-        for (date, gid), items in receipt_groups.items():
-            # Generate or reuse pseudo receipt_id for this group
-            if isinstance(gid, int): # Original Zaim group_id
-                if gid not in group_receipt_id_map:
-                    new_id = max(int(time.time()), last_pseudo_id + 1)
-                    group_receipt_id_map[gid] = new_id
-                    last_pseudo_id = new_id
-                receipt_id = group_receipt_id_map[gid]
-            else: # Pseudo gid for single items
-                new_id = max(int(time.time()), last_pseudo_id + 1)
-                receipt_id = new_id
-                last_pseudo_id = new_id
-
-            # Map Pydantic models to dictionaries for the service
-            items_list = []
-            for item in items:
-                items_list.append({
-                    "category_id": item.category_id,
-                    "genre_id": item.genre_id,
-                    "amount": item.amount,
-                    "name": item.name,
-                    "place": item.place,
-                    "comment": item.comment,
-                    "from_account_id": item.from_account_id
-                })
-
-            # [IMPORTANT] The frontend now sends items in the natural order (top-to-bottom).
-            # We process them as-is to ensure Zaim registers them in that same order.
-
+        for group in receipt_groups:
             # Register this entire receipt group via service
             success_count = zaim_service.register_receipt_items(
                 session=dest_session,
-                items=items_list,
-                date=date,
+                items=group["items"],
+                date=group["date"],
                 from_account_id=request.from_account_id,
-                receipt_id=receipt_id
+                receipt_id=group["receipt_id"]
             )
             total_success_count += success_count
 

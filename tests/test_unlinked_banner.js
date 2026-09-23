@@ -1,17 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-
-/**
- * Pure logic to determine if unlinked banner should be shown
- * @param {{ user?: any, accountsLoaded?: boolean, accounts?: any[] }} state
- * @returns {boolean}
- */
-export function isUnlinkedBannerVisible(state) {
-    if (!state || !state.user || !state.accountsLoaded) {
-        return false;
-    }
-    return !state.accounts || state.accounts.length === 0;
-}
+import { isUnlinkedBannerVisible, isParseButtonEnabled } from '../static/js/features/receipt/logic.js';
 
 test('isUnlinkedBannerVisible: returns false when state is undefined or null', () => {
     assert.equal(isUnlinkedBannerVisible(null), false);
@@ -98,19 +87,6 @@ test('Lifecycle Scenario: state transitions from initial to logged in to linked'
     state.accounts = [];
     assert.equal(isUnlinkedBannerVisible(state), false, 'Banner hidden upon signout');
 });
-
-/**
- * Pure logic to determine if parse button should be enabled
- * @param {{ user?: any, accountsLoaded?: boolean, accounts?: any[], queue?: any[] }} state
- * @returns {boolean}
- */
-export function isParseButtonEnabled(state) {
-    if (!state || !state.queue || state.queue.length === 0) {
-        return false;
-    }
-    const isUnlinked = isUnlinkedBannerVisible(state);
-    return !isUnlinked;
-}
 
 test('isParseButtonEnabled: disabled when queue is empty even if linked', () => {
     const state = {

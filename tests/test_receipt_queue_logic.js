@@ -1,17 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-
-/**
- * Pure helper function representing the decision logic of advanceQueue completion.
- * @param {number} registeredCount
- * @returns {'state-success' | 'reset-app'}
- */
-export function determineQueueCompletionAction(registeredCount) {
-    if (registeredCount > 0) {
-        return 'state-success';
-    }
-    return 'reset-app';
-}
+import { shouldShowRegistrationToast, determineQueueCompletionAction } from '../static/js/features/receipt/logic.js';
 
 /**
  * Simulate queue workflow state transitions
@@ -147,4 +136,16 @@ test('Scenario: removeItem removes target item and adjusts currentQueueIndex', (
     assert.equal(session.queue.length, 0);
     assert.equal(session.currentQueueIndex, -1);
     assert.equal(session.currentState, 'state-upload');
+});
+
+test('shouldShowRegistrationToast: returns false for single receipt or empty/null queue', () => {
+    assert.equal(shouldShowRegistrationToast([]), false);
+    assert.equal(shouldShowRegistrationToast([{ id: 1 }]), false);
+    assert.equal(shouldShowRegistrationToast(null), false);
+    assert.equal(shouldShowRegistrationToast(undefined), false);
+});
+
+test('shouldShowRegistrationToast: returns true when queue has multiple receipts', () => {
+    assert.equal(shouldShowRegistrationToast([{ id: 1 }, { id: 2 }]), true);
+    assert.equal(shouldShowRegistrationToast([{ id: 1 }, { id: 2 }, { id: 3 }]), true);
 });
