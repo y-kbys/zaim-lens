@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from requests_oauthlib import OAuth1Session
 
 from services.zaim_client import register_payment_item
+from services.zaim_logic import build_payment_payload
 
 
 def register_receipt_items(
@@ -35,27 +36,13 @@ def register_receipt_items(
 
     # Register items in the order they are provided.
     for item in items:
-        payload = {
-            "mapping": 1,
-            "category_id": item.get("category_id"),
-            "genre_id": item.get("genre_id"),
-            "amount": item.get("amount") or item.get("price"), # Support both keys
-            "date": date,
-            "name": item.get("name"),
-            "receipt_id": receipt_id,
-        }
-
-        # Override item level info with function level info if provided
-        final_from_account_id = item.get("from_account_id") or from_account_id
-        if final_from_account_id is not None and str(final_from_account_id) != "":
-            payload["from_account_id"] = final_from_account_id
-
-        final_place = item.get("place") or store_name
-        if final_place:
-            payload["place"] = final_place
-
-        if item.get("comment"):
-            payload["comment"] = item.get("comment")
+        payload = build_payment_payload(
+            item=item,
+            date=date,
+            store_name=store_name,
+            from_account_id=from_account_id,
+            receipt_id=receipt_id
+        )
 
         if register_payment_item(session, payload):
             success_count += 1

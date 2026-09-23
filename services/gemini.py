@@ -15,19 +15,21 @@ GEMINI_MODEL_CHAIN = [
 ]
 
 
-async def analyze_receipt(image_base64: str, user_gemini_key: str, master_data_context: str) -> Dict[str, Any]:
+def clean_base64_image(image_base64: str) -> bytes:
     """
-    Parses a receipt image using a chain of Gemini models and returns the result as a dictionary.
+    Cleans data URL prefix if present and decodes base64 string to image bytes.
+    Raises ValueError if data is invalid.
     """
     if ";" in image_base64 and "base64," in image_base64:
         image_base64 = image_base64.split("base64,")[1]
+    return base64.b64decode(image_base64)
 
-    try:
-        decoded_image_data = base64.b64decode(image_base64)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid image base64 data")
 
-    prompt = f"""これは紙のレシートまたはオンラインストアやアプリの購入履歴画面のスクリーンショットである。
+def build_gemini_receipt_prompt(master_data_context: str) -> str:
+    """
+    Builds the analysis prompt for Gemini including master data categories and genres.
+    """
+    return f"""これは紙のレシートまたはオンラインストアやアプリの購入履歴画面のスクリーンショットである。
 UIのノイズを無視し、純粋な購入品名と金額、そしてもしあればポイント利用額（`point_usage`）を抽出せよ。ポイント利用がなければ `point_usage` は 0 とすること。
 購入日（`date`）は画像内に明記されている場合のみ抽出し、YYYY-MM-DD形式とすること。画像内に明確な日付情報が見当たらない・判読できない場合は、適当な日付を捏造・推測せず、必ず空文字（`""`）とすること。
 店舗名（`store`）も推測可能な限り抽出すること。店舗名が不明な場合は空文字とすること。
@@ -35,6 +37,18 @@ UIのノイズを無視し、純粋な購入品名と金額、そしてもしあ
 出力は指定されたJSONスキーマに厳格に従うこと。
 
 {master_data_context}"""
+
+
+async def analyze_receipt(image_base64: str, user_gemini_key: str, master_data_context: str) -> Dict[str, Any]:
+    """
+    Parses a receipt image using a chain of Gemini models and returns the result as a dictionary.
+    """
+    try:
+        decoded_image_data = clean_base64_image(image_base64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image base64 data")
+
+    prompt = build_gemini_receipt_prompt(master_data_context)
 
     image_part = types.Part.from_bytes(data=decoded_image_data, mime_type="image/jpeg")
     client = genai.Client(api_key=user_gemini_key)
