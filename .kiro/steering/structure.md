@@ -11,10 +11,13 @@ FastAPI によるバックエンド（3層アーキテクチャ）と、Vanilla 
 **Purpose**: HTTPリクエストの受付、認証依存注入 (`Depends(verify_token)`)、バリデーション、レスポンス返却  
 **Rule**: ビジネスロジックや外部API通信を直接書かず、必ず `services/` を呼び出す。
 
-### Backend Service / Client Layer (`/services/`)
+### Backend Service & Logic Layer (`/services/`)
 **Location**: `services/`  
-**Purpose**: 業務ロジック、外部API連携（Gemini, Zaim API, Firebase Auth）の抽象化  
-**Rule**: リクエストオブジェクトに依存しない純粋な関数・クラスとして設計し、外部エラーは適切な `HTTPException` に変換する。
+**Purpose**: 業務ロジック、データ変換・集計、外部API連携（Gemini, Zaim API, Firebase Auth）の抽象化  
+**Rule**:
+- **純粋ロジックとI/Oの分離**: 外部API通信を伴うクライアント処理（`*_client.py`）と、データ変換・グルーピング・重複判定などの純粋ロジック（`*_logic.py` または純粋関数）を分離する。
+- 純粋ロジックはモック不要で単体テスト可能とし、Webフレームワークやリクエストオブジェクトに依存させない。
+- 外部APIエラーは適切な `HTTPException` に変換する。
 
 ### Backend Data Access & Schema Layer (`/db.py`, `/schemas.py`)
 **Location**: ルート直下 (`db.py`, `schemas.py`)  
@@ -25,7 +28,12 @@ FastAPI によるバックエンド（3層アーキテクチャ）と、Vanilla 
 **Location**: `static/js/features/`  
 **Purpose**: 機能ドメインごとのフロントエンド実装（例: `receipt/`, `history/`, `auth.js`, `settings.js`）  
 **Rule**:
-- 複雑なドメイン機能（`receipt/`, `history/` 等）はディレクトリに分割し、`ui.js` (DOM描画・イベント), `logic.js` または `queue.js` (状態・ロジック), `api.js` (バックエンド通信), `index.js` (初期化) に責務を分離する。画像前処理等の特定処理は `image.js` など専用サブモジュールに切り出す。
+- 複雑なドメイン機能（`receipt/`, `history/` 等）はディレクトリに分割し、以下の責務分離を徹底する：
+  - `logic.js`: **DOM非依存の純粋ロジック**（バリデーション、日付計算、グルーピング、表示判定など）。Node.jsテスト環境とブラウザ環境で完全に共有し、テスト側へのコードのコピペ・重複定義を禁止する。
+  - `ui.js`: **DOM描画・イベントハンドリング・見た目の制御**（`document.createElement`, クラスの着脱など）。
+  - `queue.js`: 非同期フロー、画像バッチ進行制御、Promise管理。
+  - `api.js`: バックエンドAPIとの通信（fetch）。
+  - `index.js`: イベントリスナーのバインドとモジュール初期化。
 - 単機能や設定系などのコンパクトな機能（`auth.js`, `settings.js` 等）は、過度な分割を避け単一モジュールとして同階層に配置可能とする。
 
 ### Frontend Shared & Infrastructure (`/static/js/api/`, `/static/js/utils/`, `/static/js/state.js`)
@@ -85,10 +93,11 @@ import { executeReceiptBatch } from './queue.js';
 1. **厳格なレイヤ間依存の一方向性**:
    - Backend: `routers` → `services` → (`db`, `schemas`)
    - Frontend: `main.js` → `features/*` → (`api`, `utils`, `state`)
-2. **UI とロジックの分離 (Separation of Concerns)**:
-   - DOM 操作やイベントリスナーは `ui.js` に集約し、純粋なデータ変換やキューイングロジックは `logic.js` / `queue.js` に切り出して Node.js 環境で単体テスト可能にする。
+2. **UI・I/O と純粋ロジックの分離 (Pure Logic vs Impure I/O & UI)**:
+   - **Frontend**: DOM 操作やイベントリスナーは `ui.js` に集約し、純粋なデータ変換・判定・計算は `logic.js` に切り出す。Node.js テスト環境とプロダクションで同一関数を共有し、テスト側へのコード重複（コピペ）を根絶する。
+   - **Backend**: ルーター内に複雑なデータ変換・グルーピング・判定をインライン記述せず、`services/*_logic.py` 等の純粋関数に切り出す。これによりモック不要の高速・堅牢なテストを実現する。
 3. **CI アライメント**:
-   - コード変更時はバックエンド（pytest）とフロントエンド（単体テスト＋TypeScript型チェック）の双方を検証する。
+   - コード変更時はバックエンド（pytest / ruff）とフロントエンド（単体テスト＋TypeScript型チェック＋Tailwind差分）の双方を検証する。
 
 ---
 _Document patterns, not file trees. New files following patterns shouldn't require updates_

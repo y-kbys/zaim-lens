@@ -11,10 +11,12 @@ FastAPI による 3 層アーキテクチャ（Handler / Service / Data Access�
 ```mermaid
 graph TD
     Client["フロントエンド / 外部クライアント"] --> Main["main.py (App / Middleware)"]
-    Main --> Routers["routers/ (Handler Layer)"]
-    Routers --> Services["services/ (Service / Client Layer)"]
+    Main --> Routers["routers/ (Handler Layer - 薄いルーター)"]
+    Routers --> Logic["services/*_logic.py (Pure Business Logic - 純粋ロジック)"]
+    Routers --> Services["services/*_client.py (I/O & External Clients)"]
     Routers --> Schemas["schemas.py (Pydantic Models)"]
     Routers --> DB["db.py (Data Access / Encryption Layer)"]
+    Services --> Logic
     Services --> DB
     Services --> Schemas
     Services --> External["外部サービス (Gemini / Zaim / Firebase Auth)"]
@@ -25,15 +27,18 @@ graph TD
 1. **Handler / Routing Layer (`routers/`)**:
    - HTTP リクエストの受付、パラメータ検証、レスポンス（JSON/HTML）の返却。
    - `Depends(verify_token)` による認証と UID 解決。
-   - **制約**: 外部 API 通信（Gemini / Zaim 等）や複雑な業務ロジックを直接記述せず、必ず `services/` を呼び出す。
-2. **Service / Client Layer (`services/`)**:
-   - ビジネスロジック、外部 API 通信（`google-genai`, `requests-oauthlib`）、データ集計・突合。
+   - **制約（薄層ルーターの維持）**: 外部 API 通信（Gemini / Zaim 等）や複雑なデータ集計・グルーピング・判定ロジックを直接記述しない。これらは純粋ロジック層またはサービスクライアント層へ委譲する。
+2. **Pure Logic Sub-layer (`services/*_logic.py` または純粋関数)**:
+   - レシートのグルーピング、重複判定、金額集計、API登録用ペイロードの構築など、**I/O を伴わない純粋なビジネスロジック**。
+   - **制約**: DB や外部 API 通信を行わず、引数のみから結果を算出する純粋関数とする。モック不要で pytest による高速かつ網羅的な単体テストを可能にする。
+3. **Service / Client Layer (`services/*_client.py`)**:
+   - 外部 API 通信（`google-genai`, `requests-oauthlib`）の実装と例外抽象化。
    - 外部エラー（レート制限 429、認証エラー等）を適切な `HTTPException` に変換。
-   - **制約**: リクエストオブジェクトや Web フレームワークのコンテキストに依存しない純粋な関数・クラスとして設計する。
-3. **Data Access Layer (`db.py`)**:
+   - **制約**: リクエストオブジェクトや Web フレームワークのコンテキストに依存しない。
+4. **Data Access Layer (`db.py`)**:
    - Firestore への CRUD 操作およびクレデンシャルの透過的な暗号化/復号。
    - **制約**: クレデンシャルは必ず暗号化して永続化する（平文保存の禁止）。
-4. **Schema Layer (`schemas.py`)**:
+5. **Schema Layer (`schemas.py`)**:
    - Pydantic v2 `BaseModel` によるリクエスト/レスポンス/ドメインモデルの定義。
    - **制約**: 他のレイヤに依存しない独立したスキーマ定義とする。
 
@@ -100,6 +105,7 @@ FastAPI 標準の Pydantic シリアライズおよび一貫した JSON 構造�
 ### 4.2 禁止事項（アンチパターン）
 - ❌ **クレデンシャルの平文ログ出力**: トークンや API キーを生のログ（デバッグログ含む）に出力してはならない。
 - ❌ **Router 内での外部 API 通信 / DB 直接操作**: ビジネスロジックをルーターに散乱させず、必ず `services/` や `db.py` にカプセル化する。
+- ❌ **Router 内への複雑な変換・グルーピング・判定ロジックの埋め込み（Fat Router）**: ルーターハンドラ内に長大なインラインロジックを書かず、純粋関数として `services/*_logic.py` 等に切り出してテスト可能にする。
 - ❌ **例外の握りつぶし (Bare Except)**: `except:` だけでエラーを無視せず、型指定またはトレーサビリティを確保する。
 - ❌ **直接 pip / venv の使用**: 環境管理・実行は必ず `uv`（`uv run`）を通すこと。
 
