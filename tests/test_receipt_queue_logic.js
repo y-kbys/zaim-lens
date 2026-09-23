@@ -1,18 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { shouldShowRegistrationToast } from '../static/js/features/receipt/logic.js';
-
-/**
- * Pure helper function representing the decision logic of advanceQueue completion.
- * @param {number} registeredCount
- * @returns {'state-success' | 'reset-app'}
- */
-export function determineQueueCompletionAction(registeredCount) {
-    if (registeredCount > 0) {
-        return 'state-success';
-    }
-    return 'reset-app';
-}
+import { shouldShowRegistrationToast, determineQueueCompletionAction } from '../static/js/features/receipt/logic.js';
 
 /**
  * Simulate queue workflow state transitions

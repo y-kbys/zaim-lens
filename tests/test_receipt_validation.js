@@ -1,49 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-
-/**
- * Pure validation logic for receipt edit state
- * @param {{ date?: string, items?: Array<{ name?: string, price?: number|string, deleted?: boolean }> }} data
- * @returns {{ isValid: boolean, hasDate: boolean, validItemCount: number, invalidItemIndices: number[] }}
- */
-export function validateReceiptData(data) {
-    if (!data) {
-        return { isValid: false, hasDate: false, validItemCount: 0, invalidItemIndices: [] };
-    }
-
-    const dateStr = (data.date || '').trim();
-    const hasDate = Boolean(dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr));
-
-    const items = data.items || [];
-    let validItemCount = 0;
-    const invalidItemIndices = [];
-
-    items.forEach((item, index) => {
-        if (item.deleted) return;
-
-        const name = (item.name || '').trim();
-        const rawPrice = item.price;
-        const numPrice = Number(rawPrice);
-        const isPriceValidInt = rawPrice !== '' && rawPrice !== null && rawPrice !== undefined && Number.isInteger(numPrice);
-
-        if (!name && (numPrice !== 0 || !isPriceValidInt)) {
-            invalidItemIndices.push(index);
-        } else if (!isPriceValidInt) {
-            invalidItemIndices.push(index);
-        } else if (name && numPrice !== 0) {
-            validItemCount++;
-        }
-    });
-
-    const isValid = hasDate && validItemCount > 0 && invalidItemIndices.length === 0;
-
-    return {
-        isValid,
-        hasDate,
-        validItemCount,
-        invalidItemIndices
-    };
-}
+import { validateReceiptData } from '../static/js/features/receipt/logic.js';
 
 test('validateReceiptData: valid receipt returns isValid true', () => {
     const data = {

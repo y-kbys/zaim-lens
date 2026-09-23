@@ -6,49 +6,8 @@ import { selectQueueItem, removeQueueItem } from './queue.js';
 
 let currentSetupRequestId = 0;
 
-/**
- * Pure validation logic for receipt edit state
- * @param {{ date?: string, items?: Array<{ name?: string, price?: number|string, deleted?: boolean }> }} data
- * @returns {{ isValid: boolean, hasDate: boolean, validItemCount: number, invalidItemIndices: number[] }}
- */
-export function validateReceiptData(data) {
-    if (!data) {
-        return { isValid: false, hasDate: false, validItemCount: 0, invalidItemIndices: [] };
-    }
-
-    const dateStr = (data.date || '').trim();
-    const hasDate = Boolean(dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr));
-
-    const items = data.items || [];
-    let validItemCount = 0;
-    const invalidItemIndices = [];
-
-    items.forEach((item, index) => {
-        if (item.deleted) return;
-
-        const name = (item.name || '').trim();
-        const rawPrice = item.price;
-        const numPrice = Number(rawPrice);
-        const isPriceValidInt = rawPrice !== '' && rawPrice !== null && rawPrice !== undefined && Number.isInteger(numPrice);
-
-        if (!name && (numPrice !== 0 || !isPriceValidInt)) {
-            invalidItemIndices.push(index);
-        } else if (!isPriceValidInt) {
-            invalidItemIndices.push(index);
-        } else if (name && numPrice !== 0) {
-            validItemCount++;
-        }
-    });
-
-    const isValid = hasDate && validItemCount > 0 && invalidItemIndices.length === 0;
-
-    return {
-        isValid,
-        hasDate,
-        validItemCount,
-        invalidItemIndices
-    };
-}
+import { validateReceiptData, isUnlinkedBannerVisible, isParseButtonEnabled } from './logic.js';
+export { validateReceiptData, isUnlinkedBannerVisible, isParseButtonEnabled };
 
 /**
  * Validates DOM form inputs and updates UI highlights & register button state
@@ -121,18 +80,6 @@ export function validateReceiptForm() {
 }
 
 /**
- * Pure logic to determine if unlinked banner should be shown
- * @param {{ user?: any, accountsLoaded?: boolean, accounts?: any[] }} state
- * @returns {boolean}
- */
-export function isUnlinkedBannerVisible(state) {
-    if (!state || !state.user || !state.accountsLoaded) {
-        return false;
-    }
-    return !state.accounts || state.accounts.length === 0;
-}
-
-/**
  * Update unlinked guide banner visibility
  */
 export function updateUnlinkedBannerState() {
@@ -140,20 +87,17 @@ export function updateUnlinkedBannerState() {
     const isUnlinked = isUnlinkedBannerVisible(appState);
     if (isUnlinked) {
         EL.unlinkedGuideBanner.classList.remove('hidden');
-        if (EL.btnParse) {
-            EL.btnParse.disabled = true;
-            EL.btnParse.classList.add('opacity-50', 'cursor-not-allowed');
-        }
     } else {
         EL.unlinkedGuideBanner.classList.add('hidden');
-        if (EL.btnParse) {
-            if (appState.queue && appState.queue.length > 0) {
-                EL.btnParse.disabled = false;
-                EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
-            } else {
-                EL.btnParse.disabled = true;
-                EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+    }
+
+    if (EL.btnParse) {
+        const enabled = isParseButtonEnabled(appState);
+        EL.btnParse.disabled = !enabled;
+        if (enabled) {
+            EL.btnParse.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            EL.btnParse.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
 }
