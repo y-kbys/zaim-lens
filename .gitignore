@@ -19,6 +19,7 @@ firebase-debug.log*
 # Project Organization
 scripts/
 user_data/
+reports/
 *.txt
 !requirements.txt
 !static/robots.txt
