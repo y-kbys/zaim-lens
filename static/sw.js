@@ -36,15 +36,27 @@ sw.addEventListener('activate', (event) => {
 });
 
 sw.addEventListener('fetch', (event) => {
-    // Only cache GET requests (don't break our API POSTs)
+    // Only handle same-origin GET requests (exclude API routes) with Network-First
     if (event.request.method !== 'GET') {
         return;
     }
 
+    const url = new URL(event.request.url);
+    if (url.origin !== sw.location.origin || url.pathname.startsWith('/api/')) {
+        return;
+    }
+
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                return response || fetch(event.request);
+        fetch(event.request)
+            .then((networkResponse) => {
+                if (networkResponse && networkResponse.ok) {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return networkResponse;
             })
+            .catch(() => caches.match(event.request).then((cached) => cached || Response.error()))
     );
 });

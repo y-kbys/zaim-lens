@@ -1,6 +1,7 @@
 import { EL, switchState } from './utils/dom.js';
 import { initFirebaseAuth } from './features/auth.js';
 import { initSettingsFeatures } from './features/settings.js';
+import { initServiceEndModal } from './features/serviceEndModal.js';
 import { initReceiptFeatures } from './features/receipt/index.js';
 import { initHistoryFeatures } from './features/history/index.js';
 import { loadAccounts, loadTargetAccounts } from './api/zaim.js';
@@ -10,9 +11,22 @@ import { appState } from './state.js';
 
 // --- PWA Service Worker Registration ---
 if ('serviceWorker' in navigator) {
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hadController && !refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
+    });
+
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
-            .then(reg => console.log('SW registered!', reg))
+        navigator.serviceWorker.register('/static/sw.js', { updateViaCache: 'none' })
+            .then(reg => {
+                console.log('SW registered!', reg);
+                reg.update();
+            })
             .catch(err => console.log('SW registration failed', err));
     });
 }
@@ -102,6 +116,9 @@ const init = async () => {
 
     // Initial State UI update
     switchState('state-upload');
+
+    // Show Service End Notice modal on every access
+    initServiceEndModal();
 };
 
 // Start the app

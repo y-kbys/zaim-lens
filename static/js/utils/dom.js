@@ -159,6 +159,12 @@ export const EL = {
     bulkMenuCategories: /** @type {HTMLElement} */ (document.getElementById('bulk-menu-categories')),
     bulkMenuGenres: /** @type {HTMLElement} */ (document.getElementById('bulk-menu-genres')),
     btnSaveZaimCreds: /** @type {HTMLButtonElement} */ (document.getElementById('btn-save-zaim-creds')),
+
+    // Service End Notice Modal
+    serviceEndModal: /** @type {HTMLElement} */ (document.getElementById('service-end-modal')),
+    serviceEndModalContent: /** @type {HTMLElement} */ (document.getElementById('service-end-modal-content')),
+    btnCloseServiceEnd: /** @type {HTMLButtonElement} */ (document.getElementById('btn-close-service-end')),
+    btnConfirmServiceEnd: /** @type {HTMLButtonElement} */ (document.getElementById('btn-confirm-service-end')),
 };
 
 /**
