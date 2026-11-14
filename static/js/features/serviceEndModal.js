@@ -2,6 +2,9 @@ import { EL } from '../utils/dom.js';
 
 let showTimeoutId = null;
 let hideTimeoutId = null;
+let lastClosedAt = 0;
+
+const REOPEN_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
  * Open the Service End Notice modal.
@@ -53,6 +56,7 @@ export const closeServiceEndModal = () => {
         EL.serviceEndModal.classList.add('hidden');
         hideTimeoutId = null;
     }, 300);
+    lastClosedAt = Date.now();
 };
 
 /**
@@ -75,6 +79,25 @@ export const initServiceEndModal = () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !EL.serviceEndModal.classList.contains('hidden')) {
             closeServiceEndModal();
+        }
+    });
+
+    // Re-open on bfcache restore (e.g. PWA / browser back-forward cache)
+    window.addEventListener('pageshow', (e) => {
+        if (e.persisted && EL.serviceEndModal.classList.contains('hidden')) {
+            openServiceEndModal();
+        }
+    });
+
+    // Re-open when returning to the PWA after a long background period
+    document.addEventListener('visibilitychange', () => {
+        if (
+            document.visibilityState === 'visible' &&
+            EL.serviceEndModal.classList.contains('hidden') &&
+            lastClosedAt > 0 &&
+            Date.now() - lastClosedAt >= REOPEN_INTERVAL_MS
+        ) {
+            openServiceEndModal();
         }
     });
 

@@ -11,6 +11,16 @@ import { appState } from './state.js';
 
 // --- PWA Service Worker Registration ---
 if ('serviceWorker' in navigator) {
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hadController && !refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
+    });
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/sw.js')
             .then(reg => console.log('SW registered!', reg))
