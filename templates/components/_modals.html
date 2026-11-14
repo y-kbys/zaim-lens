@@ -217,3 +217,77 @@
         </div>
     </div>
 </div>
+
+<!-- Service End Notice Modal -->
+<div id="service-end-modal"
+    class="hidden opacity-0 fixed inset-0 z-[420] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300"
+    role="dialog" aria-modal="true" aria-labelledby="service-end-modal-title">
+    <div id="service-end-modal-content"
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95">
+        <div
+            class="p-4 border-b border-amber-200 dark:border-amber-800/60 flex justify-between items-center bg-amber-50 dark:bg-amber-900/30">
+            <h2 id="service-end-modal-title" class="text-lg font-bold text-amber-800 dark:text-amber-300 flex items-center">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i>サービス終了のお知らせ
+            </h2>
+            <button id="btn-close-service-end" type="button" aria-label="閉じる"
+                class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-2 flex-shrink-0">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto hide-scrollbar text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p>
+                いつも <strong>Zaim Lens</strong> をご利用いただきありがとうございます。
+            </p>
+            <p>
+                このたび、<strong>2026年12月7日（月）</strong>をもって外部開発者向け機能「Zaim API」の提供が終了することに伴い、
+                <strong class="text-red-600 dark:text-red-400">Zaim Lens も同日（2026年12月7日）をもってサービスを終了</strong>いたします。
+                これまでのご利用に心より感謝申し上げます。
+            </p>
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/60 p-3.5 rounded-xl space-y-1.5">
+                <p class="text-xs font-bold text-blue-800 dark:text-blue-300 flex items-center">
+                    <i class="fa-solid fa-circle-info mr-1.5"></i>「くふう Zaim」本体は継続してご利用いただけます
+                </p>
+                <p class="text-xs text-blue-900/80 dark:text-blue-200/80">
+                    今回の終了は外部開発者向けAPIの終了によるものです。「くふう Zaim」のアプリ・Webサービスはこれまでどおりご利用いただけ、くふう Zaim 上の家計簿データが削除されることはありません。
+                </p>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600/60 p-3.5 rounded-xl space-y-2">
+                <p class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center">
+                    <i class="fa-solid fa-calendar-days mr-1.5 text-gray-500 dark:text-gray-400"></i>今後のスケジュール
+                </p>
+                <ul class="text-xs space-y-1.5 text-gray-600 dark:text-gray-300">
+                    <li class="flex items-start gap-2">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">2026/12/07（月）</span>
+                        <span>Zaim API 提供終了 / Zaim Lens サービス終了（順次停止）</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">2027/01/07（木）まで</span>
+                        <span>本サービス上で保存している認証情報・取得済みデータを完全削除</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+                <p class="font-bold text-gray-700 dark:text-gray-300">
+                    <i class="fa-solid fa-shield-halved mr-1"></i>保存データ・認証情報の取り扱いについて
+                </p>
+                <p>
+                    Zaim API 利用規約に基づき、Zaim Lens が保持しているZaimの認証情報（アクセストークン等）およびGemini APIキー等のデータは、サービス終了後すみやかに（遅くとも2027年1月7日までに）すべて削除いたします。
+                </p>
+                <p>
+                    サービス終了前であっても、ログイン後の設定メニュー（歯車アイコン）内「Zaim連携設定」「Gemini API設定」からいつでもご自身で連携解除・削除が可能です。
+                </p>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+            <button id="btn-confirm-service-end" type="button"
+                class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition transform active:scale-[0.98] text-sm shadow-lg shadow-blue-500/30">
+                確認して閉じる
+            </button>
+        </div>
+    </div>
+</div>

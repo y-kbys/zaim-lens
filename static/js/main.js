@@ -1,6 +1,7 @@
 import { EL, switchState } from './utils/dom.js';
 import { initFirebaseAuth } from './features/auth.js';
 import { initSettingsFeatures } from './features/settings.js';
+import { initServiceEndModal } from './features/serviceEndModal.js';
 import { initReceiptFeatures } from './features/receipt/index.js';
 import { initHistoryFeatures } from './features/history/index.js';
 import { loadAccounts, loadTargetAccounts } from './api/zaim.js';
@@ -102,6 +103,9 @@ const init = async () => {
 
     // Initial State UI update
     switchState('state-upload');
+
+    // Show Service End Notice modal on every access
+    initServiceEndModal();
 };
 
 // Start the app
