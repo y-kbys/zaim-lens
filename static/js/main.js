@@ -22,8 +22,11 @@ if ('serviceWorker' in navigator) {
     });
 
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
-            .then(reg => console.log('SW registered!', reg))
+        navigator.serviceWorker.register('/static/sw.js', { updateViaCache: 'none' })
+            .then(reg => {
+                console.log('SW registered!', reg);
+                reg.update();
+            })
             .catch(err => console.log('SW registration failed', err));
     });
 }
